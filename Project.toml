@@ -1,0 +1,7 @@
+name = "PeachySea"
+uuid = "5cffcf50-4b89-4965-9f27-9db17d11d620"
+authors = ["Gregory Wagner <wagner.greg@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
