@@ -1,4 +1,4 @@
-# PeachySea.jl
+# PeachySea
 
 Biogeochemistry model for Clima-Ocean.
 
