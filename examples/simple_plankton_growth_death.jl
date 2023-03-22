@@ -103,3 +103,8 @@ lines!(axe, en, z)
 lines!(axP, Pn, z)
 
 display(fig)
+
+record(fig, "simple_plankton_growth_death.mp4", 1:Nt, framerate=24) do nn
+    n[] = nn
+end
+
