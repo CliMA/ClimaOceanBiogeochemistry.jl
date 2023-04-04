@@ -9,6 +9,13 @@ using Printf
 
 import Oceananigans.Biogeochemistry: required_biogeochemical_tracers
 
+"""
+    SimplePlanktonGrowthDeath(; growth_rate = 1/day
+                                shortwave_attenuation_scale = 20.0
+                                mortality_rate = 0.1/day)
+
+Return a single-tracer biogeochemistry model for growing and dying plankton.
+"""
 Base.@kwdef struct SimplePlanktonGrowthDeath{FT} <: AbstractBiogeochemistry
     growth_rate :: FT = 1/day
     shortwave_attenuation_scale :: FT = 20.0
