@@ -1,19 +1,20 @@
+#####
+##### Definition of NutrientsPlanktonBacteriaDetritus
+#####
+
 using Oceananigans
 using Oceananigans.Units
-using Oceananigans
 using Oceananigans.Grids: znode
 using Oceananigans.Fields: ZeroField, ConstantField
 using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
-using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
-
-using Printf
 
 import Oceananigans.Biogeochemistry: required_biogeochemical_tracers, biogeochemical_drift_velocity
 
 """
     NutrientsPlanktonBacteriaDetritus(; kw...)
 
-Return a four-tracer biogeochemistry model for growing and dying plankton.
+Return a four-tracer biogeochemistry model for the interaction of nutrients, plankton
+bacteria, and detritus.
 """
 Base.@kwdef struct NutrientsPlanktonBacteriaDetritus{FT} <: AbstractBiogeochemistry
     maximum_plankton_growth_rate :: FT = 1/day
@@ -121,6 +122,9 @@ end
 ##### Set up the model
 #####
 
+using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
+using Printf
+
 grid = RectilinearGrid(size = 64,
                        z = (-256, 0),
                        topology = (Flat, Flat, Bounded))
@@ -135,17 +139,19 @@ model = HydrostaticFreeSurfaceModel(; grid,
                                     buoyancy = BuoyancyTracer(),
                                     boundary_conditions = (; b=b_bcs))
 
+# Initial conditions
 N₀ = 1e-1 # Surface nutrient concentration
 D₀ = 1e-1 # Surface detritus concentration
 dᴺ = 50.0 # Nutrient mixed layer depth
-N² = 1e-5 # s⁻²
+N² = 1e-5 # Buoyancy gradient, s⁻²
+
 bᵢ(x, y, z) = N² * z
 Nᵢ(x, y, z) = N₀ * max(1, exp(-(z + dᴺ) / 100))
 Dᵢ(x, y, z) = D₀ * exp(z / 10)
 
 set!(model, b=bᵢ, P=1e-1, B=1e-1, D=Dᵢ, N=Nᵢ, e=1e-6)
 
-simulation = Simulation(model, Δt=10minutes, stop_iteration=1200)
+simulation = Simulation(model, Δt=10minutes, stop_time=12days)
 
 progress(sim) = @printf("Iteration: %d, time: %s, max(P): %.2e, max(N): %.2e, max(B): %.2e, max(D): %.2e \n",
                         iteration(sim), prettytime(sim),
@@ -161,7 +167,7 @@ filename = "simple_plankton_growth_death.jld2"
 
 simulation.output_writers[:fields] = JLD2OutputWriter(model, outputs;
                                                       filename,
-                                                      schedule = IterationInterval(10),
+                                                      schedule = TimeInterval(20minutes),
                                                       overwrite_existing = true)
 
 run!(simulation)
@@ -183,8 +189,8 @@ fig = Figure(resolution=(1200, 600))
 
 axb = Axis(fig[1, 1], ylabel="z (m)", xlabel="Buoyancy (m² s⁻³)")
 axe = Axis(fig[1, 2], ylabel="z (m)", xlabel="Turbulent kinetic energy (m² s²)")
-axP = Axis(fig[1, 3], ylabel="z (m)", xlabel="Concentration")
-axN = Axis(fig[1, 4], ylabel="z (m)", xlabel="Nutrient concentration")
+axP = Axis(fig[1, 3], ylabel="z (m)", xlabel="Concentration (mmol)")
+axN = Axis(fig[1, 4], ylabel="z (m)", xlabel="Nutrient concentration (mmol)")
 
 xlims!(axe, -1e-5, 1e-3)
 xlims!(axP, 0, 0.2)
@@ -204,15 +210,17 @@ Nn = @lift interior(Nt[$n], 1, 1, :)
 
 lines!(axb, bn, z)
 lines!(axe, en, z)
+
 lines!(axP, Pn, z, label="Plankton")
 lines!(axP, Dn, z, label="Detritus")
 lines!(axP, Bn, z, label="Bacteria")
 axislegend(axP)
+
 lines!(axN, Nn, z)
 
 display(fig)
 
-# record(fig, "simple_plankton_growth_death.mp4", 1:Nt, framerate=24) do nn
-#     n[] = nn
-# end
+record(fig, "nutrients_plankton_detritus_bacteria.mp4", 1:nt, framerate=24) do nn
+    n[] = nn
+end
 
