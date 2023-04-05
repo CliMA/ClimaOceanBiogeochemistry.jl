@@ -2,12 +2,13 @@ using Oceananigans
 using Oceananigans.Units
 using Oceananigans
 using Oceananigans.Grids: znode
+using Oceananigans.Fields: ZeroField, ConstantField
 using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
 using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
 
 using Printf
 
-import Oceananigans.Biogeochemistry: required_biogeochemical_tracers
+import Oceananigans.Biogeochemistry: required_biogeochemical_tracers, biogeochemical_drift_velocity
 
 """
     NutrientsPlanktonBacteriaDetritus(; kw...)
@@ -16,7 +17,7 @@ Return a four-tracer biogeochemistry model for growing and dying plankton.
 """
 Base.@kwdef struct NutrientsPlanktonBacteriaDetritus{FT} <: AbstractBiogeochemistry
     maximum_plankton_growth_rate :: FT = 1/day
-    maximum_bacteria_growth_rate :: FT = 1/day
+    maximum_bacteria_growth_rate :: FT = 0.5/day
     bacteria_yield :: FT               = 0.2
     quadratic_mortality_rate :: FT     = 1/day # m³/mmol/day
     nutrient_half_saturation :: FT     = 0.1   # mmol m⁻³
@@ -26,7 +27,16 @@ Base.@kwdef struct NutrientsPlanktonBacteriaDetritus{FT} <: AbstractBiogeochemis
     detritus_sinking_speed :: FT       = 10/day # m s⁻¹
 end
 
-@inline required_biogeochemical_tracers(::NutrientsPlanktonBacteriaDetritus) = (:N, :P, :B, :D)
+const NPBD = NutrientsPlanktonBacteriaDetritus
+
+@inline required_biogeochemical_tracers(::NPBD) = (:N, :P, :B, :D)
+
+@inline function biogeochemical_drift_velocity(bgc::NPBD, ::Val{:D})
+    u = ZeroField()
+    v = ZeroField()
+    w = ConstantField(- bgc.detritus_sinking_speed)
+    return (; u, v, w)
+end
 
 const c = Center()
 
@@ -125,10 +135,15 @@ model = HydrostaticFreeSurfaceModel(; grid,
                                     buoyancy = BuoyancyTracer(),
                                     boundary_conditions = (; b=b_bcs))
 
+N₀ = 1e-1 # Surface nutrient concentration
+D₀ = 1e-1 # Surface detritus concentration
+dᴺ = 50.0 # Nutrient mixed layer depth
 N² = 1e-5 # s⁻²
 bᵢ(x, y, z) = N² * z
+Nᵢ(x, y, z) = N₀ * max(1, exp(-(z + dᴺ) / 100))
+Dᵢ(x, y, z) = D₀ * exp(z / 10)
 
-set!(model, b=bᵢ, P=1e-1, B=1e-1, D=1e-1, N=1e1, e=1e-6)
+set!(model, b=bᵢ, P=1e-1, B=1e-1, D=Dᵢ, N=Nᵢ, e=1e-6)
 
 simulation = Simulation(model, Δt=10minutes, stop_iteration=1200)
 
