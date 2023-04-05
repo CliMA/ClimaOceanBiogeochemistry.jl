@@ -115,7 +115,7 @@ end
     D = @inbounds fields.D[i, j, k]
     B = @inbounds fields.B[i, j, k]
 
-    return bacteria_mortality(m, B) + plankton_mortality(m, B) - bacteria_production(μᵇ, kᴰ, D, B) / y
+    return bacteria_mortality(m, B) + plankton_mortality(m, P) - bacteria_production(μᵇ, kᴰ, D, B) / y
 end
 
 #####
