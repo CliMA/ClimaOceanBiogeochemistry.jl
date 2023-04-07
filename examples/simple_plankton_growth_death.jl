@@ -22,9 +22,7 @@ Base.@kwdef struct SimplePlanktonGrowthDeath{FT} <: AbstractBiogeochemistry
     mortality_rate :: FT = 0.1/day
 end
 
-const SPGD = SimplePlanktonGrowthDeath
-
-@inline required_biogeochemical_tracers(::SPGD) = tuple(:P)
+@inline required_biogeochemical_tracers(::SimplePlanktonGrowthDeath) = tuple(:P)
 
 const c = Center()
 
