@@ -3,6 +3,7 @@ pushfirst!(LOAD_PATH, joinpath(@__DIR__, "..")) # add ClimaOceanBiogeochemistry 
 using
   Documenter,
   Glob,
+  Literate,
   ClimaOceanBiogeochemistry
 
 #####
@@ -47,12 +48,6 @@ makedocs(
       clean = true,
   checkdocs = :exports
 )
-
-@info "Cleaning up temporary .jld2 and .nc files created by doctests..."
-
-for file in vcat(glob("docs/*.jld2"), glob("docs/*.nc"))
-    rm(file)
-end
 
 withenv("GITHUB_REPOSITORY" => "CliMA/ClimaOceanBiogeochemistry.jl") do
     deploydocs(        repo = "github.com/CliMA/ClimaOceanBiogeochemistry.jl.git",
