@@ -1,10 +1,7 @@
-pushfirst!(LOAD_PATH, joinpath(@__DIR__, "..")) # add ParameterEstimocean to environment stack
+pushfirst!(LOAD_PATH, joinpath(@__DIR__, "..")) # add ClimaOceanBiogeochemistry to environment stack
 
 using
   Documenter,
-  Literate,
-  CairoMakie,  # so that Literate.jl does not capture precompilation output or warnings
-  Glob,
   ClimaOceanBiogeochemistry
 
 #####
