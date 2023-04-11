@@ -1,14 +1,33 @@
-using Oceananigans.Grids: znode
+using Oceananigans.Units: day
+using Oceananigans.Grids: znode, Center
 using Oceananigans.Fields: ZeroField, ConstantField
 using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
 
 import Oceananigans.Biogeochemistry: required_biogeochemical_tracers, biogeochemical_drift_velocity
+
+const c = Center()
 
 """
     NutrientsPlanktonBacteriaDetritus(; kw...)
 
 Return a four-tracer biogeochemistry model for the interaction of nutrients, plankton
 bacteria, and detritus.
+
+Parameters
+==========
+
+Tracer names
+============
+  - `N`: nutrients
+  - `P`: plankton
+  - `B`: bacteria
+  - `D`: detritus
+
+Biogeochemical functions
+========================
+  - transitions for `N`, `P`, `B`, `D`
+  - `biogeochemical_drift_velocity` for `D`, modeling the sinking of detritus at
+    a constant `detritus_sinking_speed`.
 """
 Base.@kwdef struct NutrientsPlanktonBacteriaDetritus{FT} <: AbstractBiogeochemistry
     maximum_plankton_growth_rate :: FT = 1/day
@@ -32,8 +51,6 @@ const NPBD = NutrientsPlanktonBacteriaDetritus
     w = ConstantField(- bgc.detritus_sinking_speed)
     return (; u, v, w)
 end
-
-const c = Center()
 
 # For implicit time stepping, consider:
 #
