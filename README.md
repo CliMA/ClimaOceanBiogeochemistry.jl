@@ -1,5 +1,7 @@
 # ClimaOceanBiogeochemistry
 
+[![Docs Dev](https://img.shields.io/badge/documentation-in%20development-orange)](https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev)
+
 Biogeochemistry model for Clima-Ocean.
 
 Goals for year 1:
