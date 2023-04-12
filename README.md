@@ -20,4 +20,5 @@ See also
 Goals for subsequent years:
 
 1. Extend the framework to a cell-based biogeochemical ocean carbon cycle model
-    (see [Follows and Dutkiewicz, 2011](https://hahana.soest.hawaii.edu/cmoreserver/summercourse/2014/documents/Cullen_05-31/Follows_and_Dutkiewicz_2011_annurev-marine-120709-142848-1.pdf) especially figure 13.)
+    (see [Follows and Dutkiewicz, 2011](https://hahana.soest.hawaii.edu/cmoreserver/summercourse/2014/documents/Cullen_05-31/Follows_and_Dutkiewicz_2011_annurev-marine-120709-142848-1.pdf)
+    especially figure 13.)
