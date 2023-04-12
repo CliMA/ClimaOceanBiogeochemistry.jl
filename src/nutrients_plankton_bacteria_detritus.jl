@@ -15,18 +15,42 @@ bacteria, and detritus.
 
 Parameters
 ==========
+  * `maximum_plankton_growth_rate`: (s⁻¹) Growth rate of plankton `P` unlimited by the
+                                     availability of nutrients and light. Default: 1/day.
+
+  * `maximum_bacteria_growth_rate`: (s⁻¹) Growth rate of plankton `B` unlimited by the
+                                    availability of nutrients and light. Default = 0.5/day.
+
+  * `bacteria_yield`: Determines fractional nutrient production by bacteria production
+                      relative to consumption of detritus such that ``∂_t N / ∂_t D = 1 - y``,
+                      where `y = bacteria_yield`. Default: 0.2.
+
+  * `quadratic_mortality_rate`: (s⁻¹) Mortality rate of both plankton and bacteria.
+
+  * `nutrient_half_saturation`: (mmol m⁻³) Half-saturation of nutrients for plankton production.
+
+  * `detritus_half_saturation`: (mmol m⁻³) Half-saturation of nutrients for bacteria production.
+                                Deafult = 10.0 mmol m⁻³.
+
+  * `PAR_half_saturation`: (W m⁻²) Half-saturation of photosynthetically available radiation (PAR)
+                           for plankton production.
+
+  * `PAR_attenuation_scale`: (m) Depth scale over which photosynthetically available radiation (PAR)
+                             attenuates exponentially.
+
+  * `detritus_sinking_speed`: (m s⁻¹) Sinking velocity of detritus.
 
 Tracer names
 ============
-  - `N`: nutrients
-  - `P`: plankton
-  - `B`: bacteria
-  - `D`: detritus
+  * `N`: nutrients
+  * `P`: plankton
+  * `B`: bacteria
+  * `D`: detritus
 
 Biogeochemical functions
 ========================
-  - transitions for `N`, `P`, `B`, `D`
-  - `biogeochemical_drift_velocity` for `D`, modeling the sinking of detritus at
+  * transitions for `N`, `P`, `B`, `D`
+  * `biogeochemical_drift_velocity` for `D`, modeling the sinking of detritus at
     a constant `detritus_sinking_speed`.
 """
 Base.@kwdef struct NutrientsPlanktonBacteriaDetritus{FT} <: AbstractBiogeochemistry
