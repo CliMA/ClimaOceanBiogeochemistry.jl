@@ -36,6 +36,12 @@ format = Documenter.HTML(
 
 pages = [
     "Home" => "index.md",
+    "Library" => [ 
+        "Contents" => "library/outline.md",
+        "Public" => "library/public.md",
+        "Private" => "library/internals.md",
+        "Function index" => "library/function_index.md",
+        ],
 ]
 
 makedocs(

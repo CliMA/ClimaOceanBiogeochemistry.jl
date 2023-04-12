@@ -152,4 +152,3 @@ end
 
     return bacteria_mortality(m, B) + plankton_mortality(m, P) - bacteria_production(μᵇ, kᴰ, D, B) / y
 end
-
