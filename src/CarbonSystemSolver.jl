@@ -1686,7 +1686,7 @@ pCO₂ᵃᵗᵐ = 280.0*1e-6  # uatm to atm
 pH      = 8.0
 
 Cᶜᵒⁿˢᵗ = DissociationCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ);
-
+"""
 #Check the values of calculated constants
 println("Cᵈⁱᶜₖ₀ = ",       Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀     )
 println("Cᵈⁱᶜₖ₁ᵣ₉₃ = ",    Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁ᵣ₉₃  )
@@ -1712,7 +1712,7 @@ println("Cᴮᵀ = " ,        Cᶜᵒⁿˢᵗ.Cᴮᵀ         )
 println("Cᶠᵀ = " ,        Cᶜᵒⁿˢᵗ.Cᶠᵀ         )
 println("Cᶜᵃ = ",         Cᶜᵒⁿˢᵗ.Cᶜᵃ         )
 println("Cˢᴼ⁴ = ",        Cᶜᵒⁿˢᵗ.Cˢᴼ⁴        )
-
+"""
 @assert round(log(Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀), digits = 4)     == -3.5617 # Handbook (2007)
 @assert round(log(Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁ᵣ₉₃), digits = 4)  == -13.4847 # Handbook (1994)
 @assert round(log(Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂ᵣ₉₃), digits = 4)  == -20.5504 # Handbook (1994)
@@ -1738,13 +1738,13 @@ println("Cˢᴼ⁴ = ",        Cᶜᵒⁿˢᵗ.Cˢᴼ⁴        )
 #@assert Cᶜᵒⁿˢᵗ.Cᶜᵃ        ==
 #@assert Cᶜᵒⁿˢᵗ.Cˢᴼ⁴       ==
 
-pCO₂, pH = CarbonSolverApprox(
-        Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, pH, pCO₂ᵃᵗᵐ,
-        )
-println("Cᵀ = ", Cᵀ*1e6    )
-println("Aᵀ = ", Aᵀ*1e6    )
-println("pH = "  , pH      )
-println("pCO₂ᵃᵗᵐ = ", pCO₂ᵃᵗᵐ*1e6)
-println("pCO₂ = ", pCO₂*1e6)
+#pCO₂, pH = CarbonSolverApprox(
+#        Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, pH, pCO₂ᵃᵗᵐ,
+#        )
+#println("Cᵀ = ", Cᵀ*1e6    )
+#println("Aᵀ = ", Aᵀ*1e6    )
+#println("pH = "  , pH      )
+#println("pCO₂ᵃᵗᵐ = ", pCO₂ᵃᵗᵐ*1e6)
+#println("pCO₂ = ", pCO₂*1e6)
 
 end # module CarbonSolver
