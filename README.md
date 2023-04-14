@@ -1,10 +1,14 @@
 # ClimaOceanBiogeochemistry
 
+[![Docs Dev](https://img.shields.io/badge/documentation-in%20development-orange)](https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev)
+
 Biogeochemistry model for Clima-Ocean.
 
 Goals for year 1:
 
-1. Develop and implement a trainable (bio)geochemical ocean carbon cycle model with changable free parameters. For an example of one possible model, see the [MITgcm documentation](https://mitgcm.readthedocs.io/en/latest/examples/global_oce_biogeo/global_oce_biogeo.html#sub-global-oce-biogeo).
+1. Develop and implement a trainable (bio)geochemical ocean carbon cycle model with changable free parameters.
+    For an example of one possible model, see the
+    [MITgcm documentation](https://mitgcm.readthedocs.io/en/latest/examples/global_oce_biogeo/global_oce_biogeo.html#sub-global-oce-biogeo).
 
 See also
 
@@ -15,4 +19,6 @@ See also
 
 Goals for subsequent years:
 
-1. Extend the framework to a cell-based biogeochemical ocean carbon cycle model (see [Follows and Dutkiewicz, 2011](https://hahana.soest.hawaii.edu/cmoreserver/summercourse/2014/documents/Cullen_05-31/Follows_and_Dutkiewicz_2011_annurev-marine-120709-142848-1.pdf) especially figure 13.)
+1. Extend the framework to a cell-based biogeochemical ocean carbon cycle model
+    (see [Follows and Dutkiewicz, 2011](https://hahana.soest.hawaii.edu/cmoreserver/summercourse/2014/documents/Cullen_05-31/Follows_and_Dutkiewicz_2011_annurev-marine-120709-142848-1.pdf)
+    especially figure 13.)
