@@ -19,76 +19,6 @@ module CarbonSystemSolver
 #
 
 # ------------------------------------------------------------
-module CarbonSystemApprox
-export CarbonSolverApprox
-
-struct CarbonSolverApprox
-    "DIC concentration in mmol C/m3"
-    Cᵀ     :: Float64
-    "Alkalinity in mmol Eq/m3"
-    Aᵀ    :: Float64
-    "Atmospheric pCO₂ in μatm"
-    pCO₂ᵃᵗᵐ :: Float64
-    """
-    CarbonSolverApprox(
-        Cᵀ    :: Float64 = 2150.0,
-        Aᵀ    :: Float64 = 2400.0,
-        pCO₂ᵃᵗᵐ :: Float64 = 280.0,
-        )
-
-TBW
-"""
-function CarbonSolverApprox(
-        Cᵀ    :: Float64 = 2150.0,
-        Aᵀ    :: Float64 = 2400.0,
-        pCO₂ᵃᵗᵐ :: Float64 = 280.0,
-        )
-
-
-    end # end function
-end # end struct
-
-@inline function Fᶜᵀ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ,pCO₂ᵃᵗᵐ,Pᶜᵒⁿˢᵗ)
-    p_Hion=P((
-        (-2*k0*k1*k2*kb*pCO₂ᵃᵗᵐ),               # 
-        (-k0*k1*kb*pCO₂ᵃᵗᵐ-2*k0*k1*k2*pCO₂ᵃᵗᵐ), # H
-        (kb*Aᵀ-k0*k1*pCO₂ᵃᵗᵐ-kb*bt),            # H^2
-        Aᵀ                                      # H^3
-       ))
-
-    # Find the real roots of the polynomial   
-    #H=np.real(p_Hion.roots()[np.isreal(p_Hion.roots())])
-
-    pH=-np.log10(H)
-
-    co2s=k0*pCO2test
-    hco3=(k1*co2s)/H
-    co3 =(k1*k2*co2s)/(H*H)
-
-    return co2s+hco3+co3
-end
-
-@inline function Fᵖᶜᵒ²⁽ᶜᵀ⁺ᴬᵀ⁾(Cᵀ,Aᵀ,Pᶜᵒⁿˢᵗ)
-    p_Hion_AC=P((
-        (k1*k2*kb*Atest-2*k1*k2*kb*Ctest-k1*k2*kb*bt),                #
-        (k1*k2*Atest-2*k1*k2*Ctest+k1*kb*Atest-k1*kb*Ctest-k1*kb*bt), # H  
-        (kb*Atest+k1*Atest-k1*Ctest-kb*bt),                           # H^2
-        (Atest)                                                       # H^3
-       ))
-    
-    # Find the real roots of the polynomial   
-    #H=np.real(p_Hion_AC.roots()[np.isreal(p_Hion_AC.roots())])
-    H=H[H>0]
-    
-    co2s=(H*H*Ctest)/(H*H+H*k1+k1*k2)
-    hco3=(k1*co2s)/H
-    co3 =(k1*k2*co2s)/(H*H)
-    return co2s/k0
-end
-
-end # module CarbonSolverApprox
-
-# ------------------------------------------------------------
 module DissociationConstants
 export DissociationCoefficients
 
@@ -113,12 +43,12 @@ struct DissociationCoefficients
     Δpᵦₐᵣ :: Float64
     function DissociationCoefficients(
 #        FT          = Float64,
-#        Θ     :: FT = 4.0,
-#        Sᴬ    :: FT = 34.5,
+#        Θ     :: FT = 20.0,
+#        Sᴬ    :: FT = 35.0,
 #        Δpᵦₐᵣ :: FT = 0.0,
 #        FT          = Float64,
-        Θᶜ    :: Float64 = 4.0,
-        Sᴬ    :: Float64 = 34.5,
+        Θᶜ    :: Float64 = 20.0,
+        Sᴬ    :: Float64 = 35.0,
         Δpᵦₐᵣ :: Float64 = 0.0,
         )
 
@@ -130,6 +60,7 @@ struct DissociationCoefficients
 # Also need to convert from Absolute Pressure, Pᴬ, to Applied Pressure in bars, the pressure relative to (1x) atm
 
 # Use these to convert between different pH scales
+# JML: STILL NEED TO DO THIS
     H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ)
     H⁺ₜoverH⁺₃(Θᴷ, Sᵖ, Δpᵦₐᵣ)
     H⁺ₛoverH⁺₃(Θᴷ, Sᵖ, Δpᵦₐᵣ)
@@ -153,7 +84,11 @@ struct DissociationCoefficients
             Cᴴᶠₖ₁     = Fᴴᶠₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴᶠₖ₁),
             Cᴴˢᴼ⁴ₖ₁   = Fᴴˢᴼ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴˢᴼ⁴ₖ₁),
             Cᶜᵃˡᶜⁱᵗᵉₛₚ = Fᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᶜᵃˡᶜⁱᵗᵉₛₚ),
-            Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ)
+            Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ),
+            Cᴮᵀ         = Bᵀᴼᵀ(Sᵖ),
+            Cᶠᵀ         = Fᵀᴼᵀ(Sᵖ),
+            Cᶜᵃ         = Caᵀᴼᵀ(Sᵖ),
+            Cˢᴼ⁴        = SO₄ᵀᴼᵀ(Sᵖ),
     )
     end # end function
 end # end struct
@@ -200,7 +135,8 @@ H₂Oˢʷ(Sᵖ) =  1. - 0.001005*Sᵖ
     # References: Uppström (1974), cited by  Dickson et al. (2007, chapter 5, p 10)
     #             Millero (1982) cited in Millero (1995)
 """
-Bᵀᴼᵀ(Sᵖ)  =  0.000416*(Sᵖ/35.)
+Bᵀᴼᵀ(Sᵖ)  = 0.000416*(Sᵖ/35.)
+#Bᵀᴼᵀ(Sᵖ)  = 0.000232 * (Sᵖ/1.80655)/10.811
 
 @inline """
     Caᵀᴼᵀ(Sᵖ)
@@ -1553,16 +1489,196 @@ function ρᴹᵘⁿʰ⁹⁷(Θᴷ,Sᵖ,zₘ,Pᵨ₂ᴹᵘⁿʰ⁹⁷)
 end
 
 end # module DissociationConstants
-
 #------------------------------------------------------------
+module CarbonSystemApprox
+export CarbonSolverApprox
+
+using ..DissociationConstants
+using RootSolvers
+
+struct CarbonSolverApprox
+    "Temperature in degrees Celsius"
+    Θᶜ    :: Float64
+    "Absolute Salinity in g/kg"
+    Sᴬ    :: Float64
+    "Applied Pressure in bars"
+    Δpᵦₐᵣ :: Float64
+    "DIC concentration in mol C/kg"
+    Cᵀ     :: Float64
+    "Alkalinity in mol Eq/kg"
+    Aᵀ    :: Float64
+    "Atmospheric pCO₂ in atm"
+    pCO₂ᵃᵗᵐ :: Float64
+    """
+    CarbonSolverApprox(
+        FT            = Float64,
+        Θ       :: FT = 20.0,
+        Sᴬ      :: FT = 35.0,
+        Δpᵦₐᵣ   :: FT = 0.0,
+        Cᵀ      :: FT = 2050.0*1e-6,
+        Aᵀ      :: FT = 2350.0*1e-6,
+        pCO₂ᵃᵗᵐ :: FT = 280.0*1e-6,
+        )
+
+TBW
+"""
+function CarbonSolverApprox(
+        Θᶜ      :: Float64 = 20.0,
+        Sᴬ      :: Float64 = 35.0,
+        Δpᵦₐᵣ   :: Float64 = 0.0,
+        Cᵀ      :: Float64 = 2050.0*1e-6,
+        Aᵀ      :: Float64 = 2350.0*1e-6,
+        pCO₂ᵃᵗᵐ :: Float64 = 280.0*1e-6,
+        pH      :: Float64 = 8.0,
+        )
+
+        Cᶜᵒⁿˢᵗ = DissociationCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+
+        # Some logic here about choosing coefficient options, particularly Cᵈⁱᶜ 
+        Pᶜᵒⁿˢᵗ = (Cᵈⁱᶜₖ₀ = Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀,
+                  Cᵈⁱᶜₖ₁ = Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁ₘ₉₅,
+                  Cᵈⁱᶜₖ₂ = Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂ₘ₉₅,
+                  Cᵇₖ₁   = Cᶜᵒⁿˢᵗ.Cᵇₖ₁,
+                  Cᴴ²ᴼₖ₁ = Cᶜᵒⁿˢᵗ.Cᴴ²ᴼₖ₁,
+                  Cᴮᵀ    = Cᶜᵒⁿˢᵗ.Cᴮᵀ,
+        )
+        return Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ,Cᵀ,pH,Pᶜᵒⁿˢᵗ)
+    end # end function
+end # end struct
+
+@inline function Fᶜᵀ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ,pCO₂ᵃᵗᵐ,pH,Pᶜᵒⁿˢᵗ)
+    # Find the real roots of the polynomial   
+    sol = find_zero(  x -> (
+        ( # const
+         -2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+            pCO₂ᵃᵗᵐ
+            ) +  
+        x*( # H
+           -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+            pCO₂ᵃᵗᵐ-
+          2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+            pCO₂ᵃᵗᵐ
+            ) + 
+        x^2*( # H^2 
+            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+            Aᵀ-
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            pCO₂ᵃᵗᵐ-
+            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+            Pᶜᵒⁿˢᵗ.Cᴮᵀ) +            
+        x^3*Aᵀ),
+        NewtonsMethodAD{Float64}(10^-pH),
+        CompactSolution());
+    
+    if sol.converged == true
+        H = sol.root
+        # Update pH
+        pH = -log10(H)
+
+        CO₂ˢᵒˡ = Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*pCO₂ᵃᵗᵐ
+        HCO₃⁻  = (Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*CO₂ˢᵒˡ)/H
+        CO₃²⁻  = (Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*CO₂ˢᵒˡ)/(H*H)
+
+        return CO₂ˢᵒˡ + HCO₃⁻ + CO₃²⁻, pH
+    else
+        error("CarbonSolverApprox did not converge")
+        return NaN
+    end
+end
+
+@inline """
+    Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ,Cᵀ,pH,Pᶜᵒⁿˢᵗ)
+
+TBW
+"""
+function Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ,Cᵀ,pH,Pᶜᵒⁿˢᵗ)
+    # Find the real roots of the polynomial and iterate until convergence
+
+    sol = find_zero(  x -> (
+        ( # const
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+            Aᵀ+
+         -2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+            Cᵀ+
+           -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+            Pᶜᵒⁿˢᵗ.Cᴮᵀ
+            ) +
+        x*( # H 
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+            Aᵀ +
+         -2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+            Cᵀ+
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+            Aᵀ +
+           -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+            Cᵀ+
+           -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+           Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+           Pᶜᵒⁿˢᵗ.Cᴮᵀ
+           ) +  
+        x^2*( # H^2
+            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+            Aᵀ+
+            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            Aᵀ+
+           -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            Cᵀ+
+           -Pᶜᵒⁿˢᵗ.Cᵇₖ₁*Pᶜᵒⁿˢᵗ.Cᴮᵀ
+           ) +                           
+        x^3*Aᵀ),
+        NewtonsMethodAD{Float64}(10^-pH),
+        CompactSolution());
+
+    if sol.converged == true
+        H=sol.root
+        # Update pH
+        pH = -log10(H)
+        #H=H[H>0]
+
+        CO₂ˢᵒˡ = (H*H*Cᵀ)/(H*H+H*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁+Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂)
+        HCO₃⁻  = (Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*CO₂ˢᵒˡ)/H
+        CO₃²⁻  = (Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*CO₂ˢᵒˡ)/(H*H)
+        return CO₂ˢᵒˡ/Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀, pH
+    else
+        error("CarbonSolverApprox did not converge")
+        return NaN
+    end
+end
+
+end # module CarbonSolverApprox
+# ------------------------------------------------------------
+
 using .CarbonSystemApprox
 using .DissociationConstants
 
-Θᶜ    = 4.0
-Sᴬ    = 34.5
-Δpᵦₐᵣ = 0.0
+## This should go in the testing suite, eventually.
+Θᶜ      = 20.0
+Sᴬ      = 35.0
+Δpᵦₐᵣ   = 0.0
+Cᵀ      = 2050.0*1e-6 # umol/kg to mol/kg
+Aᵀ      = 2350.0*1e-6 # umol/kg to mol/kg
+pCO₂ᵃᵗᵐ = 280.0*1e-6  # uatm to atm
+pH      = 8.0
 
-Cᶜᵒⁿˢᵗ = DissociationCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+Cᶜᵒⁿˢᵗ = DissociationCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ);
 
 #Check the values of calculated constants
 print("Cᵈⁱᶜₖ₀ = ",       Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀,     "\n")
@@ -1585,5 +1701,17 @@ print("Cᴴᶠₖ₁ = ",        Cᶜᵒⁿˢᵗ.Cᴴᶠₖ₁,      "\n")
 print("Cᴴˢᴼ⁴ₖ₁ = ",      Cᶜᵒⁿˢᵗ.Cᴴˢᴼ⁴ₖ₁,    "\n")
 print("Cᶜᵃˡᶜⁱᵗᵉₛₚ = ",   Cᶜᵒⁿˢᵗ.Cᶜᵃˡᶜⁱᵗᵉₛₚ,  "\n")
 print("Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = ", Cᶜᵒⁿˢᵗ.Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ,"\n")
+print("Cᴮᵀ = " ,        Cᶜᵒⁿˢᵗ.Cᴮᵀ,        "\n")
+print("Cᶠᵀ = " ,        Cᶜᵒⁿˢᵗ.Cᶠᵀ,        "\n")
+print("Cᶜᵃ = ",         Cᶜᵒⁿˢᵗ.Cᶜᵃ,        "\n")
+print("Cˢᴼ⁴ = ",        Cᶜᵒⁿˢᵗ.Cˢᴼ⁴,       "\n")
+
+pCO₂, pH = CarbonSolverApprox(
+        Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, pH, pCO₂ᵃᵗᵐ,
+        )
+print("Cᵀ = ", Cᵀ*1e6, "\n")
+print("Aᵀ = ", Aᵀ*1e6, "\n")
+print("pH = "  , pH,       "\n")
+print("pCO₂ = ", pCO₂*1e6, "\n")
 
 end # module CarbonSolver
