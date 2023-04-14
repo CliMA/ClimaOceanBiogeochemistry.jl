@@ -1525,16 +1525,17 @@ function CarbonSolverApprox(
         Δpᵦₐᵣ   :: Float64 = 0.0,
         Cᵀ      :: Float64 = 2050.0e-6,
         Aᵀ      :: Float64 = 2350.0e-6,
-        pCO₂ᵃᵗᵐ :: Float64 = 280.0e-6,
         pH      :: Float64 = 8.0,
+        pCO₂ᵃᵗᵐ :: Float64 = 280.0e-6,
         )
 
+        # DissociationCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
         Cᶜᵒⁿˢᵗ = DissociationCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
 
         # Some logic here about choosing coefficient options, particularly Cᵈⁱᶜ 
         Pᶜᵒⁿˢᵗ = (Cᵈⁱᶜₖ₀ = Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀,
-                  Cᵈⁱᶜₖ₁ = Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁ₘ₉₅,
-                  Cᵈⁱᶜₖ₂ = Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂ₘ₉₅,
+                  Cᵈⁱᶜₖ₁ = Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁ₗ₀₀,
+                  Cᵈⁱᶜₖ₂ = Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂ₗ₀₀,
                   Cᵇₖ₁   = Cᶜᵒⁿˢᵗ.Cᵇₖ₁,
                   Cᴴ²ᴼₖ₁ = Cᶜᵒⁿˢᵗ.Cᴴ²ᴼₖ₁,
                   Cᴮᵀ    = Cᶜᵒⁿˢᵗ.Cᴮᵀ,
@@ -1549,35 +1550,37 @@ end # end struct
     Solve for DIC given total Alkalinity and atmosphere pCO₂
 """
 function Fᶜᵀ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ,pCO₂ᵃᵗᵐ,pH,Pᶜᵒⁿˢᵗ)
-    # Find the real roots of the polynomial   
+    # Find the real roots of the polynomial using RootSolvers.jl 
     sol = find_zero(  x -> (
-        ( # const
-         -2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
-            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
-            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-            pCO₂ᵃᵗᵐ
-            ) +  
-        x*( # H
-           -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
-            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-            pCO₂ᵃᵗᵐ-
-          2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
-            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
-            pCO₂ᵃᵗᵐ
-            ) + 
-        x^2*( # H^2 
-            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-            Aᵀ-
-            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
-            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-            pCO₂ᵃᵗᵐ-
-            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-            Pᶜᵒⁿˢᵗ.Cᴮᵀ) +            
-        x^3*Aᵀ),
-        NewtonsMethodAD{Float64}(10^-pH),
+        x^3*(Aᵀ) +
+        x^2*(
+             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             Aᵀ-
+             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
+             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             pCO₂ᵃᵗᵐ-
+             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᴮᵀ) + 
+        x^1*(
+            -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
+             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             pCO₂ᵃᵗᵐ-
+           2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
+             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+             pCO₂ᵃᵗᵐ
+             ) +
+        X^0*(
+          -2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
+             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             pCO₂ᵃᵗᵐ
+             )        
+        ),
+        #NewtonsMethodAD{Float64}(10^-pH),
+        SecantMethod{Float64}(10^-(pH+1.0), 10^-(pH-1.0)),
         CompactSolution());
     
     if sol.converged == true
@@ -1602,59 +1605,60 @@ end
     Solve for pCO₂ given total Alkalinity and DIC
 """
 function Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ,Cᵀ,pH,Pᶜᵒⁿˢᵗ)
-    # Find the real roots of the polynomial and iterate until convergence
-
+    # Find the real roots of the polynomial using RootSolvers.jl
     sol = find_zero(  x -> (
-        ( # const
-            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
-            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-            Aᵀ
-         -2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
-            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-            Cᵀ
-           -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
-            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-            Pᶜᵒⁿˢᵗ.Cᴮᵀ
+        x^3*(Aᵀ) +
+        x^2*(
+             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             Aᵀ
+            +Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             Aᵀ
+            -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             Cᵀ+
+            -Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᴮᵀ
+            ) + 
+        x^1*(
+             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+             Aᵀ
+          -2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+             Cᵀ
+            +Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             Aᵀ 
+            -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             Cᵀ+
+            -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᴮᵀ
             ) +
-        x*( # H 
-            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
-            Aᵀ
-         -2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-            Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
-            Cᵀ
-           +Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-            Aᵀ 
-           -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-            Cᵀ+
-          -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-           Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-           Pᶜᵒⁿˢᵗ.Cᴮᵀ
-           ) +  
-        x^2*( # H^2
-            Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-            Aᵀ
-           +Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-            Aᵀ
-           -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-            Cᵀ+
-           -Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-           Pᶜᵒⁿˢᵗ.Cᴮᵀ
-           ) +                           
-        x^3*Aᵀ),
+        x^0*( 
+             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             Aᵀ
+          -2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             Cᵀ
+            -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             Pᶜᵒⁿˢᵗ.Cᴮᵀ
+            )                       
+        ),
         NewtonsMethodAD{Float64}(10^-pH),
+        #SecantMethod{Float64}(10^-(pH+1.0), 10^-(pH-1.0)),
         CompactSolution());
 
     if sol.converged == true
         H=sol.root
+
         # Update pH
         pH = -log10(H)
-        #H=H[H>0]
 
         CO₂ˢᵒˡ = (H*H*Cᵀ)/(H*H+H*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁+Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂)
         HCO₃⁻  = (Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*CO₂ˢᵒˡ)/H
@@ -1740,6 +1744,7 @@ pCO₂, pH = CarbonSolverApprox(
 println("Cᵀ = ", Cᵀ*1e6    )
 println("Aᵀ = ", Aᵀ*1e6    )
 println("pH = "  , pH      )
+println("pCO₂ᵃᵗᵐ = ", pCO₂ᵃᵗᵐ*1e6)
 println("pCO₂ = ", pCO₂*1e6)
 
 end # module CarbonSolver
