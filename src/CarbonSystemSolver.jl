@@ -43,11 +43,11 @@ struct DissociationCoefficients
     Δpᵦₐᵣ :: Float64
     function DissociationCoefficients(
 #        FT          = Float64,
-#        Θ     :: FT = 20.0,
+#        Θ     :: FT = 25.0,
 #        Sᴬ    :: FT = 35.0,
 #        Δpᵦₐᵣ :: FT = 0.0,
 #        FT          = Float64,
-        Θᶜ    :: Float64 = 20.0,
+        Θᶜ    :: Float64 = 25.0,
         Sᴬ    :: Float64 = 35.0,
         Δpᵦₐᵣ :: Float64 = 0.0,
         )
@@ -58,12 +58,6 @@ struct DissociationCoefficients
 # What about converting temperature from Conservative Temperature to potential temperature?
     Θᴷ = Θᶜ + Θᴷ_0ᵒC
 # Also need to convert from Absolute Pressure, Pᴬ, to Applied Pressure in bars, the pressure relative to (1x) atm
-
-# Use these to convert between different pH scales
-# JML: STILL NEED TO DO THIS
-    H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ)
-    H⁺ₜoverH⁺₃(Θᴷ, Sᵖ, Δpᵦₐᵣ)
-    H⁺ₛoverH⁺₃(Θᴷ, Sᵖ, Δpᵦₐᵣ)
 
     return (Cᵈⁱᶜₖ₀    = Fᵈⁱᶜₖ₀(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀),
             Cᵈⁱᶜₖ₁ᵣ₉₃ = Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₁ᵣ₉₃),
@@ -82,13 +76,16 @@ struct DissociationCoefficients
             Cᴺᴴ⁴ₖ₁    = Fᴺᴴ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴺᴴ⁴ₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
             Cᴴᶠᵦ₁     = Fᴴᶠᵦ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴᶠᵦ₁),
             Cᴴᶠₖ₁     = Fᴴᶠₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴᶠₖ₁),
-            Cᴴˢᴼ⁴ₖ₁   = Fᴴˢᴼ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴˢᴼ⁴ₖ₁)*H⁺ₜoverH⁺₃(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+            Cᴴˢᴼ⁴ₖ₁   = Fᴴˢᴼ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴˢᴼ⁴ₖ₁),
             Cᶜᵃˡᶜⁱᵗᵉₛₚ = Fᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᶜᵃˡᶜⁱᵗᵉₛₚ),
             Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ),
             Cᴮᵀ         = Bᵀᴼᵀ(Sᵖ),
             Cᶠᵀ         = Fᵀᴼᵀ(Sᵖ),
             Cᶜᵃ         = Caᵀᴼᵀ(Sᵖ),
             Cˢᴼ⁴        = SO₄ᵀᴼᵀ(Sᵖ),
+            CH⁺ₛoverH⁺ₜ  = H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+            CH⁺ₜoverH⁺₃ = H⁺ₜoverH⁺₃(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+            CH⁺ₛoverH⁺₃ = H⁺ₛoverH⁺₃(Θᴷ, Sᵖ, Δpᵦₐᵣ),
     )
     end # end function
 end # end struct
@@ -1512,7 +1509,7 @@ struct CarbonSolverApprox
     """
     CarbonSolverApprox(
         FT            = Float64,
-        Θ       :: FT = 20.0,
+        Θ       :: FT = 25.0,
         Sᴬ      :: FT = 35.0,
         Δpᵦₐᵣ   :: FT = 0.0,
         Cᵀ      :: FT = 2050.0e-6,
@@ -1523,7 +1520,7 @@ struct CarbonSolverApprox
 TBW
 """
 function CarbonSolverApprox(
-        Θᶜ      :: Float64 = 20.0,
+        Θᶜ      :: Float64 = 25.0,
         Sᴬ      :: Float64 = 35.0,
         Δpᵦₐᵣ   :: Float64 = 0.0,
         Cᵀ      :: Float64 = 2050.0e-6,
@@ -1676,7 +1673,7 @@ using .CarbonSystemApprox
 using .DissociationConstants
 
 ## This should go in the testing suite, eventually.
-Θᶜ      = 20.0
+Θᶜ      = 25.0
 Sᴬ      = 35.0
 Δpᵦₐᵣ   = 0.0
 Cᵀ      = 2050.0*1e-6 # umol/kg to mol/kg
@@ -1687,37 +1684,62 @@ pH      = 8.0
 Cᶜᵒⁿˢᵗ = DissociationCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ);
 
 #Check the values of calculated constants
-print("Cᵈⁱᶜₖ₀ = ",       Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀,     "\n")
-print("Cᵈⁱᶜₖ₁ᵣ₉₃ = ",    Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁ᵣ₉₃,  "\n")
-print("Cᵈⁱᶜₖ₂ᵣ₉₃ = ",    Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂ᵣ₉₃,  "\n")
-print("Cᵈⁱᶜₖ₁ₘ₉₅ = ",    Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁ₘ₉₅,  "\n")
-print("Cᵈⁱᶜₖ₂ₘ₉₅ = ",    Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂ₘ₉₅,  "\n")
-print("Cᵈⁱᶜₖ₁ₗ₀₀ = ",     Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁ₗ₀₀,  "\n")
-print("Cᵈⁱᶜₖ₂ₗ₀₀ = ",     Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂ₗ₀₀,  "\n")
-print("Cᵇₖ₁ = ",         Cᶜᵒⁿˢᵗ.Cᵇₖ₁,       "\n")
-print("Cᴴ²ᴼₖ₁ = ",       Cᶜᵒⁿˢᵗ.Cᴴ²ᴼₖ₁,     "\n")
-print("Cᴾᴼ⁴ₖ₁ = ",       Cᶜᵒⁿˢᵗ.Cᴾᴼ⁴ₖ₁,     "\n")
-print("Cᴾᴼ⁴ₖ₂ = ",       Cᶜᵒⁿˢᵗ.Cᴾᴼ⁴ₖ₂,     "\n")
-print("Cᴾᴼ⁴ₖ₃ = ",       Cᶜᵒⁿˢᵗ.Cᴾᴼ⁴ₖ₃,     "\n")
-print("Cˢⁱᵗₖ₁ = ",       Cᶜᵒⁿˢᵗ.Cˢⁱᵗₖ₁,     "\n")
-print("Cᴴ²ˢₖ₁ = ",       Cᶜᵒⁿˢᵗ.Cᴴ²ˢₖ₁,     "\n")
-print("Cᴺᴴ⁴ₖ₁ = ",       Cᶜᵒⁿˢᵗ.Cᴺᴴ⁴ₖ₁,     "\n")
-print("Cᴴᶠᵦ₁ = ",        Cᶜᵒⁿˢᵗ.Cᴴᶠᵦ₁,     "\n")
-print("Cᴴᶠₖ₁ = ",        Cᶜᵒⁿˢᵗ.Cᴴᶠₖ₁,      "\n")
-print("Cᴴˢᴼ⁴ₖ₁ = ",      Cᶜᵒⁿˢᵗ.Cᴴˢᴼ⁴ₖ₁,    "\n")
-print("Cᶜᵃˡᶜⁱᵗᵉₛₚ = ",   Cᶜᵒⁿˢᵗ.Cᶜᵃˡᶜⁱᵗᵉₛₚ,  "\n")
-print("Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = ", Cᶜᵒⁿˢᵗ.Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ,"\n")
-print("Cᴮᵀ = " ,        Cᶜᵒⁿˢᵗ.Cᴮᵀ,        "\n")
-print("Cᶠᵀ = " ,        Cᶜᵒⁿˢᵗ.Cᶠᵀ,        "\n")
-print("Cᶜᵃ = ",         Cᶜᵒⁿˢᵗ.Cᶜᵃ,        "\n")
-print("Cˢᴼ⁴ = ",        Cᶜᵒⁿˢᵗ.Cˢᴼ⁴,       "\n")
+println("Cᵈⁱᶜₖ₀ = ",       Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀     )
+println("Cᵈⁱᶜₖ₁ᵣ₉₃ = ",    Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁ᵣ₉₃  )
+println("Cᵈⁱᶜₖ₂ᵣ₉₃ = ",    Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂ᵣ₉₃  )
+println("Cᵈⁱᶜₖ₁ₘ₉₅ = ",    Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁ₘ₉₅  )
+println("Cᵈⁱᶜₖ₂ₘ₉₅ = ",    Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂ₘ₉₅  )
+println("Cᵈⁱᶜₖ₁ₗ₀₀ = ",     Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁ₗ₀₀  )
+println("Cᵈⁱᶜₖ₂ₗ₀₀ = ",     Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂ₗ₀₀  )
+println("Cᵇₖ₁ = ",         Cᶜᵒⁿˢᵗ.Cᵇₖ₁       )
+println("Cᴴ²ᴼₖ₁ = ",       Cᶜᵒⁿˢᵗ.Cᴴ²ᴼₖ₁     )
+println("Cᴾᴼ⁴ₖ₁ = ",       Cᶜᵒⁿˢᵗ.Cᴾᴼ⁴ₖ₁     )
+println("Cᴾᴼ⁴ₖ₂ = ",       Cᶜᵒⁿˢᵗ.Cᴾᴼ⁴ₖ₂     )
+println("Cᴾᴼ⁴ₖ₃ = ",       Cᶜᵒⁿˢᵗ.Cᴾᴼ⁴ₖ₃     )
+println("Cˢⁱᵗₖ₁ = ",       Cᶜᵒⁿˢᵗ.Cˢⁱᵗₖ₁     )
+println("Cᴴ²ˢₖ₁ = ",       Cᶜᵒⁿˢᵗ.Cᴴ²ˢₖ₁     )
+println("Cᴺᴴ⁴ₖ₁ = ",       Cᶜᵒⁿˢᵗ.Cᴺᴴ⁴ₖ₁     )
+println("Cᴴᶠᵦ₁ = ",        Cᶜᵒⁿˢᵗ.Cᴴᶠᵦ₁     )
+println("Cᴴᶠₖ₁ = ",        Cᶜᵒⁿˢᵗ.Cᴴᶠₖ₁      )
+println("Cᴴˢᴼ⁴ₖ₁ = ",      Cᶜᵒⁿˢᵗ.Cᴴˢᴼ⁴ₖ₁    )
+println("Cᶜᵃˡᶜⁱᵗᵉₛₚ = ",   Cᶜᵒⁿˢᵗ.Cᶜᵃˡᶜⁱᵗᵉₛₚ  )
+println("Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = ", Cᶜᵒⁿˢᵗ.Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ)
+println("Cᴮᵀ = " ,        Cᶜᵒⁿˢᵗ.Cᴮᵀ         )
+println("Cᶠᵀ = " ,        Cᶜᵒⁿˢᵗ.Cᶠᵀ         )
+println("Cᶜᵃ = ",         Cᶜᵒⁿˢᵗ.Cᶜᵃ         )
+println("Cˢᴼ⁴ = ",        Cᶜᵒⁿˢᵗ.Cˢᴼ⁴        )
+
+@assert round(log(Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀), digits = 4)     == -3.5617 # Handbook (2007)
+@assert round(log(Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁ᵣ₉₃), digits = 4)  == -13.4847 # Handbook (1994)
+@assert round(log(Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂ᵣ₉₃), digits = 4)  == -20.5504 # Handbook (1994)
+#@assert Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁ₘ₉₅  ==
+#@assert Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂ₘ₉₅  ==
+@assert round(log10(Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁ₗ₀₀), digits = 4)   == -5.8472 # Handbook (2007)
+@assert round(log10(Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂ₗ₀₀), digits = 4)   == -8.9660 # Handbook (2007)
+@assert round(log(Cᶜᵒⁿˢᵗ.Cᵇₖ₁), digits = 4)       == -19.7964 # Handbook (2007)
+@assert round(log(Cᶜᵒⁿˢᵗ.Cᴴ²ᴼₖ₁*Cᶜᵒⁿˢᵗ.CH⁺ₛoverH⁺ₜ)-0.015, digits = 3)     == -30.434 # Handbook (2007)
+@assert round(log(Cᶜᵒⁿˢᵗ.Cᴾᴼ⁴ₖ₁*Cᶜᵒⁿˢᵗ.CH⁺ₛoverH⁺ₜ)-0.015, digits = 2)     == -3.71 # Handbook (2007)
+@assert round(log(Cᶜᵒⁿˢᵗ.Cᴾᴼ⁴ₖ₂*Cᶜᵒⁿˢᵗ.CH⁺ₛoverH⁺ₜ)-0.015, digits = 3)     == -13.727 # Handbook (2007)
+@assert round(log(Cᶜᵒⁿˢᵗ.Cᴾᴼ⁴ₖ₃*Cᶜᵒⁿˢᵗ.CH⁺ₛoverH⁺ₜ)-0.015, digits = 2)     == -20.24 # Handbook (2007)
+@assert round(log(Cᶜᵒⁿˢᵗ.Cˢⁱᵗₖ₁*Cᶜᵒⁿˢᵗ.CH⁺ₛoverH⁺ₜ)-0.015, digits = 2)     == -21.61 # Handbook (2007)
+@assert round(-log10(Cᶜᵒⁿˢᵗ.Cᴴ²ˢₖ₁*Cᶜᵒⁿˢᵗ.CH⁺ₛoverH⁺ₜ), digits = 2)     == 6.51 # Lewis and Wallace (1998)
+@assert eound(-log10(Cᶜᵒⁿˢᵗ.Cᴺᴴ⁴ₖ₁*Cᶜᵒⁿˢᵗ.CH⁺ₛoverH⁺ₜ), digits = 2)     == 9.26 # Lewis and Wallace (1998)
+#@assert Cᶜᵒⁿˢᵗ.Cᴴᶠᵦ₁      ==
+@assert round(log(Cᶜᵒⁿˢᵗ.Cᴴᶠₖ₁), digits = 2)       == -6.09 # Handbook (2007)
+@assert round(log(Cᶜᵒⁿˢᵗ.Cᴴˢᴼ⁴ₖ₁), digits = 2)     == -2.30 # Handbook (2007)
+#@assert Cᶜᵒⁿˢᵗ.Cᶜᵃˡᶜⁱᵗᵉₛₚ  ==
+#@assert Cᶜᵒⁿˢᵗ.Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ==
+#@assert Cᶜᵒⁿˢᵗ.Cᴮᵀ        ==
+#@assert Cᶜᵒⁿˢᵗ.Cᶠᵀ        ==
+#@assert Cᶜᵒⁿˢᵗ.Cᶜᵃ        ==
+#@assert Cᶜᵒⁿˢᵗ.Cˢᴼ⁴       ==
 
 pCO₂, pH = CarbonSolverApprox(
         Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, pH, pCO₂ᵃᵗᵐ,
         )
-print("Cᵀ = ", Cᵀ*1e6, "\n")
-print("Aᵀ = ", Aᵀ*1e6, "\n")
-print("pH = "  , pH,       "\n")
-print("pCO₂ = ", pCO₂*1e6, "\n")
+println("Cᵀ = ", Cᵀ*1e6    )
+println("Aᵀ = ", Aᵀ*1e6    )
+println("pH = "  , pH      )
+println("pCO₂ = ", pCO₂*1e6)
 
 end # module CarbonSolver
