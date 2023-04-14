@@ -541,11 +541,11 @@ end
 ##AK_CARB_2_LUEK00 <- function (Θᴷ, s, p_bar)
 ##=======================================================================
 const Pᵈⁱᶜₖ₂ₗ₀₀ = (
-    a₀ =-25.9290,
-    a₁ = - 5357.11,
-    a₂ = 3.16967,
-    b₀ = 0.01781,
-    b₁ = 0.0001122,
+    a₀ = -  25.9290,
+    a₁ = - 471.78,
+    a₂ =     3.16967,
+    b₀ =     0.01781,
+    b₁ = -   0.0001122,
     v₀ = -  15.82,
     v₁ =     0.321,
     v₂ = -   0.0219,
@@ -1723,7 +1723,7 @@ println("Cˢᴼ⁴ = ",        Cᶜᵒⁿˢᵗ.Cˢᴼ⁴        )
 @assert round(log(Cᶜᵒⁿˢᵗ.Cᴾᴼ⁴ₖ₃*Cᶜᵒⁿˢᵗ.CH⁺ₛoverH⁺ₜ)-0.015, digits = 2)     == -20.24 # Handbook (2007)
 @assert round(log(Cᶜᵒⁿˢᵗ.Cˢⁱᵗₖ₁*Cᶜᵒⁿˢᵗ.CH⁺ₛoverH⁺ₜ)-0.015, digits = 2)     == -21.61 # Handbook (2007)
 @assert round(-log10(Cᶜᵒⁿˢᵗ.Cᴴ²ˢₖ₁*Cᶜᵒⁿˢᵗ.CH⁺ₛoverH⁺ₜ), digits = 2)     == 6.51 # Lewis and Wallace (1998)
-@assert eound(-log10(Cᶜᵒⁿˢᵗ.Cᴺᴴ⁴ₖ₁*Cᶜᵒⁿˢᵗ.CH⁺ₛoverH⁺ₜ), digits = 2)     == 9.26 # Lewis and Wallace (1998)
+@assert round(-log10(Cᶜᵒⁿˢᵗ.Cᴺᴴ⁴ₖ₁*Cᶜᵒⁿˢᵗ.CH⁺ₛoverH⁺ₜ), digits = 2)     == 9.26 # Lewis and Wallace (1998)
 #@assert Cᶜᵒⁿˢᵗ.Cᴴᶠᵦ₁      ==
 @assert round(log(Cᶜᵒⁿˢᵗ.Cᴴᶠₖ₁), digits = 2)       == -6.09 # Handbook (2007)
 @assert round(log(Cᶜᵒⁿˢᵗ.Cᴴˢᴼ⁴ₖ₁), digits = 2)     == -2.30 # Handbook (2007)
