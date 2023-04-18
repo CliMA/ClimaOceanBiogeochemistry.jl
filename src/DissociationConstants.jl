@@ -1247,7 +1247,7 @@ Returns the ratio H_SWS/H_Tot as a function of salinity, `Sᵖ`.
 Reference:  Munhoven
 pH scale:   all
 """
-function H⁺ₛoverH⁺ₜ(Sᵖ,Δpᵦₐᵣ)
+function H⁺ₛoverH⁺ₜ(Θᴷ,Sᵖ,Δpᵦₐᵣ)
     (1. +  
             (Fᵀᴼᵀ(Sᵖ)*Fᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁))
            /(1. + SO₄ᵀᴼᵀ(Sᵖ)/Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁))
