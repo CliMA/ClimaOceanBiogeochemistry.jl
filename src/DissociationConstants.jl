@@ -1,25 +1,12 @@
 module DissociationConstants
-"""
-   Copyright  2013, 2014, 2020, 2021 Guy Munhoven
-   This file is part of SolveSAPHE v. 2
-   SolveSAPHE is free software: you can redistribute it and/or modify
-   it under the terms of the GNU Lesser General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-   SolveSAPHE is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU Lesser General Public License for more details.
-   You should have received a copy of the GNU Lesser General Public License
-   along with SolveSAPHE.  If not, see <http://www.gnu.org/licenses/>.
-"""
+
 export DissociationCoefficients
 
 struct DissociationCoefficients
 #    {FT}
     """
     DissociationCoefficients(FT=Float64)
-    Function to calculate dissociation coefficients of the carbon system.
+    Returns dissociation coefficients necessary to solve for the distribution of carbonate species.
     """
 #    FT    :: Float64
 #    "Temperature in degrees Celsius"
@@ -198,9 +185,6 @@ References: Dickson (1990)
 """
 H₂Sᵀᴼᵀ(Sᵖ) = (0.0001/34.082) * (Sᵖ/1.80655)
 
-##=======================================================================
-## AK_CARB_0_WEIS74 <- function (Θᴷ, s)
-##=======================================================================
 const Pᵈⁱᶜₖ₀ = (
     a₀ = -60.2409,
     a₁ =  93.4517,
@@ -1279,6 +1263,19 @@ function H⁺ₛoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
             (SO₄ᵀᴼᵀ(Sᵖ)/Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁))
          )
 end
-
+"""
+   Copyright  2013, 2014, 2020, 2021 Guy Munhoven
+   This file is part of SolveSAPHE v. 2
+   SolveSAPHE is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+   SolveSAPHE is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU Lesser General Public License for more details.
+   You should have received a copy of the GNU Lesser General Public License
+   along with SolveSAPHE.  If not, see <http://www.gnu.org/licenses/>.
+"""
 end # module DissociationConstants
 #------------------------------------------------------------

@@ -3,7 +3,7 @@ module CarbonSystemSolver
 module CarbonSystemApprox
 export CarbonSolverApprox
 
-using ..DissociationConstants
+using DissociationConstants
 using RootSolvers
 
 struct CarbonSolverApprox
@@ -187,7 +187,7 @@ end # module CarbonSolverApprox
 # ------------------------------------------------------------
 
 using .CarbonSystemApprox
-using .DissociationConstants
+using DissociationConstants
 
 ## This should go in the testing suite, eventually.
 Θᶜ      = 25.0
