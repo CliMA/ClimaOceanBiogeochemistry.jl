@@ -1,4 +1,18 @@
 module DissociationConstants
+"""
+   Copyright  2013, 2014, 2020, 2021 Guy Munhoven
+   This file is part of SolveSAPHE v. 2
+   SolveSAPHE is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+   SolveSAPHE is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU Lesser General Public License for more details.
+   You should have received a copy of the GNU Lesser General Public License
+   along with SolveSAPHE.  If not, see <http://www.gnu.org/licenses/>.
+"""
 export DissociationCoefficients
 
 struct DissociationCoefficients
@@ -81,94 +95,106 @@ const Θᴷ_0ᵒC = 273.15 # Handbook (2007)
 @inline ΔSᵖ(Sᵖ)   = Sᵖ - 34.8
 @inline Rₜ(Θᴷ)     = gasconst_bar_cm3_o_mol_k * Θᴷ
 
-@inline """
-    H₂Oˢʷ(Sᵖ)
+@inline 
+"""
+H₂Oˢʷ(Sᵖ)
 
-    # Function returns the mass of pure water in one kg of seawater
-    # of salinity s
-    # References: "libthdyct" -- derived by Munhoven (1997) from data by Millero (1982)
-    #             "Handbook (2007)" -- Handbook (2007)
-    # pH scale:   N/A
+Return the mass of pure water in one kg of seawater
+of practical salinity, `Sᵖ`.
+References: "libthdyct" -- derived by Munhoven (1997) from data by Millero (1982)
+            "Handbook (2007)" -- Handbook (2007)
+pH scale:   N/A
 """
 H₂Oˢʷ(Sᵖ) =  1. - 0.001005*Sᵖ 
 #H₂Oˢʷ(Sᵖ) = 1. - 0.0010049*Sᵖ # libthdyct
 
-@inline """
-    μₛ(Sᵖ)
+@inline 
+"""
+μₛ(Sᵖ)
 
-    # Function calculates ionic strength in mol/kg-SW, for given salinity.
-    # References: "libthdyct" -- derived by Munhoven (1997) from data by Millero (1982)
-    #             "Handbook (2007)" -- Handbook (2007)
-    # pH scale:   N/A
+Return ionic strength in mol/kg-SW, for given practical salinity, `Sᵖ`.
+References: "libthdyct" -- derived by Munhoven (1997) from data by Millero (1982)
+            "Handbook (2007)" -- Handbook (2007)
+pH scale:   N/A
 """
 μₛ(Sᵖ)    = (0.019924 * Sᵖ) / H₂Oˢʷ(Sᵖ) # Handbook (2007)
 # μₛ(Sᵖ)    = (0.019920 * Sᵖ) / H₂Oˢʷ(Sᵖ)# libthdyct
 
-@inline """
-    Bᵀᴼᵀ(Sᵖ)
+@inline 
+"""
+Bᵀᴼᵀ(Sᵖ)
 
-    # Total borate concentration in mol/kg-SW given the salinity of a sample
-    # References: Uppström (1974), cited by  Dickson et al. (2007, chapter 5, p 10)
-    #             Millero (1982) cited in Millero (1995)
+Return total borate concentration in mol/kg-SW given practical salinity, `Sᵖ`.
+References: Uppström (1974), cited by  Dickson et al. (2007, chapter 5, p 10)
+            Millero (1982) cited in Millero (1995)
 """
 Bᵀᴼᵀ(Sᵖ)  = 0.000416*(Sᵖ/35.)
 #Bᵀᴼᵀ(Sᵖ)  = 0.000232 * (Sᵖ/1.80655)/10.811
 
-@inline """
-    Caᵀᴼᵀ(Sᵖ)
+@inline
+"""
+Caᵀᴼᵀ(Sᵖ)
 
-    # Total calcium concentration in mol/kg-SW given the salinity of a sample
-    # References: Culkin and Cox (1966), Culkin (1967), Riley and Tongudai (1967)    
+Return calcium concentration in mol/kg-SW given practical salinity, `Sᵖ`.
+References: Culkin and Cox (1966), 
+            Culkin (1967), 
+            Riley and Tongudai (1967)    
 """
 Caᵀᴼᵀ(Sᵖ) = (0.02127/40.078) * (Sᵖ/1.80655)
 # Caᵀᴼᵀ(Sᵖ) = 0.010282*(Sᵖ/35.)
 
-@inline """
-    Fᵀᴼᵀ(Sᵖ)
+@inline
+"""
+Fᵀᴼᵀ(Sᵖ)
 
-    # Total fluoride concentration in mol/kg-SW given the salinity of a sample
-    # References: Culkin (1965) (???)
+Return total fluoride concentration in mol/kg-SW given practical salinity, `Sᵖ`.
+References: Culkin (1965) (???)
 """
 Fᵀᴼᵀ(Sᵖ)  = 0.000068*(Sᵖ/35.)
 
-@inline """
-    SO₄ᵀᴼᵀ(Sᵖ)
+@inline
+"""
+SO₄ᵀᴼᵀ(Sᵖ)
 
-    # Total sulfate concentration in mol/kg-SW given the salinity of a sample
-    # References: Morris, A.W. and Riley, J.P. (1966) quoted in Handbook (2007)
+Return total sulfate concentration in mol/kg-SW given practical salinity, `Sᵖ`.
+References: Morris, A.W. and Riley, J.P. (1966) quoted in Handbook (2007)
 """
 SO₄ᵀᴼᵀ(Sᵖ) = (0.1400/96.062)*(Sᵖ/1.80655)
 #SO₄ᵀᴼᵀ(Sᵖ) = 0.028234*(Sᵖ/35.)
 
-@inline """
-    NH₄ᵀᴼᵀ(Sᵖ)
+@inline
+"""
+NH₄ᵀᴼᵀ(Sᵖ)
 
-    # Total ammonium concentration in mol/kg-SW given the salinity of a sample
-    # References: Yamamoto (1995)
+Return total ammonium concentration in mol/kg-SW given practical salinity, `Sᵖ`.
+References: Yamamoto (1995)
 """
 NH₄ᵀᴼᵀ(Sᵖ) = (0.0001/17.031) * (Sᵖ/1.80655)
 
-@inline """
-    PO₄ᵀᴼᵀ(Sᵖ)
+@inline
+"""
+PO₄ᵀᴼᵀ(Sᵖ)
 
-    # Total phosphate concentration in mol/kg-SW given the salinity of a sample
-    # References: Millero (1995)
+Return total phosphate concentration in mol/kg-SW given practical salinity, `Sᵖ`.
+References: Millero (1995)
 """
 PO₄ᵀᴼᵀ(Sᵖ) = (0.0001/94.971) * (Sᵖ/1.80655)
 
-@inline """
-    SiO₃ᵀᴼᵀ(Sᵖ)
+@inline
+"""
+SiO₃ᵀᴼᵀ(Sᵖ)
 
-    # Total silicate concentration in mol/kg-SW given the salinity of a sample
-    # References: Millero (1995)
+Return total silicate concentration in mol/kg-SW given practical salinity, `Sᵖ`.
+References: Millero (1995)
 """
 SiO₃ᵀᴼᵀ(Sᵖ) = (0.0001/60.084) * (Sᵖ/1.80655)
 
-@inline """
-    H₂Sᵀᴼᵀ(Sᵖ)
+@inline
+"""
+H₂Sᵀᴼᵀ(Sᵖ)
 
-    # Total hydrogen sulfide concentration in mol/kg-SW given the salinity of a sample
-    # References: Dickson (1990)
+Return total hydrogen sulfide concentration in mol/kg-SW given practical salinity, `Sᵖ`.
+References: Dickson (1990)
 """
 H₂Sᵀᴼᵀ(Sᵖ) = (0.0001/34.082) * (Sᵖ/1.80655)
 
@@ -184,18 +210,18 @@ const Pᵈⁱᶜₖ₀ = (
     b₂ =   0.0047036,
 )
 
-@inline """
-    Cᵈⁱᶜₖ₀(Θᴷ,Sᵖ,Pᵈⁱᶜₖ₀)
+@inline
+"""
+Cᵈⁱᶜₖ₀(Θᴷ,Sᵖ,Pᵈⁱᶜₖ₀)
 
-    # Function calculates K0 in (mol/kg-SW)/atmosphere
-    # References: Weiss (1979) [(mol/kg-SW)/atm]
-    # pH scale  : N/A
-    # Note      : currently no pressure correction
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
+Return hydration constant of CO₂ in (mol/kg-SW)/atm given temperature 
+in K, `Θᴷ`, practical salinity, `Sᵖ`, and coefficients, `Pᵈⁱᶜₖ₀`.
+
+CO₂ + H₂O <-> H₂CO₃
+
+References: Weiss (1979)
+pH scale  : N/A
+Note      : currently no pressure correction
 """
 function Fᵈⁱᶜₖ₀(Θᴷ,Sᵖ,Pᵈⁱᶜₖ₀)
 
@@ -211,9 +237,6 @@ function Fᵈⁱᶜₖ₀(Θᴷ,Sᵖ,Pᵈⁱᶜₖ₀)
        )
 end
 
-##=======================================================================
-##AK_CARB_1_ROYE93 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᵈⁱᶜₖ₁ᵣ₉₃ = (
     a₀ =     2.83655,
     a₁ = -2307.1266,
@@ -230,21 +253,20 @@ const Pᵈⁱᶜₖ₁ᵣ₉₃ = (
     k₂ =     0.0877e-3,
 )
 
-@inline """
-    Cᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ᵣ₉₃)
+@inline
+"""
+Cᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ᵣ₉₃)
 
-    # Function calculates first dissociation constant of carbonic acid
-    # in mol/kg-SW on the Total pH-scale.
-    # References: Roy et al. (1993) -- also Handbook (1994)
-    #             Millero (1979) pressure correction
-    # pH scale  : Total
-    # Note      : converted here from mol/kg-H2O to mol/kg-SW
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return the first dissociation constant of carbonic acid in mol/kg-SW, given
+temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, 
+`Δpᵦₐᵣ`, and coefficients, `Pᵈⁱᶜₖ₁ᵣ₉₃`.
+
+H₂CO₃ <-> HCO₃⁻ + H⁺
+
+References: Roy et al. (1993) -- also Handbook (1994)
+            Millero (1979) pressure correction
+pH scale  : Total
+Note      : converted here from mol/kg-H2O to mol/kg-SW
 """
 function Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ᵣ₉₃)
 
@@ -259,7 +281,7 @@ function Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ᵣ�
                 + Pᵈⁱᶜₖ₁ᵣ₉₃.b₃*Sᵖ*Sᴾ⁰⁵(Sᵖ)
                 )
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_kc1_pp = (-(Pᵈⁱᶜₖ₁ᵣ₉₃.v₀ + 
                    Pᵈⁱᶜₖ₁ᵣ₉₃.v₁*ΔSᵖ(Sᵖ) +
                    Pᵈⁱᶜₖ₁ᵣ₉₃.v₂*ΘᵒC(Θᴷ)) 
@@ -272,10 +294,7 @@ function Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ᵣ�
 
     exp( ln_kc1_p0 + ln_kc1_pp ) * H₂Oˢʷ(Sᵖ)
 end
- 
-##=======================================================================
-##AK_CARB_2_ROYE93 <- function (Θᴷ, s, p_bar)
-##=======================================================================
+
 const Pᵈⁱᶜₖ₂ᵣ₉₃ = (
     a₀ = -   9.226508,
     a₁ = -3351.6106,
@@ -292,21 +311,20 @@ const Pᵈⁱᶜₖ₂ᵣ₉₃ = (
     k₂ = -   0.1475e-3,
 )
 
-@inline """
-    Cᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ᵣ₉₃)
+@inline 
+"""
+Cᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ᵣ₉₃)
 
-    # Function calculates second dissociation constant K1
-    # in mol/kg-SW on the Total pH-scale.
-    # References: Roy et al. (1993) -- also Handbook (1994)
-    #             Millero (1979) pressure correction
-    # pH scale  : Total
-    # Note      : converted here from mol/kg-H2O to mol/kg-SW
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return the second dissociation constant of carbonic acid in mol/kg-SW, given
+temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and
+coefficients, `Pᵈⁱᶜₖ₂ᵣ₉₃`.
+
+HCO₃⁻ <-> CO₃²⁻ + H⁺
+
+References: Roy et al. (1993) -- also Handbook (1994)
+            Millero (1979) pressure correction
+pH scale  : Total
+Note      : converted here from mol/kg-H2O to mol/kg-SW
 """
 function Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ᵣ₉₃)
     ln_kc2_p0 = ( Pᵈⁱᶜₖ₂ᵣ₉₃.a₀ + 
@@ -320,7 +338,7 @@ function Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ᵣ�
                 + Pᵈⁱᶜₖ₂ᵣ₉₃.b₃*Sᵖ*Sᴾ⁰⁵(Sᵖ)
                 )    
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_kc2_pp = (-(Pᵈⁱᶜₖ₂ᵣ₉₃.v₀ + 
                    Pᵈⁱᶜₖ₂ᵣ₉₃.v₁*ΔSᵖ(Sᵖ) +
                    Pᵈⁱᶜₖ₂ᵣ₉₃.v₂*ΘᵒC(Θᴷ)) 
@@ -334,9 +352,6 @@ function Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ᵣ�
     exp(ln_kc2_p0 + ln_kc2_pp) * H₂Oˢʷ(Sᵖ)
 end
 
-##=======================================================================
-##AK_CARB_1_MILL95 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᵈⁱᶜₖ₁ₘ₉₅ = (
     a₀ =     2.18867,
     a₁ = -2275.0360,
@@ -353,20 +368,19 @@ const Pᵈⁱᶜₖ₁ₘ₉₅ = (
     k₂ =     0.0877e-3,
 )
 
-@inline """
-    Cᵈⁱᶜₖ₁ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₘ₉₅)
+@inline 
+"""
+Cᵈⁱᶜₖ₁ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₘ₉₅)
 
-    # Function calculates first dissociation constant of carbonic acid
-    # in mol/kg-SW on the SWS pH-scale.
-    # References: Millero (1995, eq 50 -- ln K1(COM))
-    #             Millero (1982) pressure correction
-    # pH scale:   SWS
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return the first dissociation constant of carbonic acid in mol/kg-SW, given
+temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, 
+`Δpᵦₐᵣ`, and coefficients, `Pᵈⁱᶜₖ₁ₘ₉₅`.
+    
+H₂CO₃ <-> HCO₃⁻ + H⁺
+    
+References: Millero (1995, eq 50 -- ln K1(COM))
+             Millero (1982) pressure correction
+pH scale:   SWS
 """
 function Fᵈⁱᶜₖ₁ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₘ₉₅)
 
@@ -382,7 +396,7 @@ function Fᵈⁱᶜₖ₁ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₘ�
                 )
 
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_kc1_pp = (-(Pᵈⁱᶜₖ₁ₘ₉₅.v₀ + 
                    Pᵈⁱᶜₖ₁ₘ₉₅.v₁*ΔSᵖ(Sᵖ) +
                    Pᵈⁱᶜₖ₁ₘ₉₅.v₂*ΘᵒC(Θᴷ)) 
@@ -396,9 +410,6 @@ function Fᵈⁱᶜₖ₁ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₘ�
     exp( ln_kc1_p0 + ln_kc1_pp )
 end
 
-##=======================================================================
-##AK_CARB_2_MILL95 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᵈⁱᶜₖ₂ₘ₉₅ = (
     a₀ = -   0.84226,
     a₁ = -3741.1288,
@@ -415,20 +426,19 @@ const Pᵈⁱᶜₖ₂ₘ₉₅ = (
     k₂ = -   0.1475e-3,
 )
 
-@inline """
-    Cᵈⁱᶜₖ₂ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₘ₉₅)
+@inline
+"""
+Cᵈⁱᶜₖ₂ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₘ₉₅)
 
-    # Function calculates second dissociation constant K1
-    # in mol/kg-SW on the SWS pH-scale.
-    # References: Millero (1995, eq 51 -- ln K2(COM))
-    #             Millero (1979) pressure correction
-    # pH scale:   SWS
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return the second dissociation constant of carbonic acid in mol/kg-SW, given
+temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and
+coefficients, `Pᵈⁱᶜₖ₂ₘ₉₅`.
+    
+HCO₃⁻ <-> CO₃²⁻ + H⁺
+
+References: Millero (1995, eq 51 -- ln K2(COM))
+            Millero (1979) pressure correction
+pH scale:   SWS
 """
 function Fᵈⁱᶜₖ₂ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₘ₉₅)
     ln_kc2_p0 = (
@@ -443,7 +453,7 @@ function Fᵈⁱᶜₖ₂ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₘ�
         Pᵈⁱᶜₖ₂ₘ₉₅.b₃*Sᵖ*Sᴾ⁰⁵(Sᵖ)
     )
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_kc2_pp = (
         -(Pᵈⁱᶜₖ₂ₘ₉₅.v₀ + 
           Pᵈⁱᶜₖ₂ₘ₉₅.v₁*ΔSᵖ(Sᵖ) +
@@ -458,9 +468,6 @@ function Fᵈⁱᶜₖ₂ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₘ�
     exp( ln_kc2_p0 + ln_kc2_pp )
 end
 
-##=======================================================================
-##AK_CARB_1_LUEK00 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᵈⁱᶜₖ₁ₗ₀₀ = (
     a₀ =    61.2172,
     a₁ = -3633.86,
@@ -475,20 +482,19 @@ const Pᵈⁱᶜₖ₁ₗ₀₀ = (
     k₂ =     0.0877e-3,
 )
 
-@inline """
-    Cᵈⁱᶜₖ₁ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₗ₀₀)
+@inline
+"""
+Cᵈⁱᶜₖ₁ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₗ₀₀)
 
-    # Function calculates first dissociation constant of carbonic acid
-    # in mol/kg-SW on the Total pH-scale.
-    # References: Luecker et al. (2000) -- also Handbook (2007)
-    #             Millero (1979) pressure correction
-    # pH scale:   Total
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return the first dissociation constant of carbonic acid in mol/kg-SW, given
+temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, 
+`Δpᵦₐᵣ`, and coefficients, `Pᵈⁱᶜₖ₁ₗ₀₀`.
+    
+H₂CO₃ <-> HCO₃⁻ + H⁺
+    
+References: Luecker et al. (2000) -- also Handbook (2007)
+            Millero (1979) pressure correction
+pH scale:   Total
 """
 function Fᵈⁱᶜₖ₁ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₗ₀₀)
     log10_kc1_p0 = (
@@ -501,7 +507,7 @@ function Fᵈⁱᶜₖ₁ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₗ�
         )*Sᵖ
     )
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_kc1_pp = (
         -(Pᵈⁱᶜₖ₁ₗ₀₀.v₀ + 
           Pᵈⁱᶜₖ₁ₗ₀₀.v₁*ΔSᵖ(Sᵖ) +
@@ -516,9 +522,6 @@ function Fᵈⁱᶜₖ₁ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₗ�
     10^(log10_kc1_p0) * exp(ln_kc1_pp)
 end
 
-##=======================================================================
-##AK_CARB_2_LUEK00 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᵈⁱᶜₖ₂ₗ₀₀ = (
     a₀ = -  25.9290,
     a₁ = - 471.78,
@@ -533,20 +536,19 @@ const Pᵈⁱᶜₖ₂ₗ₀₀ = (
     k₂ = -   0.1475e-3,
 )
 
-@inline """
-    Cᵈⁱᶜₖ₂ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₗ₀₀)
+@inline
+"""
+Cᵈⁱᶜₖ₂ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₗ₀₀)
 
-    # Function calculates second dissociation constant K1
-    # in mol/kg-SW on the Total pH-scale.
-    # References: Luecker et al. (2000) -- also Handbook (2007)
-    #             Millero (1979) pressure correction
-    # pH scale:   Total
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return the second dissociation constant of carbonic acid in mol/kg-SW, given
+temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and
+coefficients, `Pᵈⁱᶜₖ₂ₗ₀₀`.
+    
+HCO₃⁻ <-> CO₃²⁻ + H⁺
+
+References: Luecker et al. (2000) -- also Handbook (2007)
+            Millero (1979) pressure correction
+pH scale:   Total
 """
 function Fᵈⁱᶜₖ₂ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₗ₀₀)
     log10_kc2_p0 = (
@@ -559,7 +561,7 @@ function Fᵈⁱᶜₖ₂ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₗ�
         )*Sᵖ
     )
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_kc2_pp = (
         -(Pᵈⁱᶜₖ₂ₗ₀₀.v₀ + 
           Pᵈⁱᶜₖ₂ₗ₀₀.v₁*ΔSᵖ(Sᵖ) +
@@ -574,9 +576,6 @@ function Fᵈⁱᶜₖ₂ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₗ�
     10^(log10_kc2_p0) * exp(ln_kc2_pp)
 end
 
-##=======================================================================
-##AK_BORA_DICK90 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᴮₖ₁ = (
     a₀ = - 8966.90,
     a₁ = - 2890.53,
@@ -598,20 +597,16 @@ const Pᴮₖ₁ = (
     k₁ =      0.354e-3,
 )
 
-@inline """
-    Cᵇₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴮₖ₁)
+@inline
+"""
+Cᵇₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴮₖ₁)
 
-    # Function calculates boric acid dissociation constant KB
-    # in mol/kg-SW on the total pH-scale.
-    # References: Dickson (1990, eq. 23) -- also Handbook (2007, eq. 37)
-    #             Millero (1979) pressure correction
-    # pH scale  : total
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return boric acid dissociation constant in mol/kg-SW, given temperature in K,
+`Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴮₖ₁`.
+
+References: Dickson (1990, eq. 23) -- also Handbook (2007, eq. 37)
+            Millero (1979) pressure correction
+pH scale  : total
 """
 function Fᵇₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴮₖ₁)
     ln_kb_p0  = (( Pᴮₖ₁.a₀ +
@@ -633,7 +628,7 @@ function Fᵇₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴮₖ₁)
                 + Pᴮₖ₁.d₀*Sᴾ⁰⁵(Sᵖ)*Θᴷ
                 )
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_kb_pp = (-( Pᴮₖ₁.v₀ + 
                    Pᴮₖ₁.v₁*ΔSᵖ(Sᵖ) +
                    Pᴮₖ₁.v₂*ΘᵒC(Θᴷ) + 
@@ -647,9 +642,6 @@ function Fᵇₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴮₖ₁)
     exp( ln_kb_p0 + ln_kb_pp )
 end
 
-##=======================================================================
-##AK_W_MILL95 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᴴ²ᴼₖ₁ = (
     a₀ =    148.9802,
     a₁ = -13847.26,
@@ -666,18 +658,14 @@ const Pᴴ²ᴼₖ₁ = (
 )
 
 @inline """
-    Cᴴ²ᴼₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ᴼₖ₁)
+Cᴴ²ᴼₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ᴼₖ₁)
 
-    # Function calculates water dissociation constant Kw in (mol/kg-SW)^2
-    # References: Millero (1995) for value at p_bar = 0
-    #             Millero (pers. comm. 1996) for pressure correction
-    # pH scale  : SWS
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return dissociation constant of water in (mol/kg-SW)^2, given temperature in K,
+`Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴴ²ᴼₖ₁`.
+
+References: Millero (1995) for value at p_bar = 0
+            Millero (pers. comm. 1996) for pressure correction
+pH scale  : SWS
 """
 function Fᴴ²ᴼₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ᴼₖ₁)
     ln_kw_p0 = (Pᴴ²ᴼₖ₁.a₀ +
@@ -690,7 +678,7 @@ function Fᴴ²ᴼₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ᴼₖ₁)
                 Pᴴ²ᴼₖ₁.c₀*Sᵖ
                 )
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_kw_pp = (-( Pᴴ²ᴼₖ₁.v₀ + 
                    Pᴴ²ᴼₖ₁.v₁*ΘᵒC(Θᴷ) + 
                    Pᴴ²ᴼₖ₁.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)) 
@@ -703,9 +691,6 @@ function Fᴴ²ᴼₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ᴼₖ₁)
     exp( ln_kw_p0 + ln_kw_pp )
 end
 
-##=======================================================================
-##AK_PHOS_1_MILL95 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᴾᴼ⁴ₖ₁ = (
     a₀ =   115.54,
     a₁ = -4576.752,
@@ -720,20 +705,16 @@ const Pᴾᴼ⁴ₖ₁ = (
     k₀ = -   2.67e-3,
     k₁ =     0.0427e-3
 )
-@inline """
-    Cᴾᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₁)
+@inline
+"""
+Cᴾᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₁)
 
-    # Function returns the first dissociation constant
-    # of phosphoric acid (H3PO4) in seawater
-    # References: Yao and Millero (1995)
-    #             Millero (1995) for pressure correction
-    # pH scale  : SWS
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return the first dissociation constant of phosphoric acid (H3PO4) in seawater, given 
+temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴾᴼ⁴ₖ₁`.
+
+References: Yao and Millero (1995)
+            Millero (1995) for pressure correction
+pH scale  : SWS
 """
 function Fᴾᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₁)
     ln_kp1_p0 = ( Pᴾᴼ⁴ₖ₁.a₀ +
@@ -748,7 +729,7 @@ function Fᴾᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₁)
                   Pᴾᴼ⁴ₖ₁.b₃/Θᴷ
                  )*Sᵖ )
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_kp1_pp = (-( Pᴾᴼ⁴ₖ₁.v₀ + 
                     Pᴾᴼ⁴ₖ₁.v₁*ΘᵒC(Θᴷ) +
                     Pᴾᴼ⁴ₖ₁.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)) 
@@ -761,9 +742,6 @@ function Fᴾᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₁)
     exp(ln_kp1_p0 + ln_kp1_pp)
 end
 
-##=======================================================================
-##AK_PHOS_2_MILL95 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᴾᴼ⁴ₖ₂ = (
     a₀ =    172.1033,
     a₁ = - 8814.715,
@@ -779,20 +757,16 @@ const Pᴾᴼ⁴ₖ₂ = (
     k₁ =      0.09e-3
 )
 
-@inline """
-    Cᴾᴼ⁴ₖ₂(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₂)
+@inline
+"""
+Cᴾᴼ⁴ₖ₂(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₂)
 
-    # Function returns the second dissociation constant
-    # of phosphoric acid (H3PO4) in seawater
-    # References: Yao and Millero (1995)
-    #             Millero (1995) for pressure correction
-    # pH scale  : SWS
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return the second dissociation constant of phosphoric acid (H3PO4) in seawater, given
+temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴾᴼ⁴ₖ₂`.
+
+References: Yao and Millero (1995)
+            Millero (1995) for pressure correction
+pH scale  : SWS
 """
 function Fᴾᴼ⁴ₖ₂(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₂)
     ln_kp2_p0 = ( Pᴾᴼ⁴ₖ₂.a₀ +
@@ -807,7 +781,7 @@ function Fᴾᴼ⁴ₖ₂(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₂)
                   Pᴾᴼ⁴ₖ₂.b₃/Θᴷ
                  )*Sᵖ )
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_kp2_pp = (-( Pᴾᴼ⁴ₖ₂.v₀ + 
                     Pᴾᴼ⁴ₖ₂.v₁*ΘᵒC(Θᴷ) +
                     Pᴾᴼ⁴ₖ₂.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)) 
@@ -820,9 +794,6 @@ function Fᴾᴼ⁴ₖ₂(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₂)
     exp( ln_kp2_p0 + ln_kp2_pp )
 end
 
-##=======================================================================
-##AK_PHOS_3_MILL95 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᴾᴼ⁴ₖ₃ = (
     a₀ = -   18.126,
     a₁ = - 3070.75,
@@ -837,20 +808,16 @@ const Pᴾᴼ⁴ₖ₃ = (
     k₁ =      0.0714e-3
 )
 
-@inline """
-    Cᴾᴼ⁴ₖ₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₃)
+@inline
+"""
+Cᴾᴼ⁴ₖ₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₃)
 
-    # Function returns the third dissociation constant
-    # of phosphoric acid (H3PO4) in seawater
-    # References: Yao and Millero (1995)
-    #             Millero (1995) for pressure correction
-    # pH scale  : SWS
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return the third dissociation constant of phosphoric acid (H3PO4) in seawater, given 
+temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴾᴼ⁴ₖ₃`.
+
+References: Yao and Millero (1995)
+            Millero (1995) for pressure correction
+pH scale  : SWS
 """
 function Fᴾᴼ⁴ₖ₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₃)
     ln_kp3_p0 = ( Pᴾᴼ⁴ₖ₃.a₀ +
@@ -864,7 +831,7 @@ function Fᴾᴼ⁴ₖ₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₃)
                   Pᴾᴼ⁴ₖ₃.a₅/Θᴷ
                  )*Sᵖ )
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_kp3_pp = (-( Pᴾᴼ⁴ₖ₃.v₀ + 
                     Pᴾᴼ⁴ₖ₃.v₁*ΘᵒC(Θᴷ) +
                     Pᴾᴼ⁴ₖ₃.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)) 
@@ -877,9 +844,6 @@ function Fᴾᴼ⁴ₖ₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₃)
     exp( ln_kp3_p0 + ln_kp3_pp )
 end
 
-##=======================================================================
-##AK_SILI_1_MILL95 <- function (Θᴷ, s)
-##=======================================================================
 const Pˢⁱᵗₖ₁ = (
     a₀ =    117.40,
     a₁ = - 8904.2,
@@ -892,20 +856,17 @@ const Pˢⁱᵗₖ₁ = (
     c₁ = -   12.1652
 )
 
-@inline """
-    Cˢⁱᵗₖ₁(Θᴷ,Sᵖ,Pˢⁱᵗₖ₁)
+@inline
+"""
+Cˢⁱᵗₖ₁(Θᴷ,Sᵖ,Pˢⁱᵗₖ₁)
 
-    # Function returns the first dissociation constant
-    # of silicic acid (H4SiO4) in seawater
-    # References: Yao and Millero (1995) cited by Millero (1995)
-    # pH scale  : SWS (according to Dickson et al, 2007)
-    # Note      : No pressure correction available
-    # Note      : converted here from mol/kg-H2O to mol/kg-sw
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
+Return the first dissociation constant of silicic acid (H4SiO4) in seawater, given 
+temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pˢⁱᵗₖ₁`.
+
+References: Yao and Millero (1995) cited by Millero (1995)
+pH scale  : SWS (according to Dickson et al, 2007)
+Note      : No pressure correction available
+Note      : converted here from mol/kg-H2O to mol/kg-sw
 """
 function Fˢⁱᵗₖ₁(Θᴷ,Sᵖ,Pˢⁱᵗₖ₁)
     ln_ksi1_p0 = ( Pˢⁱᵗₖ₁.a₀ +
@@ -927,9 +888,6 @@ function Fˢⁱᵗₖ₁(Θᴷ,Sᵖ,Pˢⁱᵗₖ₁)
     exp( ln_ksi1_p0 + ln_ksi1_pp ) * H₂Oˢʷ(Sᵖ)
 end
 
-##=======================================================================
-##AK_H2S_1_MILL95 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᴴ²ˢₖ₁ = (
     a₀ =     225.838,
     a₁ = - 13275.3,
@@ -943,25 +901,21 @@ const Pᴴ²ˢₖ₁ = (
     k₁ =       0.054e-3
 )
 
-@inline """
-    Cᴴ²ˢₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ˢₖ₁)
+@inline
+"""
+Cᴴ²ˢₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ˢₖ₁)
 
-    # Function returns the dissociation constant 
-    # of hydrogen sulfide in sea-water
-    # References: Millero et al. (1988) (cited by Millero (1995)
-    #             Millero (1995) for pressure correction
-    # pH scale  : - SWS (according to Yao and Millero, 1995, p. 82: "refitted if necessary")
-    #             - Total (according to Lewis and Wallace, 1998)
-    # Note      : we stick to SWS here for the time being
-    # Note      : the fits from Millero (1995) and Yao and Millero (1995)
-    #             derive from Millero et al. (1988), with all the coefficients
-    #             multiplied by -ln(10)
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Returns the dissociation constant of hydrogen sulfide in sea-water, given temperature in K,
+`Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴴ²ˢₖ₁`.
+
+References: Millero et al. (1988) (cited by Millero (1995)
+            Millero (1995) for pressure correction
+pH scale  : - SWS (according to Yao and Millero, 1995, p. 82: "refitted if necessary")
+            - Total (according to Lewis and Wallace, 1998)
+Note      : we stick to SWS here for the time being
+Note      : the fits from Millero (1995) and Yao and Millero (1995)
+            derive from Millero et al. (1988), with all the coefficients
+            multiplied by -ln(10)
 """
 function Fᴴ²ˢₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ˢₖ₁)
     ln_kh2s_p0 = ( Pᴴ²ˢₖ₁.a₀ +
@@ -970,7 +924,7 @@ function Fᴴ²ˢₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ˢₖ₁)
                    Pᴴ²ˢₖ₁.a₃*Sᴾ⁰⁵(Sᵖ) +
                    Pᴴ²ˢₖ₁.a₄*Sᵖ)
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_kh2s_pp = (-( Pᴴ²ˢₖ₁.v₀ +
                      Pᴴ²ˢₖ₁.v₁*ΘᵒC(Θᴷ) +
                      Pᴴ²ˢₖ₁.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
@@ -983,9 +937,6 @@ function Fᴴ²ˢₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ˢₖ₁)
     exp( ln_kh2s_p0 + ln_kh2s_pp )
 end
 
-##=======================================================================
-##AK_AMMO_1_YAMI95 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᴺᴴ⁴ₖ₁ = (
     a₀ = -    0.25444,
     a₁ = - 6285.33,
@@ -1001,20 +952,16 @@ const Pᴺᴴ⁴ₖ₁ = (
     k₁ =      0.0814E-03
 )
 
-@inline """
-    Cᴺᴴ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴺᴴ⁴ₖ₁)
+@inline
+"""
+Cᴺᴴ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴺᴴ⁴ₖ₁)
 
-    # Function returns the dissociation constant
-    # of ammonium in sea-water [mol/kg-SW]
-    # References: Yao and Millero (1995)
-    #             Millero (1995) for pressure correction
-    # pH scale  : SWS
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return the dissociation constant of ammonium in sea-water [mol/kg-SW], given temperature
+in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴺᴴ⁴ₖ₁`.
+
+References: Yao and Millero (1995)
+            Millero (1995) for pressure correction
+pH scale  : SWS
 """
 function Fᴺᴴ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴺᴴ⁴ₖ₁)
     ln_knh4_p0 = ( Pᴺᴴ⁴ₖ₁.a₀ +
@@ -1028,7 +975,7 @@ function Fᴺᴴ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴺᴴ⁴ₖ₁)
                      )*Sᵖ)
 
     
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_knh4_pp = (-( Pᴺᴴ⁴ₖ₁.v₀ +
                      Pᴺᴴ⁴ₖ₁.v₁*ΘᵒC(Θᴷ) +
                      Pᴺᴴ⁴ₖ₁.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
@@ -1041,9 +988,6 @@ function Fᴺᴴ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴺᴴ⁴ₖ₁)
     exp( ln_knh4_p0 + ln_knh4_pp )
 end
 
-##=======================================================================
-##ABETA_HF_DIRI79 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᴴᶠᵦ₁ = (
     a₀ =     12.641,
     a₁ = - 1590.2,
@@ -1054,29 +998,26 @@ const Pᴴᶠᵦ₁ = (
     k₀ = -    3.91e-3,
     k₁ =      0.054e-3
 )
-@inline """
-    Cᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁)
+@inline
+"""
+Cᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁)
 
-    # Function calculates association constant \beta_HF [(mol/kg-SW)^-1]
-    # in (mol/kg-SW)^-1, where
-    #   \beta_HF = \frac [HF]  [H^+] [F^-] 
-    # References: Dickson and Riley (1979)
-    #             Millero (1995) for pressure correction
-    # pH scale  : free
-    # Note      : converted here from mol/kg-H2O to mol/kg-SW
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return the association constant of HF in (mol/kg-SW)^-1, , given temperature
+in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴴᶠᵦ₁`.
+
+HF <-> H⁺ + F⁻ 
+
+References: Dickson and Riley (1979)
+            Millero (1995) for pressure correction
+pH scale  : free
+Note      : converted here from mol/kg-H2O to mol/kg-SW
 """
 function Fᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁)
     ln_bhf_p0 = ( Pᴴᶠᵦ₁.a₀ +
                   Pᴴᶠᵦ₁.a₁/Θᴷ +
                   Pᴴᶠᵦ₁.a₂*sqrt(μₛ(Sᵖ)))
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_khf_pp = (-( Pᴴᶠᵦ₁.v₀ +
                      Pᴴᶠᵦ₁.v₁*ΘᵒC(Θᴷ) +
                      Pᴴᶠᵦ₁.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
@@ -1085,19 +1026,16 @@ function Fᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁)
                       Pᴴᶠᵦ₁.k₁*ΘᵒC(Θᴷ)
                      )*(Δpᵦₐᵣ/2.)
                      )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
-                     
-    # Final \beta_HF value
-    # --------------------
-    #  notice that  ln(k_HF(P)) = ln(k_HF(0)) + zln_khf_pp
-    #         <=>  -ln(\beta_HF(P)) = -ln(\beta_HF(0)) + zln_khf_pp
-    #         <=>   ln(\beta_HF(P)) =  ln(\beta_HF(0)) - zln_khf_pp
-
+    """                
+    Final \beta_HF value
+    --------------------
+     notice that  ln(k_HF(P)) = ln(k_HF(0)) + zln_khf_pp
+            <=>  -ln(\beta_HF(P)) = -ln(\beta_HF(0)) + zln_khf_pp
+            <=>   ln(\beta_HF(P)) =  ln(\beta_HF(0)) - zln_khf_pp
+    """
     exp(ln_bhf_p0 - ln_khf_pp ) / H₂Oˢʷ(Sᵖ)
 end
 
-##=======================================================================
-##AK_HF_PEFR87 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᴴᶠₖ₁ = (
     a₀ = -  9.68,
     a₁ =  874.0,
@@ -1109,26 +1047,23 @@ const Pᴴᶠₖ₁ = (
     k₁ =    0.054e-3
 )
 @inline """
-    Cᴴᶠₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠₖ₁)
+Cᴴᶠₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠₖ₁)
 
-    # Function calculates dissociation constant for hydrogen fluoride
-    # in mol/kg-SW
-    # References: Perez and Fraga (1987)
-    #             Millero (1995) for pressure correction
-    # pH scale  : Total (according to Handbook, 2007)
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return the dissociation constant for hydrogen fluoride in mol/kg-SW, given temperature
+in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴴᶠₖ₁`.
+
+HF <-> H⁺ + F⁻ 
+
+References: Perez and Fraga (1987)
+            Millero (1995) for pressure correction
+pH scale  : Total (according to Handbook, 2007
 """
 function Fᴴᶠₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠₖ₁)
     ln_khf_p0 = ( Pᴴᶠₖ₁.a₀ +
                   Pᴴᶠₖ₁.a₁/Θᴷ +
                   Pᴴᶠₖ₁.a₂*Sᴾ⁰⁵(Sᵖ))
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_khf_pp = (-( Pᴴᶠₖ₁.v₀ +
                      Pᴴᶠₖ₁.v₁*ΘᵒC(Θᴷ) +
                      Pᴴᶠₖ₁.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
@@ -1141,9 +1076,6 @@ function Fᴴᶠₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠₖ₁)
     exp( ln_khf_p0 + ln_khf_pp )
 end
 
-##=======================================================================
-##AK_HSO4_DICK90 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᴴˢᴼ⁴ₖ₁ = (
     a₀ =     141.328,
     a₁ = -  4276.1,
@@ -1163,19 +1095,15 @@ const Pᴴˢᴼ⁴ₖ₁ = (
     k₁ =       0.0900e-3
 )
 @inline """
-    Cᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁)
+Cᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁)
 
-    # Function returns the dissociation constant of hydrogen sulfate (bisulfate)
-    # References: Dickson (1990) -- also Handbook (2007)
-    #             Millero (1995) for pressure correction
-    # pH scale  : free
-    # Note      : converted here from mol/kg-H2O to mol/kg-SW
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Function returns the dissociation constant of hydrogen sulfate (bisulfate) , given temperature
+in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴴˢᴼ⁴ₖ₁`.
+
+References: Dickson (1990) -- also Handbook (2007)
+            Millero (1995) for pressure correction
+pH scale  : free
+Note      : converted here from mol/kg-H2O to mol/kg-SW
 """
 function Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁)
     ln_khso4_p0 = ( Pᴴˢᴼ⁴ₖ₁.a₀ +
@@ -1192,7 +1120,7 @@ function Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁)
                    (Pᴴˢᴼ⁴ₖ₁.d₀/Θᴷ)*sqrt(μₛ(Sᵖ))*μₛ(Sᵖ)+
                    (Pᴴˢᴼ⁴ₖ₁.d₁/Θᴷ)*μₛ(Sᵖ)*μₛ(Sᵖ))
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_khso4_pp = (-( Pᴴˢᴼ⁴ₖ₁.v₀ +
                       Pᴴˢᴼ⁴ₖ₁.v₁*ΘᵒC(Θᴷ) +
                       Pᴴˢᴼ⁴ₖ₁.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
@@ -1205,9 +1133,6 @@ function Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁)
     exp( ln_khso4_p0 + ln_khso4_pp ) * H₂Oˢʷ(Sᵖ)
 end
 
-##=======================================================================
-##ASP_CALC_MUCC83 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᶜᵃˡᶜⁱᵗᵉₛₚ = (
     a₀ = - 171.9065,
     a₁ = -   0.077993,
@@ -1224,21 +1149,17 @@ const Pᶜᵃˡᶜⁱᵗᵉₛₚ = (
     k₁ =     0.3692e-3
 )
 
-@inline """
+@inline
+"""
     Cᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᶜᵃˡᶜⁱᵗᵉₛₚ)
 
-    # Function returns stoechiometric solubility product
-    # of calcite in seawater
-    # References: Mucci (1983)
-    #             Millero (1995) for pressure correction
-    # pH scale  : N/A
-    # Units     : (mol/kg-SW)^2
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Return the stoechiometric solubility product of calcite, `Ω`, in seawater, given temperature
+in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᶜᵃˡᶜⁱᵗᵉₛₚ`
+
+References: Mucci (1983)
+            Millero (1995) for pressure correction
+pH scale  : N/A
+Units     : (mol/kg-SW)^2
 """
 function Fᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᶜᵃˡᶜⁱᵗᵉₛₚ)
     log10_kcalcite_p0 = ( Pᶜᵃˡᶜⁱᵗᵉₛₚ.a₀ +
@@ -1252,7 +1173,7 @@ function Fᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᶜᵃˡᶜⁱᵗ�
                          (Pᶜᵃˡᶜⁱᵗᵉₛₚ.c₀)*Sᵖ +
                          (Pᶜᵃˡᶜⁱᵗᵉₛₚ.d₀)*Sᵖ*Sᴾ⁰⁵(Sᵖ) )
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_kcalcite_pp = (-( Pᶜᵃˡᶜⁱᵗᵉₛₚ.v₀ +
                             Pᶜᵃˡᶜⁱᵗᵉₛₚ.v₁*ΘᵒC(Θᴷ)
                           )+( 
@@ -1264,9 +1185,6 @@ function Fᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᶜᵃˡᶜⁱᵗ�
  10^(log10_kcalcite_p0) * exp(ln_kcalcite_pp)
 end
 
-##=======================================================================
-##ASP_ARAG_MUCC83 <- function (Θᴷ, s, p_bar)
-##=======================================================================
 const Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = (
     a₀ = - 171.945,
     a₁ = -   0.077993,
@@ -1284,21 +1202,17 @@ const Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = (
     k₁ =     0.3692e-3
 )
 
-@inline """
-    Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ)
+@inline
+"""
+Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ)
 
-    # Function returns stoechiometric solubility product
-    # of aragonite in seawater
-    # References: Mucci (1983)
-    #             Millero (1979) for pressure correction
-    # pH scale  : N/A
-    # Units     : (mol/kg-SW)^2
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Function returns stoechiometric solubility product, `Ω`, of aragonite in seawater, given temperature
+in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ`.
+
+References: Mucci (1983)
+            Millero (1979) for pressure correction
+pH scale  : N/A
+Units     : (mol/kg-SW)^2
 """
 function Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ)
     log10_karagonite_p0 = ( Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.a₀ +
@@ -1312,7 +1226,7 @@ function Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵃʳᵃᵍ�
                            (Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.c₀)*Sᵖ +
                            (Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.d₀)*Sᵖ*Sᴾ⁰⁵(Sᵖ) )
 
-    # Pressure correction for applied pressure p_bar /= 0
+    "Pressure correction for applied pressure /= 0"
     ln_karagonite_pp = (-( Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.v₀ +
                            Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.v₁*ΘᵒC(Θᴷ) +
                            Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.v₂
@@ -1325,143 +1239,45 @@ function Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵃʳᵃᵍ�
     10^(log10_karagonite_p0) * exp(ln_karagonite_pp)
 end
 
-##=======================================================================
-##ACVT_HSWS_O_HTOT <- function (Θᴷ, s, p_bar)
-##=======================================================================
-@inline """
-    H⁺ₛoverH⁺ₜ(Θᴷ,Sᵖ,Δpᵦₐᵣ)
-
-    # Function returns the ratio H_SWS/H_Tot as a function of salinity s
-    # Reference:  Munhoven
-    # pH scale:   all
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+@inline
 """
-function H⁺ₛoverH⁺ₜ(Θᴷ,Sᵖ,Δpᵦₐᵣ)
+H⁺ₛoverH⁺ₜ(Θᴷ,Sᵖ,Δpᵦₐᵣ)
+
+Returns the ratio H_SWS/H_Tot as a function of salinity, `Sᵖ`.
+Reference:  Munhoven
+pH scale:   all
+"""
+function H⁺ₛoverH⁺ₜ(Sᵖ,Δpᵦₐᵣ)
     (1. +  
             (Fᵀᴼᵀ(Sᵖ)*Fᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁))
            /(1. + SO₄ᵀᴼᵀ(Sᵖ)/Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁))
            )
 end
 
-##=======================================================================
-##ACVT_HTOT_O_HFREE <- function (Θᴷ, s, p_bar)
-##=======================================================================
-@inline """
-    H⁺ₜoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
+@inline
+"""
+H⁺ₜoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
 
-    # Function returns the ratio H_Tot/H_free as a function of salinity s
-    # Reference:  Munhoven
-    # pH scale:   N/A
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Function returns the ratio H_Tot/H_free as a function of salinity, `Sᵖ`.
+Reference:  Munhoven
+pH scale:   N/A
 """
 function H⁺ₜoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
     1. + SO₄ᵀᴼᵀ(Sᵖ)/Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁)
 end
 
-##=======================================================================
-##ACVT_HSWS_O_HFREE <- function (Θᴷ, s, p_bar)
-##=======================================================================
-@inline """
-    H⁺ₛoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
+@inline
+"""
+H⁺ₛoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
 
-    # Function returns the ratio H_SWS/H_free as a function
-    # of salinity s
-    # Reference:  Munhoven
-    # pH scale:   N/A
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     Δpᵦₐᵣ  : applied pressure in bar
+Function returns the ratio H_SWS/H_free as a function
+of salinity, `Sᵖ`.
 """
 function H⁺ₛoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
     ( 1. + 
             (Fᵀᴼᵀ(Sᵖ)*Fᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁)) +
             (SO₄ᵀᴼᵀ(Sᵖ)/Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁))
          )
-end
-
-##=======================================================================
-##A_RHOSW1_MUNH97 <- function (Θᴷ, s, p_bar)
-##=======================================================================
- const Pᵨ₁ᴹᵘⁿʰ⁹⁷ =
-    ( Sᵖ₀ =    35.5,
-      Θᴷ₀ =   285.16,
-      zₘ₀ =   300.0,
-      a₀  =  1039.9044,
-      a₁  =     0.77629393,
-      a₂  = -   0.19692738
-    )
-
-@inline """
-    ρ₁ᴹᵘⁿʰ⁹⁷(Θᴷ,Sᵖ,zₘ,Pᵨ₁ᴹᵘⁿʰ⁹⁷)
-
-    # Function returns first order approximation of \rho in (kg-SW)/(m^3-SW)
-    # References: Munhoven (1997)
-    #             after EOS80 (UNESCO, 1981, 1983)
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-"""
-function ρ₁ᴹᵘⁿʰ⁹⁷(Θᴷ,Sᵖ,zₘ,Pᵨ₁ᴹᵘⁿʰ⁹⁷)
-    ( Pᵨ₁ᴹᵘⁿʰ⁹⁷.a₀ + 
-             Pᵨ₁ᴹᵘⁿʰ⁹⁷.a₁*(Sᵖ-Pᵨ₁ᴹᵘⁿʰ⁹⁷.Sᵖ₀) +
-             Pᵨ₁ᴹᵘⁿʰ⁹⁷.a₂*(Θᴷ-Pᵨ₁ᴹᵘⁿʰ⁹⁷.Θᴷ0) 
-           )
-end
-
-##=======================================================================
-##A_RHOSW2_MUNH97 <- function (Θᴷ, s, p_bar)
-##=======================================================================
-const Pᵨ₂ᴹᵘⁿʰ⁹⁷ =
-    ( Sᵖ₀ =     35.5,
-      Θᴷ₀ =    285.16,
-      zₘ₀ =    300.0,
-      ρ₀  =   1040.0145,
-      ρ₁  =      0.77629393,
-      ρ₂  = -    0.25013591,
-      ρ₃  =      0.042026266e-2,
-      ρ₄  = -    0.047473116e-3,
-      ρ₅  = -    0.047974224e-6,
-      ρ₆  = -    0.21404592e-4
-    )
-
-@inline """
-    ρᴹᵘⁿʰ⁹⁷(Θᴷ,Sᵖ,zₘ,Pᵨ₂ᴹᵘⁿʰ⁹⁷)
-
-    # Function returns second order approximation of \rho in (kg-SW)/(m^3-SW)
-    # References: Munhoven (1997)
-    #             after EOS80 (UNESCO, 1981, 1983)
-    # ------------------
-    # Argument variables
-    # ------------------
-    #     Sᵖ    : practical salinity
-    #     Θᴷ    : temperature in K
-    #     zₘ    : depth in metres
-"""
-function ρᴹᵘⁿʰ⁹⁷(Θᴷ,Sᵖ,zₘ,Pᵨ₂ᴹᵘⁿʰ⁹⁷)
-    (
-        Pᵨ₂ᴹᵘⁿʰ⁹⁷.ρ₀ + 
-        Pᵨ₂ᴹᵘⁿʰ⁹⁷.ρ₁*(Sᵖ-Pᵨ₂ᴹᵘⁿʰ⁹⁷.Sᵖ₀) +
-        Pᵨ₂ᴹᵘⁿʰ⁹⁷.ρ₂*(Θᴷ-Pᵨ₂ᴹᵘⁿʰ⁹⁷.Θᴷ₀) +
-        Pᵨ₂ᴹᵘⁿʰ⁹⁷.ρ₃*(zₘ-Pᵨ₂ᴹᵘⁿʰ⁹⁷.zₘ₀) +
-        Pᵨ₂ᴹᵘⁿʰ⁹⁷.ρ₄*(Θᴷ-Pᵨ₂ᴹᵘⁿʰ⁹⁷.Θᴷ₀)*(Θᴷ-Pᵨ₂ᴹᵘⁿʰ⁹⁷.Θᴷ₀) +
-        Pᵨ₂ᴹᵘⁿʰ⁹⁷.ρ₅*(zₘ-Pᵨ₂ᴹᵘⁿʰ⁹⁷.zₘ₀)*(zₘ-Pᵨ₂ᴹᵘⁿʰ⁹⁷.zₘ₀) +
-        Pᵨ₂ᴹᵘⁿʰ⁹⁷.ρ₆*(Θᴷ-Pᵨ₂ᴹᵘⁿʰ⁹⁷.Θᴷ₀)*(zₘ-Pᵨ₂ᴹᵘⁿʰ⁹⁷.zₘ₀)
-    )
 end
 
 end # module DissociationConstants
