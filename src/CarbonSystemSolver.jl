@@ -3,7 +3,7 @@ module CarbonSystemSolver
 module CarbonSystemApprox
 export CarbonSolverApprox
 
-using DissociationConstants
+include("biogeochemistry_coefficients.jl")
 using RootSolvers
 
 struct CarbonSolverApprox
@@ -42,8 +42,8 @@ function CarbonSolverApprox(
         pCO₂ᵃᵗᵐ :: Float64 = 280.0e-6,
         )
 
-        # DissociationCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
-        Cᶜᵒⁿˢᵗ = DissociationCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+        # BiogeochemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
+        Cᶜᵒⁿˢᵗ = BiogeochemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
 
         # Some logic here about choosing coefficient options, particularly Cᵈⁱᶜ 
         Pᶜᵒⁿˢᵗ = (Cᵈⁱᶜₖ₀ = Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀,
@@ -187,7 +187,8 @@ end # module CarbonSolverApprox
 # ------------------------------------------------------------
 
 using .CarbonSystemApprox
-using DissociationConstants
+
+include("biogeochemistry_coefficients.jl")
 
 ## This should go in the testing suite, eventually.
 Θᶜ      = 25.0
@@ -197,8 +198,9 @@ Cᵀ      = 2050.0*1e-6 # umol/kg to mol/kg
 Aᵀ      = 2350.0*1e-6 # umol/kg to mol/kg
 pCO₂ᵃᵗᵐ = 280.0*1e-6  # uatm to atm
 pH      = 8.0
+FT = Float64
 
-Cᶜᵒⁿˢᵗ = DissociationCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ);
+Cᶜᵒⁿˢᵗ = BiogeochemistryCoefficients{FT}(Θᶜ, Sᴬ, Δpᵦₐᵣ);
 """
 #Check the values of calculated constants
 println("Cᵈⁱᶜₖ₀ = ",       Cᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀     )

@@ -1,68 +1,117 @@
-module DissociationConstants
+struct BiogeochemistryCoefficients{FT}
+    Θᶜ           :: FT
+    Sᴬ           :: FT
+    Δpᵦₐᵣ        :: FT
+    Cᵈⁱᶜₖ₀       :: FT
+    Cᵈⁱᶜₖ₁ᵣ₉₃    :: FT
+    Cᵈⁱᶜₖ₂ᵣ₉₃    :: FT
+    Cᵈⁱᶜₖ₁ₘ₉₅    :: FT
+    Cᵈⁱᶜₖ₂ₘ₉₅    :: FT
+    Cᵈⁱᶜₖ₁ₗ₀₀     :: FT
+    Cᵈⁱᶜₖ₂ₗ₀₀     :: FT
+    Cᵇₖ₁         :: FT
+    Cᴴ²ᴼₖ₁       :: FT
+    Cᴾᴼ⁴ₖ₁       :: FT
+    Cᴾᴼ⁴ₖ₂       :: FT
+    Cᴾᴼ⁴ₖ₃       :: FT
+    Cˢⁱᵗₖ₁       :: FT
+    Cᴴ²ˢₖ₁       :: FT
+    Cᴺᴴ⁴ₖ₁       :: FT
+    Cᴴᶠᵦ₁        :: FT
+    Cᴴᶠₖ₁        :: FT
+    Cᴴˢᴼ⁴ₖ₁      :: FT
+    Cᶜᵃˡᶜⁱᵗᵉₛₚ   :: FT
+    Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ :: FT
+    Cᴮᵀ         :: FT
+    Cᶠᵀ         :: FT
+    Cᶜᵃ         :: FT
+    Cˢᴼ⁴        :: FT
+    H⁺ₛoverH⁺ₜ  :: FT
+    H⁺ₜoverH⁺₃  :: FT
+    H⁺ₛoverH⁺₃  :: FT
 
-export DissociationCoefficients
+end
 
-struct DissociationCoefficients{FT}
-    """
-    DissociationCoefficients{FT}
-    Returns dissociation coefficients necessary to solve for the distribution of carbonate species.
-    
-    "Temperature in degrees Celsius"
-    Θ     :: FT
-    "Absolute Salinity in g/kg"
-    Sᴬ    :: FT
-    "Applied Pressure in bars"
-    Δpᵦₐᵣ :: FT
-    """
-    function DissociationCoefficients(
-            Θᶜ    :: FT = 25.0,
-            Sᴬ    :: FT = 35.0,
-            Δpᵦₐᵣ :: FT = 0.0,
+"""
+BiogeochemistryCoefficients{FT}
+Returns dissociation coefficients necessary to solve for the distribution of carbonate species.
+"""
+@inline function BiogeochemistryCoefficients(
+            Θᶜ           :: FT = 25.0,
+            Sᴬ           :: FT = 35.0,
+            Δpᵦₐᵣ        :: FT = 0.0,
+            Cᵈⁱᶜₖ₀       :: FT = 0.0,
+            Cᵈⁱᶜₖ₁ᵣ₉₃    :: FT = 0.0,
+            Cᵈⁱᶜₖ₂ᵣ₉₃    :: FT = 0.0,
+            Cᵈⁱᶜₖ₁ₘ₉₅    :: FT = 0.0,
+            Cᵈⁱᶜₖ₂ₘ₉₅    :: FT = 0.0,
+            Cᵈⁱᶜₖ₁ₗ₀₀     :: FT = 0.0,
+            Cᵈⁱᶜₖ₂ₗ₀₀     :: FT = 0.0,
+            Cᵇₖ₁         :: FT = 0.0,
+            Cᴴ²ᴼₖ₁       :: FT = 0.0,
+            Cᴾᴼ⁴ₖ₁       :: FT = 0.0,
+            Cᴾᴼ⁴ₖ₂       :: FT = 0.0,
+            Cᴾᴼ⁴ₖ₃       :: FT = 0.0,
+            Cˢⁱᵗₖ₁       :: FT = 0.0,
+            Cᴴ²ˢₖ₁       :: FT = 0.0,
+            Cᴺᴴ⁴ₖ₁       :: FT = 0.0,
+            Cᴴᶠᵦ₁        :: FT = 0.0,
+            Cᴴᶠₖ₁        :: FT = 0.0,
+            Cᴴˢᴼ⁴ₖ₁      :: FT = 0.0,
+            Cᶜᵃˡᶜⁱᵗᵉₛₚ   :: FT = 0.0,
+            Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ :: FT = 0.0,
+            Cᴮᵀ         :: FT = 0.0,
+            Cᶠᵀ         :: FT = 0.0,
+            Cᶜᵃ         :: FT = 0.0,
+            Cˢᴼ⁴        :: FT = 0.0,
+            H⁺ₛoverH⁺ₜ   :: FT = 0.0,
+            H⁺ₜoverH⁺₃  :: FT = 0.0,
+            H⁺ₛoverH⁺₃  :: FT = 0.0,
             ) where {FT}
 
 # Need a conversion from Absolute Salinity, Sᴬ, to Practical Salinity, Sᴾ
-    Sᵖ = Sᴬ
+            Sᵖ = Sᴬ
 # Sᴾ = Sᴬ / (1.0 - 0.35 * Sᴬ / 35.0) ??
 # What about converting temperature from Conservative Temperature to potential temperature?
-    Θᴷ = Θᶜ + Θᴷ_0ᵒC
+            Θᴷ = Θᶜ + Θᴷ_0ᵒC
 # Also need to convert from Absolute Pressure, Pᴬ, to Applied Pressure in bars, the pressure relative to (1x) atm
 
-    return (Cᵈⁱᶜₖ₀    = Fᵈⁱᶜₖ₀(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀),
-            Cᵈⁱᶜₖ₁ᵣ₉₃ = Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₁ᵣ₉₃),
-            Cᵈⁱᶜₖ₂ᵣ₉₃ = Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₂ᵣ₉₃),
-            Cᵈⁱᶜₖ₁ₘ₉₅ = Fᵈⁱᶜₖ₁ₘ₉₅(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₁ₘ₉₅)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
-            Cᵈⁱᶜₖ₂ₘ₉₅ = Fᵈⁱᶜₖ₂ₘ₉₅(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₂ₘ₉₅)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
-            Cᵈⁱᶜₖ₁ₗ₀₀  = Fᵈⁱᶜₖ₁ₗ₀₀(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₁ₗ₀₀),
-            Cᵈⁱᶜₖ₂ₗ₀₀  = Fᵈⁱᶜₖ₂ₗ₀₀(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₂ₗ₀₀),
-            Cᵇₖ₁      = Fᵇₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴮₖ₁),
-            Cᴴ²ᴼₖ₁    = Fᴴ²ᴼₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴ²ᴼₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
-            Cᴾᴼ⁴ₖ₁    = Fᴾᴼ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴾᴼ⁴ₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
-            Cᴾᴼ⁴ₖ₂    = Fᴾᴼ⁴ₖ₂(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴾᴼ⁴ₖ₂)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
-            Cᴾᴼ⁴ₖ₃    = Fᴾᴼ⁴ₖ₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴾᴼ⁴ₖ₃)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
-            Cˢⁱᵗₖ₁    = Fˢⁱᵗₖ₁(Θᴷ, Sᵖ, Pˢⁱᵗₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
-            Cᴴ²ˢₖ₁    = Fᴴ²ˢₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴ²ˢₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
-            Cᴺᴴ⁴ₖ₁    = Fᴺᴴ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴺᴴ⁴ₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
-            Cᴴᶠᵦ₁     = Fᴴᶠᵦ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴᶠᵦ₁),
-            Cᴴᶠₖ₁     = Fᴴᶠₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴᶠₖ₁),
-            Cᴴˢᴼ⁴ₖ₁   = Fᴴˢᴼ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴˢᴼ⁴ₖ₁),
-            Cᶜᵃˡᶜⁱᵗᵉₛₚ = Fᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᶜᵃˡᶜⁱᵗᵉₛₚ),
-            Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ),
-            Cᴮᵀ         = Bᵀᴼᵀ(Sᵖ),
-            Cᶠᵀ         = Fᵀᴼᵀ(Sᵖ),
-            Cᶜᵃ         = Caᵀᴼᵀ(Sᵖ),
-            Cˢᴼ⁴        = SO₄ᵀᴼᵀ(Sᵖ),
-            CH⁺ₛoverH⁺ₜ  = H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
-            CH⁺ₜoverH⁺₃ = H⁺ₜoverH⁺₃(Θᴷ, Sᵖ, Δpᵦₐᵣ),
-            CH⁺ₛoverH⁺₃ = H⁺ₛoverH⁺₃(Θᴷ, Sᵖ, Δpᵦₐᵣ),
-    )
-    end # end @inline function
-end # end struct
+        return  (Θᶜ, Sᴬ, Δpᵦₐᵣ, 
+            Fᵈⁱᶜₖ₀(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀),
+            Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₁ᵣ₉₃),
+            Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₂ᵣ₉₃),
+            Fᵈⁱᶜₖ₁ₘ₉₅(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₁ₘ₉₅)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+            Fᵈⁱᶜₖ₂ₘ₉₅(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₂ₘ₉₅)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+            Fᵈⁱᶜₖ₁ₗ₀₀(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₁ₗ₀₀),
+            Fᵈⁱᶜₖ₂ₗ₀₀(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₂ₗ₀₀),
+            Fᵇₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴮₖ₁),
+            Fᴴ²ᴼₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴ²ᴼₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+            Fᴾᴼ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴾᴼ⁴ₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+            Fᴾᴼ⁴ₖ₂(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴾᴼ⁴ₖ₂)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+            Fᴾᴼ⁴ₖ₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴾᴼ⁴ₖ₃)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+            Fˢⁱᵗₖ₁(Θᴷ, Sᵖ, Pˢⁱᵗₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+            Fᴴ²ˢₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴ²ˢₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+            Fᴺᴴ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴺᴴ⁴ₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+            Fᴴᶠᵦ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴᶠᵦ₁),
+            Fᴴᶠₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴᶠₖ₁),
+            Fᴴˢᴼ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴˢᴼ⁴ₖ₁),
+            Fᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᶜᵃˡᶜⁱᵗᵉₛₚ),
+            Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ),
+            Bᵀᴼᵀ(Sᵖ, Pᴮᵀᴼᵀ),
+            Fᵀᴼᵀ(Sᵖ,Pᶠᵀᴼᵀ),
+            Caᵀᴼᵀ(Sᵖ,Pᶜᵃᵀᴼᵀ),
+            SO₄ᵀᴼᵀ(Sᵖ, Pˢᴼ⁴ᵀᴼᵀ),
+            H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+            H⁺ₜoverH⁺₃(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+            H⁺ₛoverH⁺₃(Θᴷ, Sᵖ, Δpᵦₐᵣ),
+        )
+    end
 
 # Gas constant
-const gasconst_bar_cm3_o_mol_k = 83.14472 # Handbook (2007)
+gasconst_bar_cm3_o_mol_k = 83.14472 # Handbook (2007)
 
 # 0 degrees centigrade in Kelvin
-const Θᴷ_0ᵒC = 273.15 # Handbook (2007)
+Θᴷ_0ᵒC = 273.15 # Handbook (2007)
 
 @inline Θᴷ₁₀₀(Θᴷ)    = Θᴷ/100
 @inline Sᴾ⁰⁵(Sᵖ)     = sqrt(Sᵖ)
@@ -70,7 +119,7 @@ const Θᴷ_0ᵒC = 273.15 # Handbook (2007)
 Base.@kwdef struct Pᵈˢᵖ{FT}
     a₀ :: FT    = - 34.8
 end
-@inline ΔSᵖ(Sᵖ,Pᵈˢᵖ) = Sᵖ + Pᵈˢᵖ.a₀
+@inline ΔSᵖ(Sᵖ,Pᵈˢᵖ) = Sᵖ + Pᵈˢᵖ().a₀
 @inline Rₜ(Θᴷ)        = gasconst_bar_cm3_o_mol_k * Θᴷ
 
 Base.@kwdef struct Pᴴ²⁰ˢʷ{FT}
@@ -79,7 +128,7 @@ Base.@kwdef struct Pᴴ²⁰ˢʷ{FT}
 end
 
 """
-H₂Oˢʷ(Sᵖ)
+H₂Oˢʷ(Sᵖ,Pᴴ²⁰ˢʷ)
 
 Return the mass of pure water in one kg of seawater
 of practical salinity, `Sᵖ`.
@@ -87,23 +136,26 @@ References: "libthdyct" -- derived by Munhoven (1997) from data by Millero (1982
             "Handbook (2007)" -- Handbook (2007)
 pH scale:   N/A
 """
-@inline H₂Oˢʷ(Sᵖ,Pᴴ²⁰ˢʷ) =  Pᴴ²⁰ˢʷ.a₀ + Pᴴ²⁰ˢʷ.a₁ * Sᵖ 
-#H₂Oˢʷ(Sᵖ) = 1. - 0.0010049*Sᵖ # libthdyct
+@inline function H₂Oˢʷ(Sᵖ,Pᴴ²⁰ˢʷ) 
+    a₀, a₁ = Pᴴ²⁰ˢʷ()
+    return a₀ + a₁ * Sᵖ 
+end
+#H₂Oˢʷ(Sᵖ,Pᴴ²⁰ˢʷ) = 1. - 0.0010049*Sᵖ # libthdyct
 
 Base.@kwdef struct Pᵘˢ{FT}
     a₀ :: FT    =   0.019924
 end
 
 """
-μₛ(Sᵖ)
+μₛ(Sᵖ,Pᵘˢ)
 
 Return ionic strength in mol/kg-SW, for given practical salinity, `Sᵖ`.
 References: "libthdyct" -- derived by Munhoven (1997) from data by Millero (1982)
             "Handbook (2007)" -- Handbook (2007)
 pH scale:   N/A
 """
-@inline μₛ(Sᵖ,Pᵘˢ)    = (Pᵘˢ.a₀ * Sᵖ) / H₂Oˢʷ(Sᵖ) # Handbook (2007)
-# μₛ(Sᵖ)    = (0.019920 * Sᵖ) / H₂Oˢʷ(Sᵖ)# libthdyct
+@inline μₛ(Sᵖ,Pᵘˢ) = (Pᵘˢ().a₀ * Sᵖ) / H₂Oˢʷ(Sᵖ,Pᴴ²⁰ˢʷ) # Handbook (2007)
+# μₛ(Sᵖ,Pᵘˢ)    = (0.019920 * Sᵖ) / H₂Oˢʷ(Sᵖ,Pᴴ²⁰ˢʷ)# libthdyct
 
 Base.@kwdef struct Pᴮᵀᴼᵀ{FT}
     a₀ :: FT    =   0.000416
@@ -112,14 +164,17 @@ Base.@kwdef struct Pᴮᵀᴼᵀ{FT}
 end
 
 """
-Bᵀᴼᵀ(Sᵖ)
+Bᵀᴼᵀ(Sᵖ, Pᴮᵀᴼᵀ)
 
 Return total borate concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Uppström (1974), cited by  Dickson et al. (2007, chapter 5, p 10)
             Millero (1982) cited in Millero (1995)
 """
-@inline Bᵀᴼᵀ(Sᵖ,Pᴮᵀᴼᵀ)  = Pᴮᵀᴼᵀ.a₀ * (Sᵖ / Pᴮᵀᴼᵀ.a₁) / Pᴮᵀᴼᵀ.a₂
-#Bᵀᴼᵀ(Sᵖ)  = 0.000232 * (Sᵖ/1.80655)/10.811
+@inline function Bᵀᴼᵀ(Sᵖ, Pᴮᵀᴼᵀ)
+    a₀, a₁, a₂ = Pᴮᵀᴼᵀ()
+    return a₀ * (Sᵖ / a₁) / a₂
+end
+#Bᵀᴼᵀ(Sᵖ, Pᴮᵀᴼᵀ)  = 0.000232 * (Sᵖ/1.80655)/10.811
 
 Base.@kwdef struct Pᶜᵃᵀᴼᵀ{FT}
     a₀ :: FT    =   0.02127
@@ -128,15 +183,18 @@ Base.@kwdef struct Pᶜᵃᵀᴼᵀ{FT}
 end
 
 """
-Caᵀᴼᵀ(Sᵖ)
+Caᵀᴼᵀ(Sᵖ,Pᶜᵃᵀᴼᵀ)
 
 Return calcium concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Culkin and Cox (1966), 
             Culkin (1967), 
             Riley and Tongudai (1967)    
 """
-@inline Caᵀᴼᵀ(Sᵖ,Pᶜᵃᵀᴼᵀ) = (Pᶜᵃᵀᴼᵀ.a₀/Pᶜᵃᵀᴼᵀa₁) * (Sᵖ/Pᶜᵃᵀᴼᵀ.a₂)
-# Caᵀᴼᵀ(Sᵖ) = 0.010282*(Sᵖ/35.)
+@inline function Caᵀᴼᵀ(Sᵖ,Pᶜᵃᵀᴼᵀ) 
+    a₀, a₁, a₂ = Pᶜᵃᵀᴼᵀ()
+    return (a₀ / a₁) * (Sᵖ / a₂)
+end
+# Caᵀᴼᵀ(Sᵖ,Pᶜᵃᵀᴼᵀ) = 0.010282*(Sᵖ/35.)
 
 Base.@kwdef struct Pᶠᵀᴼᵀ{FT}
     a₀ :: FT    =   0.000068
@@ -144,12 +202,15 @@ Base.@kwdef struct Pᶠᵀᴼᵀ{FT}
 end
 
 """
-Fᵀᴼᵀ(Sᵖ)
+Fᵀᴼᵀ(Sᵖ,Pᶠᵀᴼᵀ)
 
 Return total fluoride concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Culkin (1965) (???)
 """
-@inline Fᵀᴼᵀ(Sᵖ,Pᶠᵀᴼᵀ)  = Pᶠᵀᴼᵀ.a₀ * (Sᵖ / Pᶠᵀᴼᵀ.a₁)
+@inline function Fᵀᴼᵀ(Sᵖ,Pᶠᵀᴼᵀ) 
+    a₀, a₁ = Pᶠᵀᴼᵀ()
+    return a₀ * (Sᵖ / a₁)
+end
 
 Base.@kwdef struct Pˢᴼ⁴ᵀᴼᵀ{FT}
     a₀ :: FT    =   0.1400
@@ -158,13 +219,16 @@ Base.@kwdef struct Pˢᴼ⁴ᵀᴼᵀ{FT}
 end
 
 """
-SO₄ᵀᴼᵀ(Sᵖ)
+SO₄ᵀᴼᵀ(Sᵖ, Pˢᴼ⁴ᵀᴼᵀ)
 
 Return total sulfate concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Morris, A.W. and Riley, J.P. (1966) quoted in Handbook (2007)
 """
-@inline SO₄ᵀᴼᵀ(Sᵖ, Pˢᴼ⁴ᵀᴼᵀ) = (Pˢᴼ⁴ᵀᴼᵀ.a₀ / Pˢᴼ⁴ᵀᴼᵀ.a₁ ) * ( Sᵖ / Pˢᴼ⁴ᵀᴼᵀ.a₂)
-#SO₄ᵀᴼᵀ(Sᵖ) = 0.028234*(Sᵖ/35.)
+@inline function SO₄ᵀᴼᵀ(Sᵖ, Pˢᴼ⁴ᵀᴼᵀ) 
+    a₀, a₁, a₂ = Pˢᴼ⁴ᵀᴼᵀ()
+    return (a₀ / a₁ ) * ( Sᵖ / a₂)
+end
+#SO₄ᵀᴼᵀ(Sᵖ, Pˢᴼ⁴ᵀᴼᵀ) = 0.028234*(Sᵖ/35.)
 
 Base.@kwdef struct Pᴺᴴ⁴ᵀᴼᵀ{FT}
     a₀ :: FT    =   0.0001
@@ -173,12 +237,15 @@ Base.@kwdef struct Pᴺᴴ⁴ᵀᴼᵀ{FT}
 end
 
 """
-NH₄ᵀᴼᵀ(Sᵖ)
+NH₄ᵀᴼᵀ(Sᵖ,Pᴺᴴ⁴ᵀᴼᵀ)
 
 Return total ammonium concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Yamamoto (1995)
 """
-@inline NH₄ᵀᴼᵀ(Sᵖ,Pᴺᴴ⁴ᵀᴼᵀ) = (Pᴺᴴ⁴ᵀᴼᵀ.a₀ / Pᴺᴴ⁴ᵀᴼᵀ.a₁) * (Sᵖ / Pᴺᴴ⁴ᵀᴼᵀ.a₂)
+@inline function NH₄ᵀᴼᵀ(Sᵖ,Pᴺᴴ⁴ᵀᴼᵀ) 
+    a₀, a₁, a₂ = Pᴺᴴ⁴ᵀᴼᵀ()
+    return (a₀ / a₁) * (Sᵖ / a₂)
+end
 
 Base.@kwdef struct Pᴾᴼ⁴ᵀᴼᵀ{FT}
     a₀ :: FT    =   0.0001
@@ -187,12 +254,15 @@ Base.@kwdef struct Pᴾᴼ⁴ᵀᴼᵀ{FT}
 end
 
 """
-PO₄ᵀᴼᵀ(Sᵖ)
+PO₄ᵀᴼᵀ(Sᵖ, Pᴾᴼ⁴ᵀᴼᵀ)
 
 Return total phosphate concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Millero (1995)
 """
-@inline PO₄ᵀᴼᵀ(Sᵖ, Pᴾᴼ⁴ᵀᴼᵀ) = (Pᴾᴼ⁴ᵀᴼᵀ.a₀ / Pᴾᴼ⁴ᵀᴼᵀ.a₁) * (Sᵖ / Pᴾᴼ⁴ᵀᴼᵀ.a₂)
+@inline function PO₄ᵀᴼᵀ(Sᵖ, Pᴾᴼ⁴ᵀᴼᵀ) 
+    a₀, a₁, a₂ = Pᴾᴼ⁴ᵀᴼᵀ()
+    return (a₀ / a₁) * (Sᵖ / a₂)
+end
 
 Base.@kwdef struct Pˢⁱᴼ³ᵀᴼᵀ{FT}
     a₀ :: FT    =   0.0001
@@ -201,12 +271,15 @@ Base.@kwdef struct Pˢⁱᴼ³ᵀᴼᵀ{FT}
 end
 
 """
-SiO₃ᵀᴼᵀ(Sᵖ)
+SiO₃ᵀᴼᵀ(Sᵖ,Pˢⁱᴼ³ᵀᴼᵀ)
 
 Return total silicate concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Millero (1995)
 """
-@inline SiO₃ᵀᴼᵀ(Sᵖ,Pˢⁱᴼ³ᵀᴼᵀ) = (Pˢⁱᴼ³ᵀᴼᵀ.a₀ / Pˢⁱᴼ³ᵀᴼᵀ.a₁) * (Sᵖ / Pˢⁱᴼ³ᵀᴼᵀ.a₂)
+@inline function SiO₃ᵀᴼᵀ(Sᵖ,Pˢⁱᴼ³ᵀᴼᵀ) 
+    a₀, a₁, a₂ = Pˢⁱᴼ³ᵀᴼᵀ()
+    return (a₀ / a₁) * (Sᵖ / a₂)
+end
 
 Base.@kwdef struct Pᴴ²ˢᵀᴼᵀ{FT}
     a₀ :: FT    =   0.0001
@@ -215,12 +288,15 @@ Base.@kwdef struct Pᴴ²ˢᵀᴼᵀ{FT}
 end
 
 """
-H₂Sᵀᴼᵀ(Sᵖ)
+H₂Sᵀᴼᵀ(Sᵖ,Pᴴ²ˢᵀᴼᵀ)
 
 Return total hydrogen sulfide concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Dickson (1990)
 """
-@inline H₂Sᵀᴼᵀ(Sᵖ,Pᴴ²ˢᵀᴼᵀ) = (Pᴴ²ˢᵀᴼᵀ.a₀ / Pᴴ²ˢᵀᴼᵀ.a₁) * (Sᵖ / Pᴴ²ˢᵀᴼᵀ.a₂)
+@inline function H₂Sᵀᴼᵀ(Sᵖ,Pᴴ²ˢᵀᴼᵀ) 
+    a₀, a₁, a₂ = Pᴴ²ˢᵀᴼᵀ()
+    return (a₀ / a₁) * (Sᵖ / a₂)
+end
 
 Base.@kwdef struct Pᵈⁱᶜₖ₀{FT}
     a₀ :: FT = -60.2409
@@ -244,15 +320,15 @@ pH scale  : N/A
 Note      : currently no pressure correction
 """
 @inline function Fᵈⁱᶜₖ₀(Θᴷ,Sᵖ,Pᵈⁱᶜₖ₀)
-
+    a₀, a₁, a₂, b₀, b₁, b₂ = Pᵈⁱᶜₖ₀()
     exp( 
-        Pᵈⁱᶜₖ₀.a₀ + 
-        Pᵈⁱᶜₖ₀.a₁/Θᴷ₁₀₀(Θᴷ) +
-        Pᵈⁱᶜₖ₀.a₂*log(Θᴷ₁₀₀(Θᴷ)) +    
+        a₀ + 
+        a₁/Θᴷ₁₀₀(Θᴷ) +
+        a₂*log(Θᴷ₁₀₀(Θᴷ)) +    
         ( 
-         Pᵈⁱᶜₖ₀.b₀ + 
-         Pᵈⁱᶜₖ₀.b₁*(Θᴷ₁₀₀(Θᴷ)) +
-         Pᵈⁱᶜₖ₀.b₂*Θᴷ₁₀₀(Θᴷ)*Θᴷ₁₀₀(Θᴷ)
+         b₀ + 
+         b₁*(Θᴷ₁₀₀(Θᴷ)) +
+         b₂*Θᴷ₁₀₀(Θᴷ)*Θᴷ₁₀₀(Θᴷ)
         )*Sᵖ
        )
 end
@@ -288,30 +364,30 @@ pH scale  : Total
 Note      : converted here from mol/kg-H2O to mol/kg-SW
 """
 @inline function Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ᵣ₉₃)
-
-    ln_kc1_p0 = ( Pᵈⁱᶜₖ₁ᵣ₉₃.a₀ + 
-                   Pᵈⁱᶜₖ₁ᵣ₉₃.a₁/Θᴷ + 
-                   Pᵈⁱᶜₖ₁ᵣ₉₃.a₂*log(Θᴷ)
+    a₀, a₁, a₂, b₀, b₁, b₂, b₃, v₀, v₁, v₂, k₀, k₁, k₂ = Pᵈⁱᶜₖ₁ᵣ₉₃()
+    ln_kc1_p0 = (  a₀ + 
+                   a₁/Θᴷ + 
+                   a₂*log(Θᴷ)
                 + (
-                   Pᵈⁱᶜₖ₁ᵣ₉₃.b₀ + 
-                   Pᵈⁱᶜₖ₁ᵣ₉₃.b₁/Θᴷ
+                   b₀ + 
+                   b₁/Θᴷ
                    )*Sᴾ⁰⁵(Sᵖ)
-                + Pᵈⁱᶜₖ₁ᵣ₉₃.b₂*Sᵖ
-                + Pᵈⁱᶜₖ₁ᵣ₉₃.b₃*Sᵖ*Sᴾ⁰⁵(Sᵖ)
+                + b₂*Sᵖ
+                + b₃*Sᵖ*Sᴾ⁰⁵(Sᵖ)
                 )
 
     "Pressure correction for applied pressure /= 0"
-    ln_kc1_pp = (-(Pᵈⁱᶜₖ₁ᵣ₉₃.v₀ + 
-                   Pᵈⁱᶜₖ₁ᵣ₉₃.v₁*ΔSᵖ(Sᵖ) +
-                   Pᵈⁱᶜₖ₁ᵣ₉₃.v₂*ΘᵒC(Θᴷ)) 
+    ln_kc1_pp = (-(v₀ + 
+                   v₁*ΔSᵖ(Sᵖ,Pᵈˢᵖ) +
+                   v₂*ΘᵒC(Θᴷ)) 
                  +(
-                     Pᵈⁱᶜₖ₁ᵣ₉₃.k₀ + 
-                     Pᵈⁱᶜₖ₁ᵣ₉₃.k₁*ΔSᵖ(Sᵖ) +
-                     Pᵈⁱᶜₖ₁ᵣ₉₃.k₂*ΘᵒC(Θᴷ)
+                     k₀ + 
+                     k₁*ΔSᵖ(Sᵖ,Pᵈˢᵖ) +
+                     k₂*ΘᵒC(Θᴷ)
                  )*(Δpᵦₐᵣ/2.)
                  )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
 
-    exp( ln_kc1_p0 + ln_kc1_pp ) * H₂Oˢʷ(Sᵖ)
+    exp( ln_kc1_p0 + ln_kc1_pp ) * H₂Oˢʷ(Sᵖ,Pᴴ²⁰ˢʷ)
 end
 
 Base.@kwdef struct Pᵈⁱᶜₖ₂ᵣ₉₃{FT}
@@ -345,29 +421,30 @@ pH scale  : Total
 Note      : converted here from mol/kg-H2O to mol/kg-SW
 """
 @inline function Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ᵣ₉₃)
-    ln_kc2_p0 = ( Pᵈⁱᶜₖ₂ᵣ₉₃.a₀ + 
-                   Pᵈⁱᶜₖ₂ᵣ₉₃.a₁/Θᴷ + 
-                   Pᵈⁱᶜₖ₂ᵣ₉₃.a₂*log(Θᴷ)
+    a₀, a₁, a₂, b₀, b₁, b₂, b₃, v₀, v₁, v₂, k₀, k₁, k₂ = Pᵈⁱᶜₖ₂ᵣ₉₃()
+    ln_kc2_p0 = (  a₀ + 
+                   a₁/Θᴷ + 
+                   a₂*log(Θᴷ)
                 + (
-                   Pᵈⁱᶜₖ₂ᵣ₉₃.b₀ + 
-                   Pᵈⁱᶜₖ₂ᵣ₉₃.b₁/Θᴷ
+                   b₀ + 
+                   b₁/Θᴷ
                    )*Sᴾ⁰⁵(Sᵖ)
-                +  Pᵈⁱᶜₖ₂ᵣ₉₃.b₂*Sᵖ
-                + Pᵈⁱᶜₖ₂ᵣ₉₃.b₃*Sᵖ*Sᴾ⁰⁵(Sᵖ)
+                +  b₂*Sᵖ
+                + b₃*Sᵖ*Sᴾ⁰⁵(Sᵖ)
                 )    
 
     "Pressure correction for applied pressure /= 0"
-    ln_kc2_pp = (-(Pᵈⁱᶜₖ₂ᵣ₉₃.v₀ + 
-                   Pᵈⁱᶜₖ₂ᵣ₉₃.v₁*ΔSᵖ(Sᵖ) +
-                   Pᵈⁱᶜₖ₂ᵣ₉₃.v₂*ΘᵒC(Θᴷ)) 
+    ln_kc2_pp = (-(v₀ + 
+                   v₁*ΔSᵖ(Sᵖ,Pᵈˢᵖ) +
+                   v₂*ΘᵒC(Θᴷ)) 
                  +(
-                     Pᵈⁱᶜₖ₂ᵣ₉₃.k₀ + 
-                     Pᵈⁱᶜₖ₂ᵣ₉₃.k₁*ΔSᵖ(Sᵖ) +
-                     Pᵈⁱᶜₖ₂ᵣ₉₃.k₂*ΘᵒC(Θᴷ)
+                     k₀ + 
+                     k₁*ΔSᵖ(Sᵖ,Pᵈˢᵖ) +
+                     k₂*ΘᵒC(Θᴷ)
                  )*(Δpᵦₐᵣ/2.)
                  )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
 
-    exp(ln_kc2_p0 + ln_kc2_pp) * H₂Oˢʷ(Sᵖ)
+    exp(ln_kc2_p0 + ln_kc2_pp) * H₂Oˢʷ(Sᵖ,Pᴴ²⁰ˢʷ)
 end
 
 Base.@kwdef struct Pᵈⁱᶜₖ₁ₘ₉₅{FT}
@@ -401,26 +478,26 @@ References: Millero (1995, eq 50 -- ln K1(COM))
 pH scale:   SWS
 """
 @inline function Fᵈⁱᶜₖ₁ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₘ₉₅)
-
-    ln_kc1_p0 = ( Pᵈⁱᶜₖ₁ₘ₉₅.a₀ + 
-                   Pᵈⁱᶜₖ₁ₘ₉₅.a₁/Θᴷ + 
-                   Pᵈⁱᶜₖ₁ₘ₉₅.a₂*log(Θᴷ)
+    a₀, a₁, a₂, b₀, b₁, b₂, b₃, v₀, v₁, v₂, k₀, k₁, k₂ = Pᵈⁱᶜₖ₁ₘ₉₅()
+    ln_kc1_p0 = (  a₀ + 
+                   a₁/Θᴷ + 
+                   a₂*log(Θᴷ)
                 + (
-                   Pᵈⁱᶜₖ₁ₘ₉₅.b₀ + 
-                   Pᵈⁱᶜₖ₁ₘ₉₅.b₁/Θᴷ
+                   b₀ + 
+                   b₁/Θᴷ
                    )*Sᴾ⁰⁵(Sᵖ)
-                +  Pᵈⁱᶜₖ₁ₘ₉₅.b₂*Sᵖ
-                + Pᵈⁱᶜₖ₁ₘ₉₅.b₃*Sᵖ*Sᴾ⁰⁵(Sᵖ)
+                +  b₂*Sᵖ
+                + b₃*Sᵖ*Sᴾ⁰⁵(Sᵖ)
                 )
 
 
     "Pressure correction for applied pressure /= 0"
     ln_kc1_pp = (-(Pᵈⁱᶜₖ₁ₘ₉₅.v₀ + 
-                   Pᵈⁱᶜₖ₁ₘ₉₅.v₁*ΔSᵖ(Sᵖ) +
+                   Pᵈⁱᶜₖ₁ₘ₉₅.v₁*ΔSᵖ(Sᵖ,Pᵈˢᵖ) +
                    Pᵈⁱᶜₖ₁ₘ₉₅.v₂*ΘᵒC(Θᴷ)) 
                  +(
                      Pᵈⁱᶜₖ₁ₘ₉₅.k₀ + 
-                     Pᵈⁱᶜₖ₁ₘ₉₅.k₁*ΔSᵖ(Sᵖ) +
+                     Pᵈⁱᶜₖ₁ₘ₉₅.k₁*ΔSᵖ(Sᵖ,Pᵈˢᵖ) +
                      Pᵈⁱᶜₖ₁ₘ₉₅.k₂*ΘᵒC(Θᴷ)
                  )*(Δpᵦₐᵣ/2.)
                  )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
@@ -444,7 +521,6 @@ Base.@kwdef struct Pᵈⁱᶜₖ₂ₘ₉₅{FT}
     k₂ :: FT = -   0.1475e-3
 end
 
-@inline
 """
 Cᵈⁱᶜₖ₂ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₘ₉₅)
 
@@ -459,27 +535,28 @@ References: Millero (1995, eq 51 -- ln K2(COM))
 pH scale:   SWS
 """
 @inline function Fᵈⁱᶜₖ₂ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₘ₉₅)
+    a₀, a₁, a₂, b₀, b₁, b₂, b₃, v₀, v₁, v₂, k₀, k₁, k₂ = Pᵈⁱᶜₖ₂ₘ₉₅()
     ln_kc2_p0 = (
-        Pᵈⁱᶜₖ₂ₘ₉₅.a₀ + 
-        Pᵈⁱᶜₖ₂ₘ₉₅.a₁/Θᴷ + 
-        Pᵈⁱᶜₖ₂ₘ₉₅.a₂*log(Θᴷ)
+        a₀ + 
+        a₁/Θᴷ + 
+        a₂*log(Θᴷ)
         + (
-            Pᵈⁱᶜₖ₂ₘ₉₅.b₀ + 
-            Pᵈⁱᶜₖ₂ₘ₉₅.b₁/Θᴷ
+            b₀ + 
+            b₁/Θᴷ
         )*Sᴾ⁰⁵(Sᵖ) +
-        Pᵈⁱᶜₖ₂ₘ₉₅.b₂*Sᵖ +
-        Pᵈⁱᶜₖ₂ₘ₉₅.b₃*Sᵖ*Sᴾ⁰⁵(Sᵖ)
+        b₂*Sᵖ +
+        b₃*Sᵖ*Sᴾ⁰⁵(Sᵖ)
     )
 
     "Pressure correction for applied pressure /= 0"
     ln_kc2_pp = (
-        -(Pᵈⁱᶜₖ₂ₘ₉₅.v₀ + 
-          Pᵈⁱᶜₖ₂ₘ₉₅.v₁*ΔSᵖ(Sᵖ) +
-          Pᵈⁱᶜₖ₂ₘ₉₅.v₂*ΘᵒC(Θᴷ)) 
+        -(v₀ + 
+          v₁*ΔSᵖ(Sᵖ,Pᵈˢᵖ) +
+          v₂*ΘᵒC(Θᴷ)) 
         +(
-            Pᵈⁱᶜₖ₂ₘ₉₅.k₀ + 
-            Pᵈⁱᶜₖ₂ₘ₉₅.k₁*ΔSᵖ(Sᵖ) +
-            Pᵈⁱᶜₖ₂ₘ₉₅.k₂*ΘᵒC(Θᴷ)
+            k₀ + 
+            k₁*ΔSᵖ(Sᵖ,Pᵈˢᵖ) +
+            k₂*ΘᵒC(Θᴷ)
         )*(Δpᵦₐᵣ/2.)
     )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
 
@@ -500,7 +577,6 @@ Base.@kwdef struct Pᵈⁱᶜₖ₁ₗ₀₀{FT}
     k₂ :: FT =     0.0877e-3
 end
 
-@inline
 """
 Cᵈⁱᶜₖ₁ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₗ₀₀)
 
@@ -515,25 +591,26 @@ References: Luecker et al. (2000) -- also Handbook (2007)
 pH scale:   Total
 """
 @inline function Fᵈⁱᶜₖ₁ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₗ₀₀)
+    a₀, a₁, a₂, b₀, b₁, v₀, v₁, v₂, k₀, k₁, k₂ = Pᵈⁱᶜₖ₁ₗ₀₀()
     log10_kc1_p0 = (
-        Pᵈⁱᶜₖ₁ₗ₀₀.a₀ + 
-        Pᵈⁱᶜₖ₁ₗ₀₀.a₁/Θᴷ + 
-        Pᵈⁱᶜₖ₁ₗ₀₀.a₂*log(Θᴷ)
+        a₀ + 
+        a₁/Θᴷ + 
+        a₂*log(Θᴷ)
         + (
-            Pᵈⁱᶜₖ₁ₗ₀₀.b₀ + 
-            Pᵈⁱᶜₖ₁ₗ₀₀.b₁*Sᵖ
+            b₀ + 
+            b₁*Sᵖ
         )*Sᵖ
     )
 
     "Pressure correction for applied pressure /= 0"
     ln_kc1_pp = (
-        -(Pᵈⁱᶜₖ₁ₗ₀₀.v₀ + 
-          Pᵈⁱᶜₖ₁ₗ₀₀.v₁*ΔSᵖ(Sᵖ) +
-          Pᵈⁱᶜₖ₁ₗ₀₀.v₂*ΘᵒC(Θᴷ)) 
+        -(v₀ + 
+          v₁*ΔSᵖ(Sᵖ,Pᵈˢᵖ) +
+          v₂*ΘᵒC(Θᴷ)) 
         +(
-            Pᵈⁱᶜₖ₁ₗ₀₀.k₀ + 
-            Pᵈⁱᶜₖ₁ₗ₀₀.k₁*ΔSᵖ(Sᵖ) +
-            Pᵈⁱᶜₖ₁ₗ₀₀.k₂*ΘᵒC(Θᴷ)
+            k₀ + 
+            k₁*ΔSᵖ(Sᵖ,Pᵈˢᵖ) +
+            k₂*ΘᵒC(Θᴷ)
         )*(Δpᵦₐᵣ/2.)
     )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
 
@@ -554,7 +631,6 @@ Base.@kwdef struct Pᵈⁱᶜₖ₂ₗ₀₀{FT}
     k₂ :: FT = -   0.1475e-3
 end
 
-@inline
 """
 Cᵈⁱᶜₖ₂ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₗ₀₀)
 
@@ -569,25 +645,26 @@ References: Luecker et al. (2000) -- also Handbook (2007)
 pH scale:   Total
 """
 @inline function Fᵈⁱᶜₖ₂ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₗ₀₀)
+    a₀, a₁, a₂, b₀, b₁, v₀, v₁, v₂, k₀, k₁, k₂ = Pᵈⁱᶜₖ₂ₗ₀₀()
     log10_kc2_p0 = (
-        Pᵈⁱᶜₖ₂ₗ₀₀.a₀ + 
-        Pᵈⁱᶜₖ₂ₗ₀₀.a₁/Θᴷ + 
-        Pᵈⁱᶜₖ₂ₗ₀₀.a₂*log(Θᴷ)
+        a₀ + 
+        a₁/Θᴷ + 
+        a₂*log(Θᴷ)
         + (
-            Pᵈⁱᶜₖ₂ₗ₀₀.b₀ + 
-            Pᵈⁱᶜₖ₂ₗ₀₀.b₁*Sᵖ
+            b₀ + 
+            b₁*Sᵖ
         )*Sᵖ
     )
 
     "Pressure correction for applied pressure /= 0"
     ln_kc2_pp = (
-        -(Pᵈⁱᶜₖ₂ₗ₀₀.v₀ + 
-          Pᵈⁱᶜₖ₂ₗ₀₀.v₁*ΔSᵖ(Sᵖ) +
-          Pᵈⁱᶜₖ₂ₗ₀₀.v₂*ΘᵒC(Θᴷ)) 
+        -(v₀ + 
+          v₁*ΔSᵖ(Sᵖ,Pᵈˢᵖ) +
+          v₂*ΘᵒC(Θᴷ)) 
         +(
-            Pᵈⁱᶜₖ₂ₗ₀₀.k₀ + 
-            Pᵈⁱᶜₖ₂ₗ₀₀.k₁*ΔSᵖ(Sᵖ) +
-            Pᵈⁱᶜₖ₂ₗ₀₀.k₂*ΘᵒC(Θᴷ)
+            k₀ + 
+            k₁*ΔSᵖ(Sᵖ,Pᵈˢᵖ) +
+            k₂*ΘᵒC(Θᴷ)
         )*(Δpᵦₐᵣ/2.)
     )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
 
@@ -615,9 +692,8 @@ Base.@kwdef struct Pᴮₖ₁{FT}
     k₁ :: FT =      0.354e-3
 end
 
-@inline
 """
-Cᵇₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴮₖ₁)
+    Fᵇₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴮₖ₁)
 
 Return boric acid dissociation constant in mol/kg-SW, given temperature in K,
 `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴮₖ₁`.
@@ -626,34 +702,35 @@ References: Dickson (1990, eq. 23) -- also Handbook (2007, eq. 37)
             Millero (1979) pressure correction
 pH scale  : total
 """
-@inline function Fᵇₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴮₖ₁)
-    ln_kb_p0  = (( Pᴮₖ₁.a₀ +
-                Sᴾ⁰⁵(Sᵖ)*( Pᴮₖ₁.a₁ +
-                Sᴾ⁰⁵(Sᵖ)*( Pᴮₖ₁.a₂ +
-                Sᴾ⁰⁵(Sᵖ)*( Pᴮₖ₁.a₃ + 
-                Sᴾ⁰⁵(Sᵖ)*  Pᴮₖ₁.a₄
+@inline function Fᵇₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴮₖ₁)
+    a₀, a₁, a₂, a₃, a₄, b₀, b₁, b₂, c₀, c₁, c₂, d₀, v₀, v₁, v₂, v₃, k₀, k₁ = Pᴮₖ₁()
+    ln_kb_p0  = (( a₀ +
+                Sᴾ⁰⁵(Sᵖ)*( a₁ +
+                Sᴾ⁰⁵(Sᵖ)*( a₂ +
+                Sᴾ⁰⁵(Sᵖ)*( a₃ + 
+                Sᴾ⁰⁵(Sᵖ)*  a₄
                     )))) / Θᴷ
-                + Pᴮₖ₁.b₀ + 
+                + b₀ + 
                 Sᴾ⁰⁵(Sᵖ)*( 
-                    Pᴮₖ₁.b₁ + 
-                    Pᴮₖ₁.b₂*Sᴾ⁰⁵(Sᵖ)
+                    b₁ + 
+                    b₂*Sᴾ⁰⁵(Sᵖ)
                 ) +
-                ( Pᴮₖ₁.c₀ + 
+                ( c₀ + 
                 Sᴾ⁰⁵(Sᵖ)*(
-                    Pᴮₖ₁.c₁ +
-                    Pᴮₖ₁.c₂*Sᴾ⁰⁵(Sᵖ))
+                    c₁ +
+                    c₂*Sᴾ⁰⁵(Sᵖ))
                     ) * log(Θᴷ)
-                + Pᴮₖ₁.d₀*Sᴾ⁰⁵(Sᵖ)*Θᴷ
+                + d₀*Sᴾ⁰⁵(Sᵖ)*Θᴷ
                 )
 
     "Pressure correction for applied pressure /= 0"
-    ln_kb_pp = (-( Pᴮₖ₁.v₀ + 
-                   Pᴮₖ₁.v₁*ΔSᵖ(Sᵖ) +
-                   Pᴮₖ₁.v₂*ΘᵒC(Θᴷ) + 
-                   Pᴮₖ₁.v₃*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)) 
+    ln_kb_pp = (-( v₀ + 
+                   v₁*ΔSᵖ(Sᵖ,Pᵈˢᵖ) +
+                   v₂*ΘᵒC(Θᴷ) + 
+                   v₃*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)) 
                  +(
-                   Pᴮₖ₁.k₀ + 
-                   Pᴮₖ₁.k₁*ΔSᵖ(Sᵖ)
+                   k₀ + 
+                   k₁*ΔSᵖ(Sᵖ,Pᵈˢᵖ)
                  )*(Δpᵦₐᵣ/2.)
                  )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
 
@@ -686,23 +763,24 @@ References: Millero (1995) for value at p_bar = 0
 pH scale  : SWS
 """
 @inline function Fᴴ²ᴼₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ᴼₖ₁)
-    ln_kw_p0 = (Pᴴ²ᴼₖ₁.a₀ +
-                Pᴴ²ᴼₖ₁.a₁/Θᴷ +
-                Pᴴ²ᴼₖ₁.a₂*log(Θᴷ) +
-                ( Pᴴ²ᴼₖ₁.b₀ +
-                Pᴴ²ᴼₖ₁.b₁/Θᴷ +
-                Pᴴ²ᴼₖ₁.b₂*log(Θᴷ)
+    a₀, a₁, a₂, b₀, b₁, b₂, c₀, v₀, v₁, v₂, k₀, k₁ = Pᴴ²ᴼₖ₁()
+    ln_kw_p0 = (a₀ +
+                a₁/Θᴷ +
+                a₂*log(Θᴷ) +
+                ( b₀ +
+                b₁/Θᴷ +
+                b₂*log(Θᴷ)
                 )*Sᴾ⁰⁵(Sᵖ) +
-                Pᴴ²ᴼₖ₁.c₀*Sᵖ
+                c₀*Sᵖ
                 )
 
     "Pressure correction for applied pressure /= 0"
-    ln_kw_pp = (-( Pᴴ²ᴼₖ₁.v₀ + 
-                   Pᴴ²ᴼₖ₁.v₁*ΘᵒC(Θᴷ) + 
-                   Pᴴ²ᴼₖ₁.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)) 
+    ln_kw_pp = (-( v₀ + 
+                   v₁*ΘᵒC(Θᴷ) + 
+                   v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)) 
                  +(
-                   Pᴴ²ᴼₖ₁.k₀ + 
-                   Pᴴ²ᴼₖ₁.k₁*ΘᵒC(Θᴷ)
+                   k₀ + 
+                   k₁*ΘᵒC(Θᴷ)
                  )*(Δpᵦₐᵣ/2.)
                  )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
 
@@ -724,7 +802,6 @@ Base.@kwdef struct Pᴾᴼ⁴ₖ₁{FT}
     k₁ :: FT =     0.0427e-3
 end
 
-@inline
 """
 Cᴾᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₁)
 
@@ -736,25 +813,26 @@ References: Yao and Millero (1995)
 pH scale  : SWS
 """
 @inline function Fᴾᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₁)
-    ln_kp1_p0 = ( Pᴾᴼ⁴ₖ₁.a₀ +
-                  Pᴾᴼ⁴ₖ₁.a₁/Θᴷ +
-                  Pᴾᴼ⁴ₖ₁.a₂*log(Θᴷ) +
+    a₀, a₁, a₂, b₀, b₁, b₂, b₃, v₀, v₁, v₂, k₀, k₁ = Pᴾᴼ⁴ₖ₁()
+    ln_kp1_p0 = ( a₀ +
+                  a₁/Θᴷ +
+                  a₂*log(Θᴷ) +
                  ( 
-                  Pᴾᴼ⁴ₖ₁.b₀ +
-                  Pᴾᴼ⁴ₖ₁.b₁/Θᴷ
+                  b₀ +
+                  b₁/Θᴷ
                  )*Sᴾ⁰⁵(Sᵖ) +
                  ( 
-                  Pᴾᴼ⁴ₖ₁.b₂ +
-                  Pᴾᴼ⁴ₖ₁.b₃/Θᴷ
+                  b₂ +
+                  b₃/Θᴷ
                  )*Sᵖ )
 
     "Pressure correction for applied pressure /= 0"
-    ln_kp1_pp = (-( Pᴾᴼ⁴ₖ₁.v₀ + 
-                    Pᴾᴼ⁴ₖ₁.v₁*ΘᵒC(Θᴷ) +
-                    Pᴾᴼ⁴ₖ₁.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)) 
+    ln_kp1_pp = (-( v₀ + 
+                    v₁*ΘᵒC(Θᴷ) +
+                    v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)) 
                  +(
-                   Pᴾᴼ⁴ₖ₁.k₀ + 
-                   Pᴾᴼ⁴ₖ₁.k₁*ΘᵒC(Θᴷ)
+                   k₀ + 
+                   k₁*ΘᵒC(Θᴷ)
                  )*(Δpᵦₐᵣ/2.)
                  )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
 
@@ -776,7 +854,6 @@ Base.@kwdef struct Pᴾᴼ⁴ₖ₂{FT}
     k₁ :: FT =      0.09e-3
 end
 
-@inline
 """
 Cᴾᴼ⁴ₖ₂(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₂)
 
@@ -788,25 +865,26 @@ References: Yao and Millero (1995)
 pH scale  : SWS
 """
 @inline function Fᴾᴼ⁴ₖ₂(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₂)
-    ln_kp2_p0 = ( Pᴾᴼ⁴ₖ₂.a₀ +
-                  Pᴾᴼ⁴ₖ₂.a₁/Θᴷ +
-                  Pᴾᴼ⁴ₖ₂.a₂*log(Θᴷ) +
+    a₀, a₁, a₂, b₀, b₁, b₂, b₃, v₀, v₁, v₂, k₀, k₁ = Pᴾᴼ⁴ₖ₂()
+    ln_kp2_p0 = ( a₀ +
+                  a₁/Θᴷ +
+                  a₂*log(Θᴷ) +
                  ( 
-                  Pᴾᴼ⁴ₖ₂.b₀ +
-                  Pᴾᴼ⁴ₖ₂.b₁/Θᴷ
+                  b₀ +
+                  b₁/Θᴷ
                  )*Sᴾ⁰⁵(Sᵖ) +
                  ( 
-                  Pᴾᴼ⁴ₖ₂.b₂ +
-                  Pᴾᴼ⁴ₖ₂.b₃/Θᴷ
+                  b₂ +
+                  b₃/Θᴷ
                  )*Sᵖ )
 
     "Pressure correction for applied pressure /= 0"
-    ln_kp2_pp = (-( Pᴾᴼ⁴ₖ₂.v₀ + 
-                    Pᴾᴼ⁴ₖ₂.v₁*ΘᵒC(Θᴷ) +
-                    Pᴾᴼ⁴ₖ₂.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)) 
+    ln_kp2_pp = (-( v₀ + 
+                    v₁*ΘᵒC(Θᴷ) +
+                    v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)) 
                  +(
-                   Pᴾᴼ⁴ₖ₂.k₀ + 
-                   Pᴾᴼ⁴ₖ₂.k₁*ΘᵒC(Θᴷ)
+                   k₀ + 
+                   k₁*ΘᵒC(Θᴷ)
                  )*(Δpᵦₐᵣ/2.)
                  )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
     
@@ -827,7 +905,6 @@ Base.@kwdef struct Pᴾᴼ⁴ₖ₃{FT}
     k₁ :: FT =      0.0714e-3
 end
 
-@inline
 """
 Cᴾᴼ⁴ₖ₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₃)
 
@@ -839,24 +916,25 @@ References: Yao and Millero (1995)
 pH scale  : SWS
 """
 @inline function Fᴾᴼ⁴ₖ₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₃)
-    ln_kp3_p0 = ( Pᴾᴼ⁴ₖ₃.a₀ +
-                  Pᴾᴼ⁴ₖ₃.a₁/Θᴷ +
+    a₀, a₁, a₂, a₃, a₄, a₅, v₀, v₁, v₂, k₀, k₁ = Pᴾᴼ⁴ₖ₃()
+    ln_kp3_p0 = ( a₀ +
+                  a₁/Θᴷ +
                  ( 
-                  Pᴾᴼ⁴ₖ₃.a₂ +
-                  Pᴾᴼ⁴ₖ₃.a₃/Θᴷ
+                  a₂ +
+                  a₃/Θᴷ
                  )*Sᴾ⁰⁵(Sᵖ) +
                  ( 
-                  Pᴾᴼ⁴ₖ₃.a₄ +
-                  Pᴾᴼ⁴ₖ₃.a₅/Θᴷ
+                  a₄ +
+                  a₅/Θᴷ
                  )*Sᵖ )
 
     "Pressure correction for applied pressure /= 0"
-    ln_kp3_pp = (-( Pᴾᴼ⁴ₖ₃.v₀ + 
-                    Pᴾᴼ⁴ₖ₃.v₁*ΘᵒC(Θᴷ) +
-                    Pᴾᴼ⁴ₖ₃.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)) 
+    ln_kp3_pp = (-( v₀ + 
+                    v₁*ΘᵒC(Θᴷ) +
+                    v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)) 
                  +(
-                   Pᴾᴼ⁴ₖ₃.k₀ + 
-                   Pᴾᴼ⁴ₖ₃.k₁*ΘᵒC(Θᴷ)
+                   k₀ + 
+                   k₁*ΘᵒC(Θᴷ)
                  )*(Δpᵦₐᵣ/2.)
                  )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
     
@@ -875,7 +953,6 @@ Base.@kwdef struct Pˢⁱᵗₖ₁{FT}
     c₁ :: FT = -   12.1652
 end
 
-@inline
 """
 Cˢⁱᵗₖ₁(Θᴷ,Sᵖ,Pˢⁱᵗₖ₁)
 
@@ -888,23 +965,24 @@ Note      : No pressure correction available
 Note      : converted here from mol/kg-H2O to mol/kg-sw
 """
 @inline function Fˢⁱᵗₖ₁(Θᴷ,Sᵖ,Pˢⁱᵗₖ₁)
-    ln_ksi1_p0 = ( Pˢⁱᵗₖ₁.a₀ +
-                   Pˢⁱᵗₖ₁.a₁/Θᴷ +
-                   Pˢⁱᵗₖ₁.a₂*log(Θᴷ) +
-                  ( Pˢⁱᵗₖ₁.b₀ +
-                    Pˢⁱᵗₖ₁.b₁/Θᴷ
-                  )*sqrt(μₛ(Sᵖ)) +
-                  ( Pˢⁱᵗₖ₁.b₂ +
-                    Pˢⁱᵗₖ₁.b₃/Θᴷ
-                  )*μₛ(Sᵖ) +
-                  ( Pˢⁱᵗₖ₁.c₀ +
-                    Pˢⁱᵗₖ₁.c₁/Θᴷ
-                  )*μₛ(Sᵖ)*μₛ(Sᵖ) )
+    a₀, a₁, a₂, b₀, b₁, b₂, b₃, c₀, c₁ = Pˢⁱᵗₖ₁()
+    ln_ksi1_p0 = ( a₀ +
+                   a₁/Θᴷ +
+                   a₂*log(Θᴷ) +
+                  ( b₀ +
+                    b₁/Θᴷ
+                  )*sqrt(μₛ(Sᵖ,Pᵘˢ)) +
+                  ( b₂ +
+                    b₃/Θᴷ
+                  )*μₛ(Sᵖ,Pᵘˢ) +
+                  ( c₀ +
+                    c₁/Θᴷ
+                  )*μₛ(Sᵖ,Pᵘˢ)*μₛ(Sᵖ,Pᵘˢ) )
 
     # Pressure correction : currently none
     ln_ksi1_pp = 0.
 
-    exp( ln_ksi1_p0 + ln_ksi1_pp ) * H₂Oˢʷ(Sᵖ)
+    exp( ln_ksi1_p0 + ln_ksi1_pp ) * H₂Oˢʷ(Sᵖ,Pᴴ²⁰ˢʷ)
 end
 
 Base.@kwdef struct Pᴴ²ˢₖ₁{FT}
@@ -920,7 +998,6 @@ Base.@kwdef struct Pᴴ²ˢₖ₁{FT}
     k₁ :: FT =       0.054e-3
 end
 
-@inline
 """
 Cᴴ²ˢₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ˢₖ₁)
 
@@ -937,19 +1014,20 @@ Note      : the fits from Millero (1995) and Yao and Millero (1995)
             multiplied by -ln(10)
 """
 @inline function Fᴴ²ˢₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ˢₖ₁)
-    ln_kh2s_p0 = ( Pᴴ²ˢₖ₁.a₀ +
-                   Pᴴ²ˢₖ₁.a₁/Θᴷ +
-                   Pᴴ²ˢₖ₁.a₂*log(Θᴷ) +
-                   Pᴴ²ˢₖ₁.a₃*Sᴾ⁰⁵(Sᵖ) +
-                   Pᴴ²ˢₖ₁.a₄*Sᵖ)
+    a₀, a₁, a₂, a₃, a₄, v₀, v₁, v₂, k₀, k₁ = Pᴴ²ˢₖ₁()
+    ln_kh2s_p0 = ( a₀ +
+                   a₁/Θᴷ +
+                   a₂*log(Θᴷ) +
+                   a₃*Sᴾ⁰⁵(Sᵖ) +
+                   a₄*Sᵖ)
 
     "Pressure correction for applied pressure /= 0"
-    ln_kh2s_pp = (-( Pᴴ²ˢₖ₁.v₀ +
-                     Pᴴ²ˢₖ₁.v₁*ΘᵒC(Θᴷ) +
-                     Pᴴ²ˢₖ₁.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
+    ln_kh2s_pp = (-( v₀ +
+                     v₁*ΘᵒC(Θᴷ) +
+                     v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
                    )+( 
-                      Pᴴ²ˢₖ₁.k₀ +
-                      Pᴴ²ˢₖ₁.k₁*ΘᵒC(Θᴷ)
+                      k₀ +
+                      k₁*ΘᵒC(Θᴷ)
                      )*(Δpᵦₐᵣ/2.)
                      )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
 
@@ -971,7 +1049,6 @@ Base.@kwdef struct Pᴺᴴ⁴ₖ₁{FT}
     k₁ :: FT =      0.0814E-03
 end
 
-@inline
 """
 Cᴺᴴ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴺᴴ⁴ₖ₁)
 
@@ -983,24 +1060,25 @@ References: Yao and Millero (1995)
 pH scale  : SWS
 """
 @inline function Fᴺᴴ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴺᴴ⁴ₖ₁)
-    ln_knh4_p0 = ( Pᴺᴴ⁴ₖ₁.a₀ +
-                     Pᴺᴴ⁴ₖ₁.a₁/Θᴷ +
-                        Pᴺᴴ⁴ₖ₁.a₂*Θᴷ +
-                     ( Pᴺᴴ⁴ₖ₁.b₀ +
-                          Pᴺᴴ⁴ₖ₁.b₁/Θᴷ
+    a₀, a₁, a₂, b₀, b₁, b₂, b₃, v₀, v₁, v₂, k₀, k₁ = Pᴺᴴ⁴ₖ₁()
+    ln_knh4_p0 = ( a₀ +
+                     a₁/Θᴷ +
+                        a₂*Θᴷ +
+                     ( b₀ +
+                          b₁/Θᴷ
                      )*Sᴾ⁰⁵(Sᵖ) +
-                     ( Pᴺᴴ⁴ₖ₁.b₂ +
-                          Pᴺᴴ⁴ₖ₁.b₃/Θᴷ
+                     ( b₂ +
+                          b₃/Θᴷ
                      )*Sᵖ)
 
     
     "Pressure correction for applied pressure /= 0"
-    ln_knh4_pp = (-( Pᴺᴴ⁴ₖ₁.v₀ +
-                     Pᴺᴴ⁴ₖ₁.v₁*ΘᵒC(Θᴷ) +
-                     Pᴺᴴ⁴ₖ₁.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
+    ln_knh4_pp = (-( v₀ +
+                     v₁*ΘᵒC(Θᴷ) +
+                     v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
                    )+( 
-                      Pᴺᴴ⁴ₖ₁.k₀ +
-                      Pᴺᴴ⁴ₖ₁.k₁*ΘᵒC(Θᴷ)
+                      k₀ +
+                      k₁*ΘᵒC(Θᴷ)
                      )*(Δpᵦₐᵣ/2.)
                      )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
 
@@ -1018,7 +1096,6 @@ Base.@kwdef struct Pᴴᶠᵦ₁{FT}
     k₁ :: FT =      0.054e-3
 end
 
-@inline
 """
 Cᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁)
 
@@ -1033,17 +1110,18 @@ pH scale  : free
 Note      : converted here from mol/kg-H2O to mol/kg-SW
 """
 @inline function Fᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁)
-    ln_bhf_p0 = ( Pᴴᶠᵦ₁.a₀ +
-                  Pᴴᶠᵦ₁.a₁/Θᴷ +
-                  Pᴴᶠᵦ₁.a₂*sqrt(μₛ(Sᵖ)))
+    a₀, a₁, a₂, v₀, v₁, v₂, k₀, k₁ = Pᴴᶠᵦ₁()
+    ln_bhf_p0 = ( a₀ +
+                  a₁/Θᴷ +
+                  a₂*sqrt(μₛ(Sᵖ,Pᵘˢ)))
 
     "Pressure correction for applied pressure /= 0"
-    ln_khf_pp = (-( Pᴴᶠᵦ₁.v₀ +
-                     Pᴴᶠᵦ₁.v₁*ΘᵒC(Θᴷ) +
-                     Pᴴᶠᵦ₁.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
+    ln_khf_pp = (-( v₀ +
+                     v₁*ΘᵒC(Θᴷ) +
+                     v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
                    )+( 
-                      Pᴴᶠᵦ₁.k₀ +
-                      Pᴴᶠᵦ₁.k₁*ΘᵒC(Θᴷ)
+                      k₀ +
+                      k₁*ΘᵒC(Θᴷ)
                      )*(Δpᵦₐᵣ/2.)
                      )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
     """                
@@ -1053,7 +1131,7 @@ Note      : converted here from mol/kg-H2O to mol/kg-SW
             <=>  -ln(\beta_HF(P)) = -ln(\beta_HF(0)) + zln_khf_pp
             <=>   ln(\beta_HF(P)) =  ln(\beta_HF(0)) - zln_khf_pp
     """
-    exp(ln_bhf_p0 - ln_khf_pp ) / H₂Oˢʷ(Sᵖ)
+    exp(ln_bhf_p0 - ln_khf_pp ) / H₂Oˢʷ(Sᵖ,Pᴴ²⁰ˢʷ)
 end
 
 Base.@kwdef struct Pᴴᶠₖ₁{FT}
@@ -1080,17 +1158,18 @@ References: Perez and Fraga (1987)
 pH scale  : Total (according to Handbook, 2007
 """
 @inline function Fᴴᶠₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠₖ₁)
-    ln_khf_p0 = ( Pᴴᶠₖ₁.a₀ +
-                  Pᴴᶠₖ₁.a₁/Θᴷ +
-                  Pᴴᶠₖ₁.a₂*Sᴾ⁰⁵(Sᵖ))
+    a₀, a₁, a₂, v₀, v₁, v₂, k₀, k₁ = Pᴴᶠₖ₁()
+    ln_khf_p0 = ( a₀ +
+                  a₁/Θᴷ +
+                  a₂*Sᴾ⁰⁵(Sᵖ))
 
     "Pressure correction for applied pressure /= 0"
-    ln_khf_pp = (-( Pᴴᶠₖ₁.v₀ +
-                     Pᴴᶠₖ₁.v₁*ΘᵒC(Θᴷ) +
-                     Pᴴᶠₖ₁.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
+    ln_khf_pp = (-( v₀ +
+                     v₁*ΘᵒC(Θᴷ) +
+                     v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
                    )+( 
-                      Pᴴᶠₖ₁.k₀ +
-                      Pᴴᶠₖ₁.k₁*ΘᵒC(Θᴷ)
+                      k₀ +
+                      k₁*ΘᵒC(Θᴷ)
                      )*(Δpᵦₐᵣ/2.)
                      )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
         
@@ -1128,31 +1207,32 @@ pH scale  : free
 Note      : converted here from mol/kg-H2O to mol/kg-SW
 """
 @inline function Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁)
-    ln_khso4_p0 = ( Pᴴˢᴼ⁴ₖ₁.a₀ +
-                    Pᴴˢᴼ⁴ₖ₁.a₁/Θᴷ +
-                    Pᴴˢᴼ⁴ₖ₁.a₂*log(Θᴷ) +
-                   (Pᴴˢᴼ⁴ₖ₁.b₀ +
-                    Pᴴˢᴼ⁴ₖ₁.b₁/Θᴷ +
-                    Pᴴˢᴼ⁴ₖ₁.b₂*log(Θᴷ)
-                   )*sqrt(μₛ(Sᵖ)) +
-                   (Pᴴˢᴼ⁴ₖ₁.c₀ +
-                    Pᴴˢᴼ⁴ₖ₁.c₁/Θᴷ +
-                    Pᴴˢᴼ⁴ₖ₁.c₂*log(Θᴷ)
-                   )*μₛ(Sᵖ) +
-                   (Pᴴˢᴼ⁴ₖ₁.d₀/Θᴷ)*sqrt(μₛ(Sᵖ))*μₛ(Sᵖ)+
-                   (Pᴴˢᴼ⁴ₖ₁.d₁/Θᴷ)*μₛ(Sᵖ)*μₛ(Sᵖ))
+    a₀, a₁, a₂, b₀, b₁, b₂, c₀, c₁, c₂, d₀, d₁, v₀, v₁, v₂, k₀, k₁ = Pᴴˢᴼ⁴ₖ₁()
+    ln_khso4_p0 = ( a₀ +
+                    a₁/Θᴷ +
+                    a₂*log(Θᴷ) +
+                   (b₀ +
+                    b₁/Θᴷ +
+                    b₂*log(Θᴷ)
+                   )*sqrt(μₛ(Sᵖ,Pᵘˢ)) +
+                   (c₀ +
+                    c₁/Θᴷ +
+                    c₂*log(Θᴷ)
+                   )*μₛ(Sᵖ,Pᵘˢ) +
+                   (d₀/Θᴷ)*sqrt(μₛ(Sᵖ,Pᵘˢ))*μₛ(Sᵖ,Pᵘˢ)+
+                   (d₁/Θᴷ)*μₛ(Sᵖ,Pᵘˢ)*μₛ(Sᵖ,Pᵘˢ))
 
     "Pressure correction for applied pressure /= 0"
-    ln_khso4_pp = (-( Pᴴˢᴼ⁴ₖ₁.v₀ +
-                      Pᴴˢᴼ⁴ₖ₁.v₁*ΘᵒC(Θᴷ) +
-                      Pᴴˢᴼ⁴ₖ₁.v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
+    ln_khso4_pp = (-( v₀ +
+                      v₁*ΘᵒC(Θᴷ) +
+                      v₂*ΘᵒC(Θᴷ)*ΘᵒC(Θᴷ)
                     )+( 
-                       Pᴴˢᴼ⁴ₖ₁.k₀ +
-                       Pᴴˢᴼ⁴ₖ₁.k₁*ΘᵒC(Θᴷ)
+                       k₀ +
+                       k₁*ΘᵒC(Θᴷ)
                       )*(Δpᵦₐᵣ/2.)
                       )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
 
-    exp( ln_khso4_p0 + ln_khso4_pp ) * H₂Oˢʷ(Sᵖ)
+    exp( ln_khso4_p0 + ln_khso4_pp ) * H₂Oˢʷ(Sᵖ,Pᴴ²⁰ˢʷ)
 end
 
 Base.@kwdef struct Pᶜᵃˡᶜⁱᵗᵉₛₚ{FT}
@@ -1171,7 +1251,6 @@ Base.@kwdef struct Pᶜᵃˡᶜⁱᵗᵉₛₚ{FT}
     k₁ :: FT =     0.3692e-3
 end
 
-@inline
 """
     Cᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᶜᵃˡᶜⁱᵗᵉₛₚ)
 
@@ -1184,23 +1263,24 @@ pH scale  : N/A
 Units     : (mol/kg-SW)^2
 """
 @inline function Fᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᶜᵃˡᶜⁱᵗᵉₛₚ)
-    log10_kcalcite_p0 = ( Pᶜᵃˡᶜⁱᵗᵉₛₚ.a₀ +
-                          Pᶜᵃˡᶜⁱᵗᵉₛₚ.a₁*Θᴷ +
-                          Pᶜᵃˡᶜⁱᵗᵉₛₚ.a₂/Θᴷ +
-                          Pᶜᵃˡᶜⁱᵗᵉₛₚ.a₃*log10(Θᴷ) +
-                         (Pᶜᵃˡᶜⁱᵗᵉₛₚ.b₀ +
-                          Pᶜᵃˡᶜⁱᵗᵉₛₚ.b₁*Θᴷ +
-                          Pᶜᵃˡᶜⁱᵗᵉₛₚ.b₂/Θᴷ
+    a₀, a₁, a₂, a₃, b₀, b₁, b₂, c₀, d₀, v₀, v₁, k₀, k₁ = Pᶜᵃˡᶜⁱᵗᵉₛₚ()
+    log10_kcalcite_p0 = ( a₀ +
+                          a₁*Θᴷ +
+                          a₂/Θᴷ +
+                          a₃*log10(Θᴷ) +
+                         (b₀ +
+                          b₁*Θᴷ +
+                          b₂/Θᴷ
                          )*Sᴾ⁰⁵(Sᵖ) +
-                         (Pᶜᵃˡᶜⁱᵗᵉₛₚ.c₀)*Sᵖ +
-                         (Pᶜᵃˡᶜⁱᵗᵉₛₚ.d₀)*Sᵖ*Sᴾ⁰⁵(Sᵖ) )
+                         (c₀)*Sᵖ +
+                         (d₀)*Sᵖ*Sᴾ⁰⁵(Sᵖ) )
 
     "Pressure correction for applied pressure /= 0"
-    ln_kcalcite_pp = (-( Pᶜᵃˡᶜⁱᵗᵉₛₚ.v₀ +
-                            Pᶜᵃˡᶜⁱᵗᵉₛₚ.v₁*ΘᵒC(Θᴷ)
+    ln_kcalcite_pp = (-( v₀ +
+                            v₁*ΘᵒC(Θᴷ)
                           )+( 
-                             Pᶜᵃˡᶜⁱᵗᵉₛₚ.k₀ +
-                             Pᶜᵃˡᶜⁱᵗᵉₛₚ.k₁*ΘᵒC(Θᴷ)
+                             k₀ +
+                             k₁*ΘᵒC(Θᴷ)
                             )*(Δpᵦₐᵣ/2.)
                             )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
 
@@ -1224,7 +1304,6 @@ Base.@kwdef struct Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ{FT}
     k₁ :: FT =     0.3692e-3
 end
 
-@inline
 """
 Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ)
 
@@ -1237,31 +1316,31 @@ pH scale  : N/A
 Units     : (mol/kg-SW)^2
 """
 @inline function Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ)
-    log10_karagonite_p0 = ( Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.a₀ +
-                            Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.a₁*Θᴷ +
-                            Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.a₂/Θᴷ +
-                            Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.a₃*log10(Θᴷ) +
-                           (Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.b₀ +
-                            Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.b₁*Θᴷ +
-                            Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.b₂/Θᴷ
+    a₀, a₁, a₂, a₃, b₀, b₁, b₂, c₀, d₀, v₀, v₁, v₂, k₀, k₁ = Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ()
+    log10_karagonite_p0 = ( a₀ +
+                            a₁*Θᴷ +
+                            a₂/Θᴷ +
+                            a₃*log10(Θᴷ) +
+                           (b₀ +
+                            b₁*Θᴷ +
+                            b₂/Θᴷ
                            )*Sᴾ⁰⁵(Sᵖ) +
-                           (Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.c₀)*Sᵖ +
-                           (Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.d₀)*Sᵖ*Sᴾ⁰⁵(Sᵖ) )
+                           (c₀)*Sᵖ +
+                           (d₀)*Sᵖ*Sᴾ⁰⁵(Sᵖ) )
 
     "Pressure correction for applied pressure /= 0"
-    ln_karagonite_pp = (-( Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.v₀ +
-                           Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.v₁*ΘᵒC(Θᴷ) +
-                           Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.v₂
+    ln_karagonite_pp = (-( v₀ +
+                           v₁*ΘᵒC(Θᴷ) +
+                           v₂
                           )+( 
-                             Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.k₀ +
-                             Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ.k₁*ΘᵒC(Θᴷ)
+                             k₀ +
+                             k₁*ΘᵒC(Θᴷ)
                             )*(Δpᵦₐᵣ/2.)
                             )*(Δpᵦₐᵣ/Rₜ(Θᴷ))
 
     10^(log10_karagonite_p0) * exp(ln_karagonite_pp)
 end
 
-@inline
 """
 H⁺ₛoverH⁺ₜ(Θᴷ,Sᵖ,Δpᵦₐᵣ)
 
@@ -1271,12 +1350,11 @@ pH scale:   all
 """
 @inline function H⁺ₛoverH⁺ₜ(Θᴷ,Sᵖ,Δpᵦₐᵣ)
     (1. +  
-            (Fᵀᴼᵀ(Sᵖ)*Fᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁))
-           /(1. + SO₄ᵀᴼᵀ(Sᵖ)/Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁))
+            (Fᵀᴼᵀ(Sᵖ,Pᶠᵀᴼᵀ)*Fᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁))
+           /(1. + SO₄ᵀᴼᵀ(Sᵖ, Pˢᴼ⁴ᵀᴼᵀ)/Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁))
            )
 end
 
-@inline
 """
 H⁺ₜoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
 
@@ -1285,10 +1363,9 @@ Reference:  Munhoven
 pH scale:   N/A
 """
 @inline function H⁺ₜoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
-    1. + SO₄ᵀᴼᵀ(Sᵖ)/Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁)
+    1. + SO₄ᵀᴼᵀ(Sᵖ, Pˢᴼ⁴ᵀᴼᵀ)/Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁)
 end
 
-@inline
 """
 H⁺ₛoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
 
@@ -1297,23 +1374,7 @@ of salinity, `Sᵖ`.
 """
 @inline function H⁺ₛoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
     ( 1. + 
-            (Fᵀᴼᵀ(Sᵖ)*Fᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁)) +
-            (SO₄ᵀᴼᵀ(Sᵖ)/Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁))
+            (Fᵀᴼᵀ(Sᵖ,Pᶠᵀᴼᵀ)*Fᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁)) +
+            (SO₄ᵀᴼᵀ(Sᵖ, Pˢᴼ⁴ᵀᴼᵀ)/Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁))
          )
 end
-"""
-   Copyright  2013, 2014, 2020, 2021 Guy Munhoven
-   This file is part of SolveSAPHE v. 2
-   SolveSAPHE is free software: you can redistribute it and/or modify
-   it under the terms of the GNU Lesser General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-   SolveSAPHE is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU Lesser General Public License for more details.
-   You should have received a copy of the GNU Lesser General Public License
-   along with SolveSAPHE.  If not, see <http://www.gnu.org/licenses/>.
-"""
-end # module DissociationConstants
-#------------------------------------------------------------
