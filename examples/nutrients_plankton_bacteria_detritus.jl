@@ -56,6 +56,11 @@ Dᵢ(x, y, z) = D₀ * exp(z / 10)
 
 set!(model, b=bᵢ, P=1e-1, B=1e-1, D=Dᵢ, N=Nᵢ, e=1e-6)
 
+# ## A simulation of physical-biological interaction
+# 
+# We construct a simple simulation that emits a message every 10 iterations
+# and outputs tracer fields.
+
 simulation = Simulation(model, Δt=10minutes, stop_time=12days)
 
 progress(sim) = @printf("Iteration: %d, time: %s, max(P): %.2e, max(N): %.2e, max(B): %.2e, max(D): %.2e \n",
