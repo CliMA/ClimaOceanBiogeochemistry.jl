@@ -1,15 +1,37 @@
+# # Nutrients, plankton, bacteria, detritus
+#
+# This example illustrates how to use ClimaOceanBiogeochemistry's
+# `NutrientsPlanktonBacteriaDetrius` model in a single column context.
+
+using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus
+
 using Oceananigans
 using Oceananigans.Units
 using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
-using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus
 using Printf
+using CairoMakie
+
+# ## A single column grid
+#
+# We set up a single column grid with 4 m grid spacing that's 256 m deep:
 
 grid = RectilinearGrid(size = 64,
                        z = (-256, 0),
                        topology = (Flat, Flat, Bounded))
 
+# ## Convection then quiet
+#
+# To illustrate the dynamics of `NutrientsPlanktonBacteriaDetritus`,
+# we set up a physical scenario in which strong convection drives turbulent mixing
+# for 4 days, and then abruptly shuts off. Once the convective turbulence dies
+# down, plankton start to grow.
+
 Qᵇ(x, y, t) = ifelse(t < 4days, 1e-7, 0.0)
 b_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(Qᵇ))
+
+# We put the pieces together.
+# The important line here is `biogeochemistry = NutrientsPlanktonBacteriaDetritus()`.
+# We use all default parameters.
 
 model = HydrostaticFreeSurfaceModel(; grid,
                                     biogeochemistry = NutrientsPlanktonBacteriaDetritus(),
@@ -18,7 +40,11 @@ model = HydrostaticFreeSurfaceModel(; grid,
                                     buoyancy = BuoyancyTracer(),
                                     boundary_conditions = (; b=b_bcs))
 
-# Initial conditions
+# ## Initial conditions
+#
+# We initialize the model with reasonable nutrients, detritus, and a nutrient
+# mixed layer.
+
 N₀ = 1e-1 # Surface nutrient concentration
 D₀ = 1e-1 # Surface detritus concentration
 dᴺ = 50.0 # Nutrient mixed layer depth
@@ -29,6 +55,11 @@ Nᵢ(x, y, z) = N₀ * max(1, exp(-(z + dᴺ) / 100))
 Dᵢ(x, y, z) = D₀ * exp(z / 10)
 
 set!(model, b=bᵢ, P=1e-1, B=1e-1, D=Dᵢ, N=Nᵢ, e=1e-6)
+
+# ## A simulation of physical-biological interaction
+# 
+# We construct a simple simulation that emits a message every 10 iterations
+# and outputs tracer fields.
 
 simulation = Simulation(model, Δt=10minutes, stop_time=12days)
 
@@ -41,17 +72,18 @@ progress(sim) = @printf("Iteration: %d, time: %s, max(P): %.2e, max(N): %.2e, ma
 
 simulation.callbacks[:progress] = Callback(progress, IterationInterval(10))
 
-outputs = merge(model.velocities, model.tracers)
-filename = "simple_plankton_growth_death.jld2"
+filename = "nutrients_plankton_bacteria_detritus.jld2"
 
-simulation.output_writers[:fields] = JLD2OutputWriter(model, outputs;
+simulation.output_writers[:fields] = JLD2OutputWriter(model, model.tracers;
                                                       filename,
                                                       schedule = TimeInterval(20minutes),
                                                       overwrite_existing = true)
 
 run!(simulation)
 
-using GLMakie
+# ## Visualization
+#
+# All that's left is to visualize the results.
 
 bt = FieldTimeSeries(filename, "b")
 et = FieldTimeSeries(filename, "e")
@@ -97,9 +129,10 @@ axislegend(axP)
 
 lines!(axN, Nn, z)
 
-display(fig)
-
-record(fig, "nutrients_plankton_detritus_bacteria.mp4", 1:nt, framerate=24) do nn
+record(fig, "nutrients_plankton_bacteria_detritus.mp4", 1:nt, framerate=24) do nn
     n[] = nn
 end
+nothing #hide
+
+# ![](nutrients_plankton_bacteria_detritus.mp4)
 
