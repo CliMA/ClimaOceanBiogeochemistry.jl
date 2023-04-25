@@ -80,10 +80,9 @@ progress(sim) = @printf("Iteration: %d, time: %s, max(P): %.2e, max(N): %.2e, ma
 
 simulation.callbacks[:progress] = Callback(progress, IterationInterval(10))
 
-outputs = merge(model.velocities, model.tracers)
 filename = "nutrients_plankton_bacteria_detritus.jld2"
 
-simulation.output_writers[:fields] = JLD2OutputWriter(model, outputs;
+simulation.output_writers[:fields] = JLD2OutputWriter(model, model.tracers;
                                                       filename,
                                                       schedule = TimeInterval(20minutes),
                                                       overwrite_existing = true)
@@ -140,7 +139,7 @@ axislegend(axP)
 
 lines!(axN, Nn, z)
 
-record(fig, "nutrients_plankton_detritus_bacteria.mp4", 1:nt, framerate=24) do nn
+record(fig, "nutrients_plankton_bacteria_detritus.mp4", 1:nt, framerate=24) do nn
     n[] = nn
 end
 ````
