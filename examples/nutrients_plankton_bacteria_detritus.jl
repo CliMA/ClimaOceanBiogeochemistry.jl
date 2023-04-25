@@ -132,6 +132,7 @@ lines!(axN, Nn, z)
 record(fig, "nutrients_plankton_bacteria_detritus.mp4", 1:nt, framerate=24) do nn
     n[] = nn
 end
+nothing #hide
 
 # ![](nutrients_plankton_bacteria_detritus.mp4)
 
