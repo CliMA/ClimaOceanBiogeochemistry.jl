@@ -7,9 +7,6 @@ import Oceananigans.Biogeochemistry: required_biogeochemical_tracers, biogeochem
 
 const c = Center()
 
-# Conversion factor from moles per kg to moles per m^3
-const conv_molkg_molm3 = 1024.5
-
 """
     CarbonAlkalinityNutrients(; kw...)
 
