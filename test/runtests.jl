@@ -1,3 +1,5 @@
 using Test
+using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients, NutrientsPlanktonBacteriaDetritus
 
-@test 1 == 1
+@test NutrientsPlanktonBacteriaDetritus() isa NutrientsPlanktonBacteriaDetritus
+@test CarbonAlkalinityNutrients() isa CarbonAlkalinityNutrients
