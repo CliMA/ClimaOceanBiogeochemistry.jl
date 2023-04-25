@@ -11,7 +11,7 @@ and heroic external collaborators.
 
 ## Installation
 
-To add `ClimaOceanBiogeochemistry.jl`, to your local environment,
+To add `ClimaOceanBiogeochemistry.jl` to your local environment, type
 
 ```julia
 julia> using Pkg
