@@ -128,3 +128,5 @@ record(fig, "nutrients_plankton_bacteria_detritus.mp4", 1:nt, framerate=24) do n
     n[] = nn
 end
 
+# ![](nutrients_plankton_bacteria_detritus.mp4)
+
