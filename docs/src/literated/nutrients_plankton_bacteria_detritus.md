@@ -1,8 +1,13 @@
-# # Nutrients, plankton, bacteria, detritus
-#
-# This example illustrates how to use ClimaOceanBiogeochemistry's
-# `NutrientsPlanktonBacteriaDetrius` model in a single column context.
+```@meta
+EditURL = "<unknown>/../examples/nutrients_plankton_bacteria_detritus.jl"
+```
 
+# Nutrients, plankton, bacteria, detritus
+
+This example illustrates how to use ClimaOceanBiogeochemistry's
+`NutrientsPlanktonBacteriaDetrius` model in a single column context.
+
+````@example nutrients_plankton_bacteria_detritus
 using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus
 
 using Oceananigans
@@ -10,41 +15,49 @@ using Oceananigans.Units
 using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
 using Printf
 using CairoMakie
+````
 
-# ## A single column grid
-#
-# We set up a single column grid with 4 m grid spacing that's 256 m deep:
+## A single column grid
 
+We set up a single column grid with 4 m grid spacing that's 256 m deep:
+
+````@example nutrients_plankton_bacteria_detritus
 grid = RectilinearGrid(size = 64,
                        z = (-256, 0),
                        topology = (Flat, Flat, Bounded))
+````
 
-# ## Convection then quiet
-#
-# To illustrate the dynamics of `NutrientsPlanktonBacteriaDetritus`,
-# we set up a physical scenario in which strong convection drives turbulent mixing
-# for 4 days, and then abruptly shuts off. Once the convective turbulence dies
-# down, plankton start to grow.
+## Convection then quiet
 
+To illustrate the dynamics of `NutrientsPlanktonBacteriaDetritus`,
+we set up a physical scenario in which strong convection drives turbulent mixing
+for 4 days, and then abruptly shuts off. Once the convective turbulence dies
+down, plankton start to grow.
+
+````@example nutrients_plankton_bacteria_detritus
 Qᵇ(x, y, t) = ifelse(t < 4days, 1e-7, 0.0)
 b_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(Qᵇ))
+````
 
-# We put the pieces together.
-# The important line here is `biogeochemistry = NutrientsPlanktonBacteriaDetritus()`.
-# We use all default parameters.
+We put the pieces together.
+The important line here is `biogeochemistry = NutrientsPlanktonBacteriaDetritus()`.
+We use all default parameters.
 
+````@example nutrients_plankton_bacteria_detritus
 model = HydrostaticFreeSurfaceModel(; grid,
                                     biogeochemistry = NutrientsPlanktonBacteriaDetritus(),
                                     closure = CATKEVerticalDiffusivity(),
                                     tracers = (:b, :e),
                                     buoyancy = BuoyancyTracer(),
                                     boundary_conditions = (; b=b_bcs))
+````
 
-# ## Initial conditions
-#
-# We initialize the model with reasonable nutrients, detritus, and a nutrient
-# mixed layer.
+## Initial conditions
 
+We initialize the model with reasonable nutrients, detritus, and a nutrient
+mixed layer.
+
+````@example nutrients_plankton_bacteria_detritus
 N₀ = 1e-1 # Surface nutrient concentration
 D₀ = 1e-1 # Surface detritus concentration
 dᴺ = 50.0 # Nutrient mixed layer depth
@@ -76,11 +89,13 @@ simulation.output_writers[:fields] = JLD2OutputWriter(model, outputs;
                                                       overwrite_existing = true)
 
 run!(simulation)
+````
 
-# ## Visualization
-#
-# All that's left is to visualize the results.
+## Visualization
 
+All that's left is to visualize the results.
+
+````@example nutrients_plankton_bacteria_detritus
 bt = FieldTimeSeries(filename, "b")
 et = FieldTimeSeries(filename, "e")
 Pt = FieldTimeSeries(filename, "P")
@@ -128,4 +143,9 @@ lines!(axN, Nn, z)
 record(fig, "nutrients_plankton_detritus_bacteria.mp4", 1:nt, framerate=24) do nn
     n[] = nn
 end
+````
+
+---
+
+*This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
 
