@@ -1,27 +1,27 @@
-module CarbonSystemSolver
+module CarbonSystemSolvers
 
-module CarbonSystemApprox
-export CarbonSolverApprox
+"""
+CarbonSolverApprox solves a cubic equation in terms of [H⁺]; 
+Not for serious use, but as a placeholder and for testing purposes
+"""
+module CarbonSolverApprox
+export CarbonSystemApprox
 
-include("carbon_chemistry_coefficients.jl")
+struct CarbonSystemApprox{FT}
+    pH     :: FT
+    CO₂ˢᵒˡ :: FT
+    HCO₃⁻  :: FT
+    CO₃²⁻  :: FT
+    Cᵀ     :: FT
+    pCO₂   :: FT
+    Aᵀ     :: FT
+end
+
 using RootSolvers
+include("carbon_chemistry_coefficients.jl")
 
-struct CarbonSolverApprox
-    "Temperature in degrees Celsius"
-    Θᶜ    :: Float64
-    "Absolute Salinity in g/kg"
-    Sᴬ    :: Float64
-    "Applied Pressure in bars"
-    Δpᵦₐᵣ :: Float64
-    "DIC concentration in mol C/kg"
-    Cᵀ     :: Float64
-    "Alkalinity in mol Eq/kg"
-    Aᵀ    :: Float64
-    "Atmospheric pCO₂ in atm"
-    pCO₂ᵃᵗᵐ :: Float64
-    """
-    CarbonSolverApprox(
-        FT            = Float64,
+"""
+CarbonSystemApprox(
         Θ       :: FT = 25.0,
         Sᴬ      :: FT = 35.0,
         Δpᵦₐᵣ   :: FT = 0.0,
@@ -32,68 +32,71 @@ struct CarbonSolverApprox
 
 TBW
 """
-function CarbonSolverApprox(
-        Θᶜ      :: Float64 = 25.0,
-        Sᴬ      :: Float64 = 35.0,
-        Δpᵦₐᵣ   :: Float64 = 0.0,
-        Cᵀ      :: Float64 = 2050.0e-6,
-        Aᵀ      :: Float64 = 2350.0e-6,
-        pH      :: Float64 = 8.0,
-        pCO₂ᵃᵗᵐ :: Float64 = 280.0e-6,
-        )
+@inline function CarbonSystemApprox(
+    Θᶜ      :: FT = 25,
+    Sᴬ      :: FT = 35,
+    Δpᵦₐᵣ   :: FT = 0,
+    Cᵀ      :: FT = 2050e-6,
+    Aᵀ      :: FT = 2350e-6,
+    pH      :: FT = 8,
+    pCO₂ᵃᵗᵐ :: FT = 280e-6,
+    ) where {FT}
+    # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
+    Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+    
+    # Some logic here about choosing coefficient options, particularly Cᵈⁱᶜ 
+    Pᶜᵒᵉᶠᶠ = (Cᵈⁱᶜₖ₀ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
+              Cᵈⁱᶜₖ₁ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ₗ₀₀,
+              Cᵈⁱᶜₖ₂ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ₗ₀₀,
+              Cᵇₖ₁   = Cᶜᵒᵉᶠᶠ.Cᵇₖ₁,
+              Cᴴ²ᴼₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁,
+              Cᴮᵀ    = Cᶜᵒᵉᶠᶠ.Cᴮᵀ,
+    )
+    println("Borate concentration = ",Pᶜᵒᵉᶠᶠ.Cᴮᵀ)
 
-        # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
-        Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+    # Calculate pH, pCO2, and carbon species from Aᵀ and Cᵀ
+    pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, _, pCO₂, _  = Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
-        # Some logic here about choosing coefficient options, particularly Cᵈⁱᶜ 
-        Pᶜᵒⁿˢᵗ = (Cᵈⁱᶜₖ₀ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
-                  Cᵈⁱᶜₖ₁ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ₗ₀₀,
-                  Cᵈⁱᶜₖ₂ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ₗ₀₀,
-                  Cᵇₖ₁   = Cᶜᵒᵉᶠᶠ.Cᵇₖ₁,
-                  Cᴴ²ᴼₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁,
-                  Cᴮᵀ    = Cᶜᵒᵉᶠᶠ.Cᴮᵀ,
-        )
-        return Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ,Cᵀ,pH,Pᶜᵒⁿˢᵗ)
-    end # end function
-end # end struct
+    return CarbonSystemApprox(pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, pCO₂, Aᵀ)
+end # end function
 
-@inline """
-    Fᶜᵀ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ,pCO₂ᵃᵗᵐ,pH,Pᶜᵒⁿˢᵗ)
+"""
+    Fᶜᵀ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂ᵃᵗᵐ, pH, Pᶜᵒᵉᶠᶠ)
 
     Solve for DIC given total Alkalinity and atmosphere pCO₂
 """
-function Fᶜᵀ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ,pCO₂ᵃᵗᵐ,pH,Pᶜᵒⁿˢᵗ)
+@inline function Fᶜᵀ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂ᵃᵗᵐ, pH, Pᶜᵒᵉᶠᶠ)
     # Find the real roots of the polynomial using RootSolvers.jl 
     sol = find_zero(  x -> (
         x^3*(Aᵀ) +
         x^2*(
-             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
              Aᵀ-
-             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
-             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀*
+             Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
              pCO₂ᵃᵗᵐ-
-             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᴮᵀ) + 
+             Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᴮᵀ) + 
         x^1*(
-            -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
-             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+            -Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀*
+             Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
              pCO₂ᵃᵗᵐ-
-           2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
-             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+           2*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀*
+             Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*
              pCO₂ᵃᵗᵐ
              ) +
         X^0*(
-          -2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*
-             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
-             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+          -2*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀*
+             Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*
+             Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
              pCO₂ᵃᵗᵐ
              )        
         ),
-        #NewtonsMethodAD{Float64}(10^-pH),
-        SecantMethod{Float64}(10^-(pH+1.0), 10^-(pH-1.0)),
+        NewtonsMethodAD{Float64}(10^-(pH)),
+        #SecantMethod{Float64}(10^-(pH+0.1), 10^-(pH-0.1)),
         CompactSolution());
     
     if sol.converged == true
@@ -101,70 +104,77 @@ function Fᶜᵀ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ,pCO₂ᵃᵗᵐ,pH,Pᶜᵒⁿˢ�
         # Update pH
         pH = -log10(H)
 
-        CO₂ˢᵒˡ = Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀*pCO₂ᵃᵗᵐ
-        HCO₃⁻  = (Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*CO₂ˢᵒˡ)/H
-        CO₃²⁻  = (Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*CO₂ˢᵒˡ)/(H*H)
+        CO₂ˢᵒˡ = Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀*pCO₂ᵃᵗᵐ
+        HCO₃⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*CO₂ˢᵒˡ)/H
+        CO₃²⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*CO₂ˢᵒˡ)/(H*H)
 
-        return CO₂ˢᵒˡ + HCO₃⁻ + CO₃²⁻, pH
+        return  pH, 
+                CO₂ˢᵒˡ, 
+                HCO₃⁻, 
+                CO₃²⁻,
+                CO₂ˢᵒˡ + HCO₃⁻ + CO₃²⁻, 
+                CO₂ˢᵒˡ/Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀, 
+                Aᵀ
     else
         error("CarbonSolverApprox did not converge")
-        return NaN
+        return nothing
     end
-end
+end # end function
 
-@inline """
-    Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ,Cᵀ,pH,Pᶜᵒⁿˢᵗ)
-
-    Solve for pCO₂ given total Alkalinity and DIC
 """
-function Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ,Cᵀ,pH,Pᶜᵒⁿˢᵗ)
+    Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+
+    Solve for ocean pCO₂ given total Alkalinity and DIC
+"""
+@inline function Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    println("call to calculate pCO₂")
     # Find the real roots of the polynomial using RootSolvers.jl
     sol = find_zero(  x -> (
         x^3*(Aᵀ) +
         x^2*(
-             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
              Aᵀ
-            +Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            +Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
              Aᵀ
-            -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
+            -Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
              Cᵀ+
-            -Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᴮᵀ
+            -Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᴮᵀ
             ) + 
         x^1*(
-             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+             Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*
              Aᵀ
-          -2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
+          -2*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*
              Cᵀ
-            +Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+            +Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
              Aᵀ 
-            -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+            -Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
              Cᵀ+
-            -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᴮᵀ
+            -Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᴮᵀ
             ) +
         x^0*( 
-             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
-             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*
+             Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
              Aᵀ
-          -2*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
-             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
+          -2*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*
+             Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
              Cᵀ
-            -Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*
-             Pᶜᵒⁿˢᵗ.Cᵇₖ₁*
-             Pᶜᵒⁿˢᵗ.Cᴮᵀ
+            -Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*
+             Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
+             Pᶜᵒᵉᶠᶠ.Cᴮᵀ
             )                       
         ),
-        NewtonsMethodAD{Float64}(10^-pH),
-        #SecantMethod{Float64}(10^-(pH+1.0), 10^-(pH-1.0)),
+        #SecantMethod{Float64}(10^-(pH+0.1), 10^-(pH-0.1)),
+        NewtonsMethodAD{Float64}(10^-(pH)),
         CompactSolution());
 
     if sol.converged == true
@@ -173,20 +183,28 @@ function Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ,Cᵀ,pH,Pᶜᵒⁿˢᵗ)
         # Update pH
         pH = -log10(H)
 
-        CO₂ˢᵒˡ = (H*H*Cᵀ)/(H*H+H*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁+Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂)
-        HCO₃⁻  = (Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*CO₂ˢᵒˡ)/H
-        CO₃²⁻  = (Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₁*Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₂*CO₂ˢᵒˡ)/(H*H)
-        return CO₂ˢᵒˡ/Pᶜᵒⁿˢᵗ.Cᵈⁱᶜₖ₀, pH
+        CO₂ˢᵒˡ = (H*H*Cᵀ)/(H*H+H*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁+Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂)
+        HCO₃⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*CO₂ˢᵒˡ)/H
+        CO₃²⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*CO₂ˢᵒˡ)/(H*H)
+        
+        println("calculated pCO₂ = ", CO₂ˢᵒˡ/Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * 1e6)
+        return pH, 
+                CO₂ˢᵒˡ, 
+                HCO₃⁻, 
+                CO₃²⁻,
+                CO₂ˢᵒˡ + HCO₃⁻ + CO₃²⁻, 
+                CO₂ˢᵒˡ/Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀, 
+                Aᵀ
     else
         error("CarbonSolverApprox did not converge")
-        return NaN
+        return nothing
     end
-end
+end # end function
 
 end # module CarbonSolverApprox
 # ------------------------------------------------------------
 
-using .CarbonSystemApprox
+using .CarbonSystemSolvers.CarbonSolverApprox
 
 include("carbon_chemistry_coefficients.jl")
 
@@ -254,7 +272,8 @@ println("Cˢᴼ⁴ = ",        Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴        )
 #@assert Cᶜᵒᵉᶠᶠ.Cᶜᵃ        ==
 #@assert Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴       ==
 
-pCO₂, pH = CarbonSolverApprox(
+pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, pCO₂, Aᵀ = 
+CarbonSystemApprox(
         Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, pH, pCO₂ᵃᵗᵐ,
         )
 println("Cᵀ = ", Cᵀ*1e6    )
@@ -263,4 +282,4 @@ println("pH = "  , pH      )
 println("pCO₂ᵃᵗᵐ = ", pCO₂ᵃᵗᵐ*1e6)
 println("pCO₂ = ", pCO₂*1e6)
 
-end # module CarbonSolver
+end
