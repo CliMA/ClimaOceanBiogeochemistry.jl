@@ -1,4 +1,16 @@
 module CarbonSystemSolvers
+export CarbonSystem
+
+struct CarbonSystem{FT}
+    pH     :: FT
+    CO₂ˢᵒˡ :: FT
+    HCO₃⁻  :: FT
+    CO₃²⁻  :: FT
+    Cᵀ     :: FT
+    Aᵀ     :: FT
+    pCO₂ᵒᶜᵉ:: FT
+    pCO₂ᵃᵗᵐ:: FT
+end
 
 """
 CarbonSolverApprox solves a cubic equation in terms of [H⁺]; 
@@ -7,17 +19,8 @@ Not for serious use, but as a placeholder and for testing purposes
 module CarbonSolverApprox
 export CarbonSystemApprox
 
-struct CarbonSystemApprox{FT}
-    pH     :: FT
-    CO₂ˢᵒˡ :: FT
-    HCO₃⁻  :: FT
-    CO₃²⁻  :: FT
-    Cᵀ     :: FT
-    pCO₂   :: FT
-    Aᵀ     :: FT
-end
-
 using RootSolvers
+using ..CarbonSystemSolvers: CarbonSystem
 include("carbon_chemistry_coefficients.jl")
 
 """
@@ -27,20 +30,21 @@ CarbonSystemApprox(
         Δpᵦₐᵣ   :: FT = 0.0,
         Cᵀ      :: FT = 2050.0e-6,
         Aᵀ      :: FT = 2350.0e-6,
+        pH      :: FT = 8.0,
         pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
         )
 
 TBW
 """
 @inline function CarbonSystemApprox(
-    Θᶜ      :: FT = 25,
-    Sᴬ      :: FT = 35,
-    Δpᵦₐᵣ   :: FT = 0,
-    Cᵀ      :: FT = 2050e-6,
-    Aᵀ      :: FT = 2350e-6,
-    pH      :: FT = 8,
-    pCO₂ᵃᵗᵐ :: FT = 280e-6,
-    ) where {FT}
+        Θᶜ      :: FT = 25.0,
+        Sᴬ      :: FT = 35.0,
+        Δpᵦₐᵣ   :: FT = 0.0,
+        Cᵀ      :: FT = 2050.0e-6,
+        Aᵀ      :: FT = 2350.0e-6,
+        pH      :: FT = 8.0,
+        pCO₂ᵃᵗᵐ :: FT = 280.0e-6) where {FT}
+
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
     Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
     
@@ -55,9 +59,9 @@ TBW
     println("Borate concentration = ",Pᶜᵒᵉᶠᶠ.Cᴮᵀ)
 
     # Calculate pH, pCO2, and carbon species from Aᵀ and Cᵀ
-    pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, _, pCO₂, _  = Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, _, pCO₂ᵒᶜᵉ, _  = Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
-    return CarbonSystemApprox(pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, pCO₂, Aᵀ)
+    return CarbonSystem(pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ)
 end # end function
 
 """
@@ -202,6 +206,7 @@ end # end function
 end # end function
 
 end # module CarbonSolverApprox
+
 # ------------------------------------------------------------
 
 using .CarbonSystemSolvers.CarbonSolverApprox
@@ -212,9 +217,9 @@ include("carbon_chemistry_coefficients.jl")
 Θᶜ      = 25.0
 Sᴬ      = 35.0
 Δpᵦₐᵣ   = 0.0
-Cᵀ      = 2050.0*1e-6 # umol/kg to mol/kg
-Aᵀ      = 2350.0*1e-6 # umol/kg to mol/kg
-pCO₂ᵃᵗᵐ = 280.0*1e-6  # uatm to atm
+Cᵀ      = 2050e-6 # umol/kg to mol/kg
+Aᵀ      = 2350e-6 # umol/kg to mol/kg
+pCO₂ᵃᵗᵐ = 280e-6  # uatm to atm
 pH      = 8.0
 FT = Float64
 
@@ -272,14 +277,14 @@ println("Cˢᴼ⁴ = ",        Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴        )
 #@assert Cᶜᵒᵉᶠᶠ.Cᶜᵃ        ==
 #@assert Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴       ==
 
-pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, pCO₂, Aᵀ = 
+(; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
 CarbonSystemApprox(
         Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, pH, pCO₂ᵃᵗᵐ,
         )
-println("Cᵀ = ", Cᵀ*1e6    )
-println("Aᵀ = ", Aᵀ*1e6    )
-println("pH = "  , pH      )
-println("pCO₂ᵃᵗᵐ = ", pCO₂ᵃᵗᵐ*1e6)
-println("pCO₂ = ", pCO₂*1e6)
-
+        
+println("Cᵀ = ", Cᵀ * 1e6  )
+println("Aᵀ = ", Aᵀ * 1e6  )
+println("pH = " , pH       )
+println("pCO₂ᵃᵗᵐ = ", pCO₂ᵃᵗᵐ * 1e6)
+println("pCO₂ᵒᶜᵉ = ", pCO₂ᵒᶜᵉ * 1e6)
 end

@@ -23,9 +23,9 @@ struct CarbonChemistryCoefficients{FT}
     Cᶠᵀ         :: FT
     Cᶜᵃ         :: FT
     Cˢᴼ⁴        :: FT
-    H⁺ₛoverH⁺ₜ  :: FT
-    H⁺ₜoverH⁺₃  :: FT
-    H⁺ₛoverH⁺₃  :: FT
+    H⁺ₛoverH⁺ₜ   :: FT
+    H⁺ₜoverH⁺₃   :: FT
+    H⁺ₛoverH⁺₃   :: FT
 end
 
 """
