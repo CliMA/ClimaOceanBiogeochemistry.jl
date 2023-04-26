@@ -12,10 +12,167 @@ struct CarbonSystem{FT}
     pCO₂ᵃᵗᵐ:: FT
 end
 
+module CarbonSolverFollows
+export CarbonSystemFollows
+
+using ..CarbonSystemSolvers: CarbonSystem
+include("carbon_chemistry_coefficients.jl")
+
 """
-CarbonSolverApprox solves a cubic equation in terms of [H⁺]; 
-Not for serious use, but as a placeholder and for testing purposes
+CarbonSystemFollows(
+        Θ       :: FT = 25.0,
+        Sᴬ      :: FT = 35.0,
+        Δpᵦₐᵣ   :: FT = 0.0,
+        Cᵀ      :: FT = 2050.0e-6,
+        Aᵀ      :: FT = 2350.0e-6,
+        Pᵀ      :: FT = 1.0e-6,
+        Siᵀ     :: FT = 15.0e-6,
+        pH      :: FT = 8.0,
+        pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
+        )
+
+        Uses the Follows et al (2006) method to solve the distribution of carbon species
 """
+@inline function CarbonSystemFollows(
+        Θᶜ      :: FT = 25.0,
+        Sᴬ      :: FT = 35.0,
+        Δpᵦₐᵣ   :: FT = 0.0,
+        Cᵀ      :: FT = 2050.0e-6,
+        Aᵀ      :: FT = 2350.0e-6,
+        Pᵀ      :: FT = 1.0e-6,
+        Siᵀ     :: FT = 15.0e-6,
+        pH      :: FT = 8.0,
+        pCO₂ᵃᵗᵐ :: FT = 280.0e-6) where {FT}
+
+    # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
+    Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+    
+    # Some logic here about choosing coefficient options, particularly Cᵈⁱᶜ 
+    Pᶜᵒᵉᶠᶠ = (Cᵈⁱᶜₖ₀ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
+              Cᵈⁱᶜₖ₁ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ₗ₀₀,
+              Cᵈⁱᶜₖ₂ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ₗ₀₀,
+              Cᵇₖ₁   = Cᶜᵒᵉᶠᶠ.Cᵇₖ₁,
+              Cᴾᴼ⁴ₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁,
+              Cᴾᴼ⁴ₖ₂ = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂,
+              Cᴾᴼ⁴ₖ₃ = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃,
+              Cˢⁱᵗₖ₁ = Cᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁,
+              Cᴴˢᴼ⁴ₖ₁= Cᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁,
+              Cᴴᶠₖ₁  = Cᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁,
+              Cᴴ²ᴼₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁,
+              Cᴮᵀ    = Cᶜᵒᵉᶠᶠ.Cᴮᵀ,
+              Cᶠᵀ    = Cᶜᵒᵉᶠᶠ.Cᶠᵀ,
+              Cˢᴼ⁴   = Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴,
+    )
+
+    # Calculate pH, pCO2, and carbon species from Aᵀ and Cᵀ
+    pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, _, pCO₂ᵒᶜᵉ, _  = Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
+
+    return CarbonSystem(pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ)
+end # end function
+
+"""
+    Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+
+    Solve for ocean pCO₂ given total Alkalinity and DIC
+
+    Estimate H⁺ (hydrogen ion conc) using
+    approximate estimate of CA, carbonate alkalinity
+"""
+@inline function Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
+
+# Calculate H⁺ from pH
+    H⁺ = 10.0^-pH
+
+# Borate contribution to alkalinity B(OH)₄⁻
+    BO₄H₄⁻ = Pᶜᵒᵉᶠᶠ.Cᴮᵀ * Pᶜᵒᵉᶠᶠ.Cᵇₖ₁/(H⁺ + Pᶜᵒᵉᶠᶠ.Cᵇₖ₁)
+
+# Phosphate contribution to alkalinity
+    H₃PO₄  = (Pᵀ * H⁺^3) / (
+            H⁺^3 +
+            H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ +
+            H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂) +
+            H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)
+    )
+    H₂PO₄⁻ = (Pᵀ * H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁) / (
+            H⁺^3 +
+            H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ +
+            H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂) +
+            H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)
+    )
+    HPO₄²⁻  = (Pᵀ * H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂)) / (
+            H⁺^3 +
+            H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ +
+            H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂) +
+            H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)
+    )
+    PO₄³⁻   = (Pᵀ * H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)) / (
+            H⁺^3 +
+            H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ +
+            H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂) +
+            H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)
+    )
+    
+# Silicate (SiO(OH)₃⁻) contribution to alkalinity 
+    SiO₄H₃⁻ = Siᵀ * Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁ / (H⁺ + Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁)
+    
+# Hydroxide contribution to alkalinity
+    OH⁻ = Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁ / H⁺
+
+# "Free" Hydrogen ion to alkalinity
+    H⁺ᶠʳᵉᵉ = H⁺ * Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ / (Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ + Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁)
+
+# Hydrogen sulphate to alkalinity
+    HSO₄⁻ = Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * H⁺ᶠʳᵉᵉ / (H⁺ᶠʳᵉᵉ + Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁)
+
+# Hydrogen fluoride to alkalinity
+    HF = Pᶜᵒᵉᶠᶠ.Cᶠᵀ * H⁺ / (H⁺ + Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁)
+
+# Estimate carbonate alkalinity
+    Aᶜ = Aᵀ - 
+         BO₄H₄⁻ - OH⁻ - SiO₄H₃⁻ -
+         HPO₄²⁻ - 2*PO₄³⁻ + 
+         H₃PO₄ + (H⁺ᶠʳᵉᵉ + HSO₄⁻) + HF
+
+# Evaluate better guess of hydrogen ion conc
+    H⁺  = 0.5 * ( 
+        ((Cᵀ/Aᶜ)-1) * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ + 
+        sqrt(
+            (1-(Cᵀ/Aᶜ))^2 * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁^2 -
+            4*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ * (1-2*(Cᵀ/Aᶜ))
+            ) 
+        )
+
+    # Update pH
+    pH = -log10(H⁺)
+
+    CO₂ˢᵒˡ = Cᵀ / (
+             1 + 
+             (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ / H⁺) + 
+             (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ / H⁺^2)
+             )
+    HCO₃⁻  = ( Cᵀ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * H⁺ )/(
+             (H⁺^2) + 
+             (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * H⁺) + 
+             (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂)
+            )
+             
+    CO₃²⁻  = ( Cᵀ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ ) / (
+             (H⁺^2) + 
+             (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * H⁺) + 
+             (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂)
+            )
+    
+    return pH, 
+           CO₂ˢᵒˡ, 
+           HCO₃⁻, 
+           CO₃²⁻,
+           CO₂ˢᵒˡ + HCO₃⁻ + CO₃²⁻, 
+           CO₂ˢᵒˡ/Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀, 
+           Aᵀ
+end # end function
+
+end # module
+
 module CarbonSolverApprox
 export CarbonSystemApprox
 
@@ -34,7 +191,8 @@ CarbonSystemApprox(
         pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
         )
 
-TBW
+        CarbonSolverApprox solves a cubic equation in terms of [H⁺]; 
+        Not for serious use, but as a placeholder and for testing purposes
 """
 @inline function CarbonSystemApprox(
         Θᶜ      :: FT = 25.0,
@@ -103,13 +261,13 @@ end # end function
         CompactSolution());
     
     if sol.converged == true
-        H = sol.root
+        H⁺ = sol.root
         # Update pH
-        pH = -log10(H)
+        pH = -log10(H⁺)
 
-        CO₂ˢᵒˡ = Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀*pCO₂ᵃᵗᵐ
-        HCO₃⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*CO₂ˢᵒˡ)/H
-        CO₃²⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*CO₂ˢᵒˡ)/(H*H)
+        CO₂ˢᵒˡ = Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * pCO₂ᵃᵗᵐ
+        HCO₃⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * CO₂ˢᵒˡ)/H⁺
+        CO₃²⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ * CO₂ˢᵒˡ)/(H⁺^2)
 
         return  pH, 
                 CO₂ˢᵒˡ, 
@@ -180,14 +338,14 @@ end # end function
         CompactSolution());
 
     if sol.converged == true
-        H=sol.root
+        H⁺ = sol.root
 
         # Update pH
-        pH = -log10(H)
+        pH = -log10(H⁺)
 
-        CO₂ˢᵒˡ = (H*H*Cᵀ)/(H*H+H*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁+Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂)
-        HCO₃⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*CO₂ˢᵒˡ)/H
-        CO₃²⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*CO₂ˢᵒˡ)/(H*H)
+        CO₂ˢᵒˡ = (H⁺^2 * Cᵀ)/(H⁺^2 + H⁺ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ + Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂)
+        HCO₃⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * CO₂ˢᵒˡ)/H⁺
+        CO₃²⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ * CO₂ˢᵒˡ)/(H⁺^2)
         
         return pH, 
                 CO₂ˢᵒˡ, 
@@ -207,6 +365,7 @@ end # module CarbonSolverApprox
 # ------------------------------------------------------------
 
 using .CarbonSystemSolvers.CarbonSolverApprox
+using .CarbonSystemSolvers.CarbonSolverFollows
 
 include("carbon_chemistry_coefficients.jl")
 
@@ -273,7 +432,7 @@ println("Cˢᴼ⁴ = ",        Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴        )
 #@assert Cᶜᵒᵉᶠᶠ.Cᶠᵀ        ==
 #@assert Cᶜᵒᵉᶠᶠ.Cᶜᵃ        ==
 #@assert Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴       ==
-
+println("Testing the Approximate pCO2 solver:")
 (; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
 CarbonSystemApprox(
         Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, pH, pCO₂ᵃᵗᵐ,
@@ -284,4 +443,23 @@ println("Aᵀ = ", Aᵀ * 1e6  )
 println("pH = " , pH       )
 println("pCO₂ᵃᵗᵐ = ", pCO₂ᵃᵗᵐ * 1e6)
 println("pCO₂ᵒᶜᵉ = ", pCO₂ᵒᶜᵉ * 1e6)
+println("")
+
+Pᵀ = 0.5e-6  # umol/kg to mol/kg
+Siᵀ = 7.5e-6 # umol/kg to mol/kg
+
+println("Testing the Follows et al (2006) pCO2 solver:")
+(; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
+CarbonSystemFollows(
+        Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
+        )
+
+println("Cᵀ = ", Cᵀ * 1e6  )
+println("Aᵀ = ", Aᵀ * 1e6  )
+println("Pᵀ = ", Pᵀ * 1e6  )
+println("Siᵀ = ", Siᵀ * 1e6  )
+println("pH = " , pH       )
+println("pCO₂ᵃᵗᵐ = ", pCO₂ᵃᵗᵐ * 1e6)
+println("pCO₂ᵒᶜᵉ = ", pCO₂ᵒᶜᵉ * 1e6)
+println("NB, you wouldn't expect to get exactly the same results here \nbecause of the extra terms in the calcite alkalinity.")
 end
