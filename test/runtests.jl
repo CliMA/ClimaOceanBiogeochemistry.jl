@@ -1,6 +1,6 @@
 using Test
+using ClimaOceanBiogeochemistry: CarbonSystemSolver
 
-using CarbonSystemSolver
 CarbonChemistryCoefficients() isa CarbonChemistryCoefficients
 
 Θᶜ      = 25.0
