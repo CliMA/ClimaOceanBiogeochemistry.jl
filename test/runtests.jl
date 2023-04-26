@@ -1,3 +1,4 @@
+using .CarbonSystemSolvers: CarbonSystem, CarbonSystemApprox
 using Test
 
-@test 1 == 1
+CarbonSystemApprox() isa CarbonSystem
