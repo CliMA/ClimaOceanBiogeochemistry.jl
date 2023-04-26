@@ -56,7 +56,6 @@ TBW
               Cᴴ²ᴼₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁,
               Cᴮᵀ    = Cᶜᵒᵉᶠᶠ.Cᴮᵀ,
     )
-    println("Borate concentration = ",Pᶜᵒᵉᶠᶠ.Cᴮᵀ)
 
     # Calculate pH, pCO2, and carbon species from Aᵀ and Cᵀ
     pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, _, pCO₂ᵒᶜᵉ, _  = Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
@@ -131,7 +130,6 @@ end # end function
     Solve for ocean pCO₂ given total Alkalinity and DIC
 """
 @inline function Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
-    println("call to calculate pCO₂")
     # Find the real roots of the polynomial using RootSolvers.jl
     sol = find_zero(  x -> (
         x^3*(Aᵀ) +
@@ -191,7 +189,6 @@ end # end function
         HCO₃⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*CO₂ˢᵒˡ)/H
         CO₃²⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*CO₂ˢᵒˡ)/(H*H)
         
-        println("calculated pCO₂ = ", CO₂ˢᵒˡ/Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * 1e6)
         return pH, 
                 CO₂ˢᵒˡ, 
                 HCO₃⁻, 
@@ -281,7 +278,7 @@ println("Cˢᴼ⁴ = ",        Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴        )
 CarbonSystemApprox(
         Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, pH, pCO₂ᵃᵗᵐ,
         )
-        
+
 println("Cᵀ = ", Cᵀ * 1e6  )
 println("Aᵀ = ", Aᵀ * 1e6  )
 println("pH = " , pH       )
