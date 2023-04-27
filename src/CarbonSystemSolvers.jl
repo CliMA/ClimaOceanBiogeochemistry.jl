@@ -12,14 +12,102 @@ struct CarbonSystem{FT}
     pCO₂ᵃᵗᵐ:: FT
 end
 
-module CarbonSolverFollows
-export CarbonSystemFollows
+"""
+FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
-using ..CarbonSystemSolvers: CarbonSystem
+Calculate the dissolved and hydrated CO₂ concentration in seawater
+   given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
+"""
+@inline function FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    # Calculate H⁺ from pH
+    H⁺ = 10^-pH
+
+    return ( Cᵀ * H⁺^2 )/(
+             (H⁺^2) + 
+             (H⁺^1 * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁) + 
+             (H⁺^0 * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂)
+            )
+end
+
+"""
+FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+
+Calculate the bicarbonate ion concentration in seawater
+   given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
+"""
+@inline function FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    # Calculate H⁺ from pH
+    H⁺ = 10^-pH
+
+    return ( Cᵀ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * H⁺ )/(
+             (H⁺^2) + 
+             (H⁺^1 * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁) + 
+             (H⁺^0 * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂)
+            )
+end
+
+"""
+FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+
+Calculate the carbonate concentration in seawater
+   given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
+"""
+@inline function FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    # Calculate H⁺ from pH
+    H⁺ = 10^-pH
+
+    return ( Cᵀ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ ) / (
+             (H⁺^2) + 
+             (H⁺^1 * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁) + 
+             (H⁺^0 * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂)
+            )
+end
+
+"""
+FpCO₂CO₂ˢᵒˡ(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
+
+Calculate the dissolved and hydrated CO₂ concentration in seawater
+   given the pCO₂, pH, and the carbon chemistry coefficients.
+"""
+@inline function FpCO₂CO₂ˢᵒˡ(pCO₂, Pᶜᵒᵉᶠᶠ)
+    # Perhaps take account of fugacity here?
+    return Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * pCO₂
+end
+
+"""
+FpCO₂HCO₃⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
+
+Calculate the bicarbonate ion concentration in seawater
+   given the pCO₂, pH, and the carbon chemistry coefficients.
+"""
+@inline function FpCO₂HCO₃⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
+    # Calculate H⁺ from pH
+    H⁺ = 10^-pH
+
+    return (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * pCO₂)/H⁺
+end
+
+"""
+FpCO₂CO₃²⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
+
+Calculate the carbonate concentration in seawater
+   given the pCO₂, pH, and the carbon chemistry coefficients.
+"""
+@inline function FpCO₂CO₃²⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
+    # Calculate H⁺ from pH
+    H⁺ = 10^-pH
+
+    return (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * pCO₂)/(H⁺^2)
+end
+
+module AlkalinityCorrectionCarbonSolver
+export AlkalinityCorrectionCarbonSystem
+
+using ..CarbonSystemSolvers: CarbonSystem, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, FCᵀHCO₃⁻
 include("carbon_chemistry_coefficients.jl")
 
 """
-CarbonSystemFollows(
+AlkalinityCorrectionCarbonSystem(
         Θ       :: FT = 25.0,
         Sᴬ      :: FT = 35.0,
         Δpᵦₐᵣ   :: FT = 0.0,
@@ -33,7 +121,7 @@ CarbonSystemFollows(
 
         Uses the Follows et al (2006) method to solve the distribution of carbon species
 """
-@inline function CarbonSystemFollows(
+@inline function AlkalinityCorrectionCarbonSystem(
         Θᶜ      :: FT = 25.0,
         Sᴬ      :: FT = 35.0,
         Δpᵦₐᵣ   :: FT = 0.0,
@@ -64,74 +152,175 @@ CarbonSystemFollows(
               Cˢᴼ⁴   = Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴,
     )
 
-    # Calculate pH, pCO2, and carbon species from Aᵀ and Cᵀ
-    pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, _, pCO₂ᵒᶜᵉ, _  = Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    # Calculate pH from Aᵀ and Cᵀ and then calculate the rest of the carbon system
+    pH     = Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    CO₂ˢᵒˡ = FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    HCO₃⁻  = FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    CO₃²⁻  = FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    pCO₂ᵒᶜᵉ= CO₂ˢᵒˡ / Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ # correct for fugacity of CO₂ in seawater?
 
     return CarbonSystem(pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ)
 end # end function
+
+"""
+BO₄H₄⁻(pH, Pᶜᵒᵉᶠᶠ) 
+
+Calculate borate (B(OH)₄⁻) contribution to Aᶜ using salinity as a proxy
+"""
+@inline function BO₄H₄⁻(pH, Pᶜᵒᵉᶠᶠ) 
+    # Calculate H⁺ from pH
+    H⁺ = 10^-pH
+
+    return Pᶜᵒᵉᶠᶠ.Cᴮᵀ * Pᶜᵒᵉᶠᶠ.Cᵇₖ₁/(H⁺ + Pᶜᵒᵉᶠᶠ.Cᵇₖ₁)
+end
+
+"""
+H₃PO₄(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+
+Calculate orthophosphoric acid (H₃PO₄) contribution to Aᶜ
+"""
+@inline function H₃PO₄(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+    # Calculate H⁺ from pH
+    H⁺ = 10^-pH
+
+    return (Pᵀ * H⁺^3) / (
+                 H⁺^3 +
+                 H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ +
+                 H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂) +
+                 H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)
+         )
+end
+
+"""
+Calculate the dihydrogen phosphate (H₂PO₄⁻) contribution to Aᶜ
+"""
+@inline function H₂PO₄⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+    # Calculate H⁺ from pH
+    H⁺ = 10^-pH
+
+    return (Pᵀ * H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁) / (
+                 H⁺^3 +
+                 H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ +
+                 H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂) +
+                 H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)
+         )
+end
+
+"""
+HPO₄²⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+
+Calculate the monohydrogen phosphate (HPO₄²⁻) contribution to Aᶜ
+"""
+@inline function HPO₄²⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+    # Calculate H⁺ from pH
+    H⁺ = 10^-pH
+
+    return (Pᵀ * H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂)) / (
+                 H⁺^3 +
+                 H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ +
+                 H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂) +
+                 H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)
+         )
+end
+
+"""
+PO₄³⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+
+Calculate the phosphate (PO₄³⁻) contribution to Aᶜ
+"""
+@inline function PO₄³⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+    # Calculate H⁺ from pH
+    H⁺ = 10^-pH
+
+    return (Pᵀ * H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)) / (
+                 H⁺^3 +
+                 H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ +
+                 H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂) +
+                 H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)
+         )
+end
+
+"""
+SiO₄H₃⁻(Siᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+
+Calculate the silicate (SiO(OH)₃⁻) contribution to Aᶜ
+"""
+@inline function SiO₄H₃⁻(Siᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+    # Calculate H⁺ from pH
+    H⁺ = 10^-pH
+
+    return Siᵀ * Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁ / (H⁺ + Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁)
+end
+
+"""
+OH⁻(pH, Pᶜᵒᵉᶠᶠ) 
+
+Calculate the hydroxide (OH⁻) contribution to Aᶜ
+"""
+@inline function OH⁻(pH, Pᶜᵒᵉᶠᶠ) 
+    # Calculate H⁺ from pH
+    H⁺ = 10^-pH
+
+    return Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁ / H⁺
+end
+
+"""
+H⁺ᶠʳᵉᵉ(pH, Pᶜᵒᵉᶠᶠ)
+
+Calculate the "Free" H⁺ contribution to Aᶜ
+"""
+@inline function H⁺ᶠʳᵉᵉ(pH, Pᶜᵒᵉᶠᶠ)
+    # Calculate H⁺ from pH
+    H⁺ = 10^-pH
+
+    return H⁺ * Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ / (Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ + Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁)
+end
+
+"""
+HSO₄⁻(pH, Pᶜᵒᵉᶠᶠ)
+
+Calculate the hydrogen sulphate (HSO₄⁻) contribution to Aᶜ
+"""
+@inline function HSO₄⁻(pH, Pᶜᵒᵉᶠᶠ)
+    # Calculate H⁺ from pH
+    # H⁺ = 10^-pH
+
+    return Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * H⁺ᶠʳᵉᵉ(pH, Pᶜᵒᵉᶠᶠ) / (H⁺ᶠʳᵉᵉ(pH, Pᶜᵒᵉᶠᶠ) + Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁)
+end
+    
+"""
+HF(pH, Pᶜᵒᵉᶠᶠ)
+
+Calculate the hydrogen fluoride (HF) contribution to Aᶜ
+"""
+@inline function HF(pH, Pᶜᵒᵉᶠᶠ)
+    # Calculate H⁺ from pH
+    H⁺ = 10^-pH
+
+    return Pᶜᵒᵉᶠᶠ.Cᶠᵀ * H⁺ / (H⁺ + Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁)
+end
 
 """
     Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
     Solve for ocean pCO₂ given total Alkalinity and DIC
 
-    Estimate H⁺ (hydrogen ion conc) using
-    approximate estimate of CA, carbonate alkalinity
+    Estimate H⁺ (hydrogen ion conc) using estimate of Aᶜ, carbonate alkalinity
+    after (Follows et al., 2006)
 """
-@inline function Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
-
-# Calculate H⁺ from pH
-    H⁺ = 10.0^-pH
-
-# Borate contribution to alkalinity B(OH)₄⁻
-    BO₄H₄⁻ = Pᶜᵒᵉᶠᶠ.Cᴮᵀ * Pᶜᵒᵉᶠᶠ.Cᵇₖ₁/(H⁺ + Pᶜᵒᵉᶠᶠ.Cᵇₖ₁)
-
-# Phosphate contribution to alkalinity
-    H₃PO₄  = (Pᵀ * H⁺^3) / (
-            H⁺^3 +
-            H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ +
-            H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂) +
-            H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)
-    )
-    H₂PO₄⁻ = (Pᵀ * H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁) / (
-            H⁺^3 +
-            H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ +
-            H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂) +
-            H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)
-    )
-    HPO₄²⁻  = (Pᵀ * H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂)) / (
-            H⁺^3 +
-            H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ +
-            H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂) +
-            H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)
-    )
-    PO₄³⁻   = (Pᵀ * H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)) / (
-            H⁺^3 +
-            H⁺^2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ +
-            H⁺^1 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂) +
-            H⁺^0 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃)
-    )
-    
-# Silicate (SiO(OH)₃⁻) contribution to alkalinity 
-    SiO₄H₃⁻ = Siᵀ * Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁ / (H⁺ + Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁)
-    
-# Hydroxide contribution to alkalinity
-    OH⁻ = Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁ / H⁺
-
-# "Free" Hydrogen ion to alkalinity
-    H⁺ᶠʳᵉᵉ = H⁺ * Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ / (Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ + Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁)
-
-# Hydrogen sulphate to alkalinity
-    HSO₄⁻ = Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * H⁺ᶠʳᵉᵉ / (H⁺ᶠʳᵉᵉ + Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁)
-
-# Hydrogen fluoride to alkalinity
-    HF = Pᶜᵒᵉᶠᶠ.Cᶠᵀ * H⁺ / (H⁺ + Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁)
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
 # Estimate carbonate alkalinity
     Aᶜ = Aᵀ - 
-         BO₄H₄⁻ - OH⁻ - SiO₄H₃⁻ -
-         HPO₄²⁻ - 2*PO₄³⁻ + 
-         H₃PO₄ + (H⁺ᶠʳᵉᵉ + HSO₄⁻) + HF
+         BO₄H₄⁻(pH, Pᶜᵒᵉᶠᶠ) - 
+         OH⁻(pH, Pᶜᵒᵉᶠᶠ) - 
+         SiO₄H₃⁻(Siᵀ, pH, Pᶜᵒᵉᶠᶠ) -
+         HPO₄²⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) - 
+         2 * PO₄³⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) + 
+         H₃PO₄(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) + 
+         H⁺ᶠʳᵉᵉ(pH, Pᶜᵒᵉᶠᶠ) +
+         HSO₄⁻(pH, Pᶜᵒᵉᶠᶠ) + 
+         HF(pH, Pᶜᵒᵉᶠᶠ)
 
 # Evaluate better guess of hydrogen ion conc
     H⁺  = 0.5 * ( 
@@ -142,46 +331,58 @@ end # end function
             ) 
         )
 
-    # Update pH
+    # Update pH (may want to iterate on this pH?)
     pH = -log10(H⁺)
-
-    CO₂ˢᵒˡ = Cᵀ / (
-             1 + 
-             (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ / H⁺) + 
-             (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ / H⁺^2)
-             )
-    HCO₃⁻  = ( Cᵀ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * H⁺ )/(
-             (H⁺^2) + 
-             (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * H⁺) + 
-             (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂)
-            )
-             
-    CO₃²⁻  = ( Cᵀ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ ) / (
-             (H⁺^2) + 
-             (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * H⁺) + 
-             (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂)
-            )
-    
-    return pH, 
-           CO₂ˢᵒˡ, 
-           HCO₃⁻, 
-           CO₃²⁻,
-           CO₂ˢᵒˡ + HCO₃⁻ + CO₃²⁻, 
-           CO₂ˢᵒˡ/Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀, 
-           Aᵀ
+    return pH 
 end # end function
 
+"""
+    Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
+
+    Solve for ocean DIC given total Alkalinity and pCO₂
+
+    Estimate H⁺ (hydrogen ion conc) using estimate of Aᶜ, carbonate alkalinity
+    after (Follows et al., 2006)
+"""
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
+
+# Estimate carbonate alkalinity
+    Aᶜ = Aᵀ - 
+         BO₄H₄⁻(pH, Pᶜᵒᵉᶠᶠ) - 
+         OH⁻(pH, Pᶜᵒᵉᶠᶠ) - 
+         SiO₄H₃⁻(Siᵀ, pH, Pᶜᵒᵉᶠᶠ) -
+         HPO₄²⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) - 
+         2 * PO₄³⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) + 
+         H₃PO₄(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) + 
+         H⁺ᶠʳᵉᵉ(pH, Pᶜᵒᵉᶠᶠ) +
+         HSO₄⁻(pH, Pᶜᵒᵉᶠᶠ) + 
+         HF(pH, Pᶜᵒᵉᶠᶠ)
+
+# Evaluate better guess of hydrogen ion conc
+#  take account of fugacity in pco2atm in seawater?
+    H⁺  = 0.5 * (
+                 ((Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * pCO₂) / Aᶜ) + 
+             sqrt(
+                 ((Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * pCO₂) / Aᶜ)^2 + 
+              8 * (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ * pCO₂) / Aᶜ 
+                 )
+                )
+
+    # Update pH (may want to iterate on this pH?)
+    pH = -log10(H⁺)
+    return pH 
+end # end function
 end # module
 
-module CarbonSolverApprox
-export CarbonSystemApprox
+module DirectCubicCarbonSolver
+export DirectCubicCarbonSystem
 
 using RootSolvers
-using ..CarbonSystemSolvers: CarbonSystem
+using ..CarbonSystemSolvers: CarbonSystem, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, FCᵀHCO₃⁻
 include("carbon_chemistry_coefficients.jl")
 
 """
-CarbonSystemApprox(
+DirectCubicCarbonSystem(
         Θ       :: FT = 25.0,
         Sᴬ      :: FT = 35.0,
         Δpᵦₐᵣ   :: FT = 0.0,
@@ -191,10 +392,10 @@ CarbonSystemApprox(
         pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
         )
 
-        CarbonSolverApprox solves a cubic equation in terms of [H⁺]; 
+        DirectCubicCarbonSolver solves a cubic equation in terms of [H⁺]; 
         Not for serious use, but as a placeholder and for testing purposes
 """
-@inline function CarbonSystemApprox(
+@inline function DirectCubicCarbonSystem(
         Θᶜ      :: FT = 25.0,
         Sᴬ      :: FT = 35.0,
         Δpᵦₐᵣ   :: FT = 0.0,
@@ -216,17 +417,22 @@ CarbonSystemApprox(
     )
 
     # Calculate pH, pCO2, and carbon species from Aᵀ and Cᵀ
-    pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, _, pCO₂ᵒᶜᵉ, _  = Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    pH  = Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+
+    CO₂ˢᵒˡ = FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    HCO₃⁻  = FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    CO₃²⁻  = FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    pCO₂ᵒᶜᵉ= CO₂ˢᵒˡ / Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ # correct for fugacity of CO₂ in seawater?
 
     return CarbonSystem(pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ)
 end # end function
 
 """
-    Fᶜᵀ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂ᵃᵗᵐ, pH, Pᶜᵒᵉᶠᶠ)
+    Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂ᵃᵗᵐ, pH, Pᶜᵒᵉᶠᶠ)
 
-    Solve for DIC given total Alkalinity and atmosphere pCO₂
+    Solve for DIC given total Alkalinity and pCO₂
 """
-@inline function Fᶜᵀ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂ᵃᵗᵐ, pH, Pᶜᵒᵉᶠᶠ)
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂, pH, Pᶜᵒᵉᶠᶠ)
     # Find the real roots of the polynomial using RootSolvers.jl 
     sol = find_zero(  x -> (
         x^3*(Aᵀ) +
@@ -235,25 +441,25 @@ end # end function
              Aᵀ-
              Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀*
              Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
-             pCO₂ᵃᵗᵐ-
+             pCO₂-
              Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
              Pᶜᵒᵉᶠᶠ.Cᴮᵀ) + 
         x^1*(
             -Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀*
              Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
              Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
-             pCO₂ᵃᵗᵐ-
+             pCO₂-
            2*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀*
              Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
              Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*
-             pCO₂ᵃᵗᵐ
+             pCO₂
              ) +
         X^0*(
           -2*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀*
              Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
              Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*
              Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
-             pCO₂ᵃᵗᵐ
+             pCO₂
              )        
         ),
         NewtonsMethodAD{Float64}(10^-(pH)),
@@ -264,30 +470,19 @@ end # end function
         H⁺ = sol.root
         # Update pH
         pH = -log10(H⁺)
-
-        CO₂ˢᵒˡ = Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * pCO₂ᵃᵗᵐ
-        HCO₃⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * CO₂ˢᵒˡ)/H⁺
-        CO₃²⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ * CO₂ˢᵒˡ)/(H⁺^2)
-
-        return  pH, 
-                CO₂ˢᵒˡ, 
-                HCO₃⁻, 
-                CO₃²⁻,
-                CO₂ˢᵒˡ + HCO₃⁻ + CO₃²⁻, 
-                CO₂ˢᵒˡ/Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀, 
-                Aᵀ
+        return  pH
     else
-        error("CarbonSolverApprox did not converge")
+        error("DirectCubicCarbonSolver did not converge")
         return nothing
     end
 end # end function
 
 """
-    Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
     Solve for ocean pCO₂ given total Alkalinity and DIC
 """
-@inline function Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     # Find the real roots of the polynomial using RootSolvers.jl
     sol = find_zero(  x -> (
         x^3*(Aᵀ) +
@@ -343,29 +538,19 @@ end # end function
         # Update pH
         pH = -log10(H⁺)
 
-        CO₂ˢᵒˡ = (H⁺^2 * Cᵀ)/(H⁺^2 + H⁺ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ + Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂)
-        HCO₃⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * CO₂ˢᵒˡ)/H⁺
-        CO₃²⁻  = (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ * CO₂ˢᵒˡ)/(H⁺^2)
-        
-        return pH, 
-                CO₂ˢᵒˡ, 
-                HCO₃⁻, 
-                CO₃²⁻,
-                CO₂ˢᵒˡ + HCO₃⁻ + CO₃²⁻, 
-                CO₂ˢᵒˡ/Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀, 
-                Aᵀ
+        return pH 
     else
-        error("CarbonSolverApprox did not converge")
+        error("DirectCubicCarbonSolver did not converge")
         return nothing
     end
 end # end function
 
-end # module CarbonSolverApprox
+end # module DirectCubicCarbonSolver
 
 # ------------------------------------------------------------
 
-using .CarbonSystemSolvers.CarbonSolverApprox
-using .CarbonSystemSolvers.CarbonSolverFollows
+using .CarbonSystemSolvers.DirectCubicCarbonSolver
+using .CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver
 
 include("carbon_chemistry_coefficients.jl")
 
@@ -432,9 +617,9 @@ println("Cˢᴼ⁴ = ",        Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴        )
 #@assert Cᶜᵒᵉᶠᶠ.Cᶠᵀ        ==
 #@assert Cᶜᵒᵉᶠᶠ.Cᶜᵃ        ==
 #@assert Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴       ==
-println("Testing the Approximate pCO2 solver:")
+println("Testing DirectCubicCarbonSolver for pCO2:")
 (; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
-CarbonSystemApprox(
+DirectCubicCarbonSystem(
         Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, pH, pCO₂ᵃᵗᵐ,
         )
 
@@ -448,9 +633,9 @@ println("")
 Pᵀ = 0.5e-6  # umol/kg to mol/kg
 Siᵀ = 7.5e-6 # umol/kg to mol/kg
 
-println("Testing the Follows et al (2006) pCO2 solver:")
+println("Testing AlkalinityCorrectionCarbonSolver (Follows et al., 2006) for pCO2:")
 (; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
-CarbonSystemFollows(
+AlkalinityCorrectionCarbonSystem(
         Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
         )
 
