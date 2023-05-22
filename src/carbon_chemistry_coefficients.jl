@@ -313,6 +313,7 @@ Base.@kwdef struct Pᵈⁱᶜₖ₁ᵣ₉₃{FT}
     k₁ :: FT = -   0.578e-3
     k₂ :: FT =     0.0877e-3
 end
+
 """
 Cᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ᵣ₉₃)
 
@@ -325,6 +326,7 @@ H₂CO₃ <-> HCO₃⁻ + H⁺
 References: Roy et al. (1993) -- also Handbook (1994)
             Millero (1979) pressure correction
 pH scale  : Total
+Valid range: T:  0-45  S:  5-45.
 Note      : converted here from mol/kg-H2O to mol/kg-SW
 """
 @inline function Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, params = Pᵈⁱᶜₖ₁ᵣ₉₃)
@@ -382,6 +384,7 @@ HCO₃⁻ <-> CO₃²⁻ + H⁺
 References: Roy et al. (1993) -- also Handbook (1994)
             Millero (1979) pressure correction
 pH scale  : Total
+Valid range: T:  0-45  S:  5-45.
 Note      : converted here from mol/kg-H2O to mol/kg-SW
 """
 @inline function Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, params = Pᵈⁱᶜₖ₂ᵣ₉₃)
@@ -924,7 +927,7 @@ Base.@kwdef struct Pˢⁱᵗₖ₁{FT}
 end
 
 """
-Cˢⁱᵗₖ₁(Θᴷ,Sᵖ,Pˢⁱᵗₖ₁)
+Cˢⁱᵗₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pˢⁱᵗₖ₁)
 
 Return the first dissociation constant of silicic acid (H4SiO4) in seawater, given 
 temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pˢⁱᵗₖ₁`.
