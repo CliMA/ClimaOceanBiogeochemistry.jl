@@ -3,8 +3,9 @@ using Test
 include("../src/carbon_chemistry_coefficients.jl")
 include("../src/CarbonSystemSolvers.jl")
 
-using .CarbonSystemSolvers.DirectCubicCarbonSolver
-using .CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver
+using .CarbonSystemSolvers
+using .CarbonSystemSolvers.DirectCubicCarbonSolver: DirectCubicCarbonSystem
+using .CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver: AlkalinityCorrectionCarbonSystem
 
 # Test carbon chemistry coefficients
 Θᶜ      = 25.0
@@ -17,6 +18,9 @@ pH      = 8.0
 FT = Float64
 
 Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+
+# Check the type of the coefficients struct
+@test Cᶜᵒᵉᶠᶠ isa CarbonChemistryCoefficients
 
 #Check the values of calculated constants (sources in comments)
 @test round(log(Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀),                        digits = 4) == -3.5617 # Handbook (2007)
@@ -45,6 +49,8 @@ Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
 #@test Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴       ≈
 
 # Test the CarbonSystemSolvers module
+@test DirectCubicCarbonSystem() isa CarbonSystem
+
 (; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
 DirectCubicCarbonSystem(
         Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, pH, pCO₂ᵃᵗᵐ,
@@ -56,6 +62,8 @@ DirectCubicCarbonSystem(
 
 Pᵀ = 0.5e-6  # umol/kg to mol/kg
 Siᵀ = 7.5e-6 # umol/kg to mol/kg
+
+@test AlkalinityCorrectionCarbonSystem() isa CarbonSystem
 
 (; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
 AlkalinityCorrectionCarbonSystem(

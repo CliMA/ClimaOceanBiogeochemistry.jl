@@ -102,7 +102,8 @@ end
 
 # ----------------------------------------------------------------------------------
 module AlkalinityCorrectionCarbonSolver
-export AlkalinityCorrectionCarbonSystem
+export AlkalinityCorrectionCarbonSystem,
+        CarbonSystem
 
 using ..CarbonSystemSolvers: CarbonSystem, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, FCᵀHCO₃⁻
 include("carbon_chemistry_coefficients.jl")
@@ -377,7 +378,8 @@ end # module
 
 # ----------------------------------------------------------------------------------
 module DirectCubicCarbonSolver
-export DirectCubicCarbonSystem
+export DirectCubicCarbonSystem,
+        CarbonSystem
 
 using RootSolvers
 using ..CarbonSystemSolvers: CarbonSystem, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, FCᵀHCO₃⁻
