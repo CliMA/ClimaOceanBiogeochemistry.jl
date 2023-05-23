@@ -133,8 +133,7 @@ of ligand concentration and stability coefficient, but this is a simple first or
 Tracer sources and sinks for DIC
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:DIC}, clock, fields)
-    μᵖ = bgc.maximum_plankton_growth_rate
-    kᴰ = bgc.detritus_half_saturation
+    μᵖ = bgc.maximum_net_community_production_rate
     kᴺ = bgc.phosphate_half_saturation
     kᴾ = bgc.nitrate_half_saturation
     kᶠ = bgc.iron_half_saturation
@@ -171,8 +170,7 @@ end
 Tracer sources and sinks for ALK
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:Alk}, clock, fields)
-    μᵖ = bgc.maximum_plankton_growth_rate
-    kᴰ = bgc.detritus_half_saturation
+    μᵖ = bgc.maximum_net_community_production_rate
     kᴺ = bgc.phosphate_half_saturation
     kᴾ = bgc.nitrate_half_saturation
     kᶠ = bgc.iron_half_saturation
@@ -208,8 +206,7 @@ end
 Tracer sources and sinks for PO₄
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:PO₄}, clock, fields)
-    μᵖ = bgc.maximum_plankton_growth_rate
-    kᴰ = bgc.detritus_half_saturation
+    μᵖ = bgc.maximum_net_community_production_rate
     kᴺ = bgc.phosphate_half_saturation
     kᴾ = bgc.nitrate_half_saturation
     kᶠ = bgc.iron_half_saturation
@@ -243,44 +240,7 @@ end
 Tracer sources and sinks for NO₃
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:NO₃}, clock, fields)
-    μᵖ = bgc.maximum_plankton_growth_rate
-    kᴰ = bgc.detritus_half_saturation
-    kᴺ = bgc.phosphate_half_saturation
-    kᴾ = bgc.nitrate_half_saturation
-    kᶠ = bgc.iron_half_saturation
-    kᴵ = bgc.PAR_half_saturation
-    λ = bgc.PAR_attenuation_scale
-    γ = bgc.dissolved_organic_phosphate_remin_timescale
-    α = bgc.fraction_of_particulate_export
-    Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
-    Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
-    Rᴾᴼ = bgc.stoichoimetric_ratio_phosphate_to_oxygen   
-    Rᶜᴺ = bgc.stoichoimetric_ratio_carbon_to_nitrate     
-    Rᶜᴼ = bgc.stoichoimetric_ratio_carbon_to_oxygen      
-    Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron        
-    Rᶜᵃᶜᵒ³ = bgc.rain_ratio_inorganic_to_organic_carbon     
-
-    # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
-
-    P = @inbounds fields.P[i, j, k]
-    N = @inbounds fields.N[i, j, k]
-    F = @inbounds fields.F[i, j, k]
-    D = @inbounds fields.D[i, j, k]
-
-    return Rᴺᴾ * (
-           - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-           dissolved_organic_phosphate_remin(γ, D) +
-           particulate_organic_phosphate_remin())
-end
-
-"""
-Tracer sources and sinks for FeT
-"""
-@inline function (bgc::CAN)(i, j, k, grid, ::Val{:Fe}, clock, fields)
-    μᵖ = bgc.maximum_plankton_growth_rate
-    kᴰ = bgc.detritus_half_saturation
+    μᵖ = bgc.maximum_net_community_production_rate
     kᴺ = bgc.phosphate_half_saturation
     kᴾ = bgc.nitrate_half_saturation
     kᶠ = bgc.iron_half_saturation
@@ -305,19 +265,55 @@ Tracer sources and sinks for FeT
     F = @inbounds fields.Fe[i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
-    return Rᶠᴾ * (
+    return Rᴺᴾ * (
            - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
            dissolved_organic_phosphate_remin(γ, D) +
-           particulate_organic_phosphate_remin()) +
-           iron_sources() -
-           iron_scavenging()
+           particulate_organic_phosphate_remin())
+end
+
+"""
+Tracer sources and sinks for FeT
+"""
+@inline function (bgc::CAN)(i, j, k, grid, ::Val{:Fe}, clock, fields)
+    μᵖ = bgc.maximum_net_community_production_rate
+    kᴺ = bgc.phosphate_half_saturation
+    kᴾ = bgc.nitrate_half_saturation
+    kᶠ = bgc.iron_half_saturation
+    kᴵ = bgc.PAR_half_saturation
+    λ = bgc.PAR_attenuation_scale
+    γ = bgc.dissolved_organic_phosphate_remin_timescale
+    α = bgc.fraction_of_particulate_export
+    Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
+    Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
+    Rᴾᴼ = bgc.stoichoimetric_ratio_phosphate_to_oxygen   
+    Rᶜᴺ = bgc.stoichoimetric_ratio_carbon_to_nitrate     
+    Rᶜᴼ = bgc.stoichoimetric_ratio_carbon_to_oxygen      
+    Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron        
+    Rᶠᴾ = bgc.stoichoimetric_ratio_phosphate_to_iron
+    Rᶜᵃᶜᵒ³ = bgc.rain_ratio_inorganic_to_organic_carbon     
+
+    # Available photosynthetic radiation
+    z = znode(i, j, k, grid, c, c, c)
+    I = exp(z / λ)
+
+    P = @inbounds fields.PO₄[i, j, k]
+    N = @inbounds fields.NO₃[i, j, k]
+    F = @inbounds fields.Fe[i, j, k]
+    D = @inbounds fields.DOP[i, j, k]
+
+    return Rᶠᴾ * (
+                - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
+                + dissolved_organic_phosphate_remin(γ, D))
+           #    + particulate_organic_phosphate_remin()) +
+           #    + iron_sources()
+           #    - iron_scavenging())
     end
 
 """
 Tracer sources and sinks for DOP
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:DOP}, clock, fields)
-    μᵖ = bgc.maximum_plankton_growth_rate
+    μᵖ = bgc.maximum_net_community_production_rate
     kᴺ = bgc.phosphate_half_saturation
     kᴾ = bgc.nitrate_half_saturation
     kᶠ = bgc.iron_half_saturation
