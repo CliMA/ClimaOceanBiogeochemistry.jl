@@ -14,7 +14,7 @@ const EXAMPLES_DIR = joinpath(@__DIR__, "..", "examples")
 const OUTPUT_DIR   = joinpath(@__DIR__, "src/literated")
 
 to_be_literated = [
-    "nutrients_plankton_bacteria_detritus.jl",
+    "single_column_nutrients_plankton_bacteria_detritus.jl",
 ]
   
 for file in to_be_literated
@@ -37,7 +37,7 @@ format = Documenter.HTML(collapselevel = 2,
 pages = [
     "Home" => "index.md",
     "Examples" => [
-        "Nutrients, plankton, bacteria, detritus" => "literated/nutrients_plankton_bacteria_detritus.md",
+        "Single column nutrients, plankton, bacteria, detritus" => "literated/single_column_nutrients_plankton_bacteria_detritus.md",
     ],
     "Library" => [ 
         "Contents" => "library/outline.md",
