@@ -26,3 +26,9 @@ Manifest.toml
 *.jld2
 *.mp4
 *.DS_Store
+*.swp
+
+# Documenter.jl and MkDocs
+docs/build
+docs/site
+docs/src/literated
