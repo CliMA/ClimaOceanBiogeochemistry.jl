@@ -14,6 +14,7 @@
 
 using Oceananigans
 using Oceananigans.Units
+using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus
 
 # ## Grid
 
@@ -21,7 +22,7 @@ using Oceananigans.Units
 
 Lx = 1000kilometers # east-west extent [m]
 Ly = 1000kilometers # north-south extent [m]
-Lz = 1kilometers    # depth [m]
+Lz = 200            # depth [m]
 
 Nx = 64
 Ny = 64
@@ -39,9 +40,11 @@ grid = RectilinearGrid(size = (Nx, Ny, Nz),
 # Regarding Coriolis, we use a beta-plane centered at 45° South.
 
 model = HydrostaticFreeSurfaceModel(; grid,
+                                    biogeochemistry = NutrientsPlanktonBacteriaDetritus(),
+                                    closure = CATKEVerticalDiffusivity(),
                                     coriolis = BetaPlane(latitude = -45),
                                     buoyancy = BuoyancyTracer(),
-                                    tracers = :b,
+                                    tracers = (:b, :e),
                                     momentum_advection = WENO(),
                                     tracer_advection = WENO())
 
@@ -75,27 +78,17 @@ M² = 8e-8 # [s⁻²] horizontal buoyancy gradient
 
 bᵢ(x, y, z) = N² * z + Δb * ramp(y, Δy) + ϵb * randn()
 
-set!(model, b=bᵢ)
+# BGC initial conditions
+N₀ = 1e-1 # Surface nutrient concentration
+D₀ = 1e-1 # Surface detritus concentration
+dᴺ = 50.0 # Nutrient mixed layer depth
+N² = 1e-5 # Buoyancy gradient, s⁻²
 
-# Let's visualize the initial buoyancy distribution.
+bᵢ(x, y, z) = N² * z
+Nᵢ(x, y, z) = N₀ * max(1, exp(-(z + dᴺ) / 100))
+Dᵢ(x, y, z) = D₀ * exp(z / 10)
 
-using CairoMakie
-
-x, y, z = 1e-3 .* nodes(grid, (Center(), Center(), Center())) # convert m -> km
-
-b = model.tracers.b
-
-fig, ax, hm = heatmap(y, z, interior(b)[1, :, :],
-                      colormap=:deep,
-                      axis = (xlabel = "y [km]",
-                              ylabel = "z [km]",
-                              title = "b(x=0, y, z, t=0)",
-                              titlesize = 24))
-
-Colorbar(fig[1, 2], hm, label = "[m s⁻²]")
-
-current_figure() # hide
-fig
+set!(model, b=bᵢ, P=1e-1, B=1e-1, D=Dᵢ, N=Nᵢ, e=1e-6)
 
 # Now let's built a `Simulation`.
 
@@ -107,7 +100,6 @@ simulation = Simulation(model, Δt=Δt₀, stop_time=stop_time)
 # We add a `TimeStepWizard` callback to adapt the simulation's time-step,
 
 wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=20minutes)
-
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(20))
 
 # Also, we add a callback to print a message about how the simulation is going,
@@ -141,8 +133,7 @@ simulation.callbacks[:print_progress] = Callback(print_progress, IterationInterv
 
 u, v, w = model.velocities
 
-B = Field(Average(b, dims=1))
-
+averages = NamedTuple(name => Average(model.tracers[name], dims=1) for name in keys(model.tracers))
 filename = "baroclinic_adjustment"
 save_fields_interval = 0.5day
 
@@ -155,15 +146,14 @@ slicers = (west = (1, :, :),
 
 for side in keys(slicers)
     indices = slicers[side]
-
-    simulation.output_writers[side] = JLD2OutputWriter(model, (; b);
+    simulation.output_writers[side] = JLD2OutputWriter(model, model.tracers;
                                                        filename = filename * "_$(side)_slice",
                                                        schedule = TimeInterval(save_fields_interval),
                                                        overwrite_existing = true,
                                                        indices)
 end
 
-simulation.output_writers[:zonal] = JLD2OutputWriter(model, (b=B,);
+simulation.output_writers[:zonal] = JLD2OutputWriter(model, averages;
                                                      filename = filename * "_zonal_average",
                                                      schedule = TimeInterval(save_fields_interval),
                                                      overwrite_existing = true)
@@ -186,10 +176,7 @@ using CairoMakie
 
 # We load the saved buoyancy output on the top, bottom, and east surface as `FieldTimeSeries`es.
 
-filename = "baroclinic_adjustment"
-
 sides = keys(slicers)
-
 slice_filenames = NamedTuple(side => filename * "_$(side)_slice.jld2" for side in sides)
 
 b_timeserieses = (east   = FieldTimeSeries(slice_filenames.east, "b"),
