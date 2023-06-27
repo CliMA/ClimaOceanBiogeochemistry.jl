@@ -27,10 +27,6 @@ end
 ##### Build and deploy docs
 #####
 
-# Set up a timer to print a space ' ' every 240 seconds. This is to avoid CI
-# timing out when building demanding Literate.jl examples.
-Timer(t -> println(" "), 0, interval=240)
-
 format = Documenter.HTML(collapselevel = 2,
                          prettyurls = get(ENV, "CI", nothing) == "true",
                          canonical = "https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/")
@@ -59,6 +55,29 @@ makedocs(sitename = "ClimaOceanBiogeochemistry.jl",
          strict = true,
          clean = true,
          checkdocs = :exports)
+
+
+@info "Clean up temporary .jld2/.nc files created by doctests..."
+
+"""
+    recursive_find(directory, pattern)
+
+Return list of filepaths within `directory` that contains the `pattern::Regex`.
+"""
+recursive_find(directory, pattern) =
+    mapreduce(vcat, walkdir(directory)) do (root, dirs, files)
+        joinpath.(root, filter(contains(pattern), files))
+    end
+
+files = []
+for pattern in [r"\.jld2", r"\.nc"]
+    global files = vcat(files, recursive_find(@__DIR__, pattern))
+end
+
+for file in files
+    rm(file)
+end
+
 
 withenv("GITHUB_REPOSITORY" => "CliMA/ClimaOceanBiogeochemistry.jl") do
     deploydocs(repo = "github.com/CliMA/ClimaOceanBiogeochemistry.jl.git",
