@@ -13,10 +13,10 @@ struct CarbonSystem{FT}
 end
 
 """
-FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the dissolved and hydrated CO₂ concentration in seawater
-   given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
+given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
 """
 @inline function FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
@@ -64,10 +64,10 @@ Calculate the carbonate concentration in seawater
 end
 
 """
-FpCO₂CO₂ˢᵒˡ(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
+    FpCO₂CO₂ˢᵒˡ(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the dissolved and hydrated CO₂ concentration in seawater
-   given the pCO₂, pH, and the carbon chemistry coefficients.
+given the pCO₂, pH, and the carbon chemistry coefficients.
 """
 @inline function FpCO₂CO₂ˢᵒˡ(pCO₂, Pᶜᵒᵉᶠᶠ)
     # Perhaps take account of fugacity here?
