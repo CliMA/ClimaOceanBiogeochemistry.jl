@@ -331,7 +331,7 @@ Tracer sources and sinks for DOP
     F = @inbounds fields.Fe[i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
-    return - dissolved_organic_phosphate_remin(γ, D)
-           + (1 - α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F)
+    return - dissolved_organic_phosphate_remin(γ, D) +
+             (1 - α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F)
 
 end
