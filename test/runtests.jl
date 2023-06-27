@@ -1,5 +1,6 @@
 using Test
 using Oceananigans
+using Oceananigans.Units
 using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients, NutrientsPlanktonBacteriaDetritus
 
 @testset "CarbonSolvers" begin
