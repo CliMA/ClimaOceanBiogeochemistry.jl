@@ -73,4 +73,5 @@ AlkalinityCorrectionCarbonSystem(
 @test pH            == 8.033988293659919
 @test pCO₂ᵃᵗᵐ * 1e6 == 280.0            
 @test pCO₂ᵒᶜᵉ * 1e6 == 417.9894057400246
-# NB, you wouldn't expect to get exactly the same results here \nbecause of the extra terms in the calcite alkalinity.
+# NB, you wouldn't expect to get exactly the same results here 
+# because of the extra terms in the calcite alkalinity.
