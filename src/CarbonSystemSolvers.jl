@@ -30,7 +30,7 @@ given the total carbon concentration Cᵀ, pH, and the carbon chemistry coeffici
 end
 
 """
-FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the bicarbonate ion concentration in seawater
    given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
@@ -47,7 +47,7 @@ Calculate the bicarbonate ion concentration in seawater
 end
 
 """
-FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the carbonate concentration in seawater
    given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
@@ -75,7 +75,7 @@ given the pCO₂, pH, and the carbon chemistry coefficients.
 end
 
 """
-FpCO₂HCO₃⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
+    FpCO₂HCO₃⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the bicarbonate ion concentration in seawater
    given the pCO₂, pH, and the carbon chemistry coefficients.
@@ -88,7 +88,7 @@ Calculate the bicarbonate ion concentration in seawater
 end
 
 """
-FpCO₂CO₃²⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
+    FpCO₂CO₃²⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the carbonate concentration in seawater
    given the pCO₂, pH, and the carbon chemistry coefficients.
@@ -109,19 +109,19 @@ using ..CarbonSystemSolvers: CarbonSystem, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, F
 include("carbon_chemistry_coefficients.jl")
 
 """
-AlkalinityCorrectionCarbonSystem(
-        Θ       :: FT = 25.0,
-        Sᴬ      :: FT = 35.0,
-        Δpᵦₐᵣ   :: FT = 0.0,
-        Cᵀ      :: FT = 2050.0e-6,
-        Aᵀ      :: FT = 2350.0e-6,
-        Pᵀ      :: FT = 1.0e-6,
-        Siᵀ     :: FT = 15.0e-6,
-        pH      :: FT = 8.0,
-        pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
-        )
+    AlkalinityCorrectionCarbonSystem(
+            Θ       :: FT = 25.0,
+            Sᴬ      :: FT = 35.0,
+            Δpᵦₐᵣ   :: FT = 0.0,
+            Cᵀ      :: FT = 2050.0e-6,
+            Aᵀ      :: FT = 2350.0e-6,
+            Pᵀ      :: FT = 1.0e-6,
+            Siᵀ     :: FT = 15.0e-6,
+            pH      :: FT = 8.0,
+            pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
+            )
 
-        Uses the Follows et al (2006) method to solve the distribution of carbon species
+Uses the Follows et al (2006) method to solve the distribution of carbon species
 """
 @inline function AlkalinityCorrectionCarbonSystem(
         Θᶜ      :: FT = 25.0,
@@ -165,7 +165,7 @@ AlkalinityCorrectionCarbonSystem(
 end # end function
 
 """
-BO₄H₄⁻(pH, Pᶜᵒᵉᶠᶠ) 
+    BO₄H₄⁻(pH, Pᶜᵒᵉᶠᶠ) 
 
 Calculate borate (B(OH)₄⁻) contribution to Aᶜ using salinity as a proxy
 """
@@ -177,7 +177,7 @@ Calculate borate (B(OH)₄⁻) contribution to Aᶜ using salinity as a proxy
 end
 
 """
-H₃PO₄(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+    H₃PO₄(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
 
 Calculate orthophosphoric acid (H₃PO₄) contribution to Aᶜ
 """
@@ -194,9 +194,11 @@ Calculate orthophosphoric acid (H₃PO₄) contribution to Aᶜ
 end
 
 """
+    H₂PO₄⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ)
+
 Calculate the dihydrogen phosphate (H₂PO₄⁻) contribution to Aᶜ
 """
-@inline function H₂PO₄⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+@inline function H₂PO₄⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -226,7 +228,7 @@ Calculate the monohydrogen phosphate (HPO₄²⁻) contribution to Aᶜ
 end
 
 """
-PO₄³⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+    PO₄³⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
 
 Calculate the phosphate (PO₄³⁻) contribution to Aᶜ
 """
@@ -243,7 +245,7 @@ Calculate the phosphate (PO₄³⁻) contribution to Aᶜ
 end
 
 """
-SiO₄H₃⁻(Siᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+    SiO₄H₃⁻(Siᵀ, pH, Pᶜᵒᵉᶠᶠ) 
 
 Calculate the silicate (SiO(OH)₃⁻) contribution to Aᶜ
 """
@@ -255,7 +257,7 @@ Calculate the silicate (SiO(OH)₃⁻) contribution to Aᶜ
 end
 
 """
-OH⁻(pH, Pᶜᵒᵉᶠᶠ) 
+    OH⁻(pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the hydroxide (OH⁻) contribution to Aᶜ
 """
@@ -267,7 +269,7 @@ Calculate the hydroxide (OH⁻) contribution to Aᶜ
 end
 
 """
-H⁺ᶠʳᵉᵉ(pH, Pᶜᵒᵉᶠᶠ)
+    H⁺ᶠʳᵉᵉ(pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the "Free" H⁺ contribution to Aᶜ
 """
@@ -279,7 +281,7 @@ Calculate the "Free" H⁺ contribution to Aᶜ
 end
 
 """
-HSO₄⁻(pH, Pᶜᵒᵉᶠᶠ)
+    HSO₄⁻(pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the hydrogen sulphate (HSO₄⁻) contribution to Aᶜ
 """
@@ -291,7 +293,7 @@ Calculate the hydrogen sulphate (HSO₄⁻) contribution to Aᶜ
 end
     
 """
-HF(pH, Pᶜᵒᵉᶠᶠ)
+    HF(pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the hydrogen fluoride (HF) contribution to Aᶜ
 """
@@ -305,10 +307,10 @@ end
 """
     Fᵖᶜᵒ²⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
-    Solve for ocean pCO₂ given total Alkalinity and DIC
+Solve for ocean pCO₂ given total Alkalinity and DIC
 
-    Estimate H⁺ (hydrogen ion conc) using estimate of Aᶜ, carbonate alkalinity
-    after (Follows et al., 2006)
+Estimate H⁺ (hydrogen ion conc) using estimate of Aᶜ, carbonate alkalinity
+after (Follows et al., 2006)
 """
 @inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
@@ -386,18 +388,18 @@ using ..CarbonSystemSolvers: CarbonSystem, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, F
 include("carbon_chemistry_coefficients.jl")
 
 """
-DirectCubicCarbonSystem(
-        Θ       :: FT = 25.0,
-        Sᴬ      :: FT = 35.0,
-        Δpᵦₐᵣ   :: FT = 0.0,
-        Cᵀ      :: FT = 2050.0e-6,
-        Aᵀ      :: FT = 2350.0e-6,
-        pH      :: FT = 8.0,
-        pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
-        )
+    DirectCubicCarbonSystem(
+            Θ       :: FT = 25.0,
+            Sᴬ      :: FT = 35.0,
+            Δpᵦₐᵣ   :: FT = 0.0,
+            Cᵀ      :: FT = 2050.0e-6,
+            Aᵀ      :: FT = 2350.0e-6,
+            pH      :: FT = 8.0,
+            pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
+            )
 
-        DirectCubicCarbonSolver solves a cubic equation in terms of [H⁺]; 
-        Not for serious use, but as a placeholder and for testing purposes
+DirectCubicCarbonSolver solves a cubic equation in terms of [H⁺]; 
+Not for serious use, but as a placeholder and for testing purposes
 """
 @inline function DirectCubicCarbonSystem(
         Θᶜ      :: FT = 25.0,
@@ -484,7 +486,7 @@ end # end function
 """
     Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
-    Solve for ocean pCO₂ given total Alkalinity and DIC
+Solve for ocean pCO₂ given total Alkalinity and DIC
 """
 @inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     # Find the real roots of the polynomial using RootSolvers.jl
