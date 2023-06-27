@@ -5,6 +5,7 @@ using
   Glob,
   Literate,
   ClimaOceanBiogeochemistry
+  ClimaOceanBiogeochemistry.CarbonSystemSolvers
 
 #####
 ##### Generate examples
@@ -48,7 +49,10 @@ pages = [
 ]
 
 makedocs(sitename = "ClimaOceanBiogeochemistry.jl",
-         modules = [ClimaOceanBiogeochemistry],
+         modules = [ClimaOceanBiogeochemistry, 
+                    ClimaOceanBiogeochemistry.CarbonSystemSolvers,
+                    ClimaOceanBiogeochemistry.CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver,
+                    ClimaOceanBiogeochemistry.CarbonSystemSolvers.DirectCubicCarbonSolver],
          format = format,
          pages = pages,
          doctest = true,
