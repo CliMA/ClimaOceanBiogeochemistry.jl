@@ -16,7 +16,7 @@ using CairoMakie
 # We set up a single column grid with 4 m grid spacing that's 256 m deep:
 
 grid = RectilinearGrid(size = 64,
-                       z = (-256, 0),
+                       z = (-256meters, 0),
                        topology = (Flat, Flat, Bounded))
 
 # ## Convection then quiet
