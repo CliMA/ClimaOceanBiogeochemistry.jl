@@ -29,8 +29,9 @@ struct CarbonChemistryCoefficients{FT}
 end
 
 """
-CarbonChemistryCoefficients{FT}
-Returns dissociation coefficients necessary to solve for the distribution of carbonate species.
+    CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+
+Return dissociation coefficients necessary to solve for the distribution of carbonate species.
 """
 @inline function CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
 # Need a conversion from Absolute Salinity, Sᴬ, to Practical Salinity, Sᴾ
@@ -92,7 +93,7 @@ Base.@kwdef struct Pᴴ²⁰ˢʷ{FT}
 end
 
 """
-H₂Oˢʷ(Sᵖ,Pᴴ²⁰ˢʷ)
+    H₂Oˢʷ(Sᵖ,Pᴴ²⁰ˢʷ)
 
 Return the mass of pure water in one kg of seawater
 of practical salinity, `Sᵖ`.
@@ -111,7 +112,7 @@ Base.@kwdef struct Pᵘˢ{FT}
 end
 
 """
-μₛ(Sᵖ)
+    μₛ(Sᵖ)
 
 Return ionic strength in mol/kg-SW, for given practical salinity, `Sᵖ`.
 References: "libthdyct" -- derived by Munhoven (1997) from data by Millero (1982)
@@ -128,7 +129,7 @@ Base.@kwdef struct Pᴮᵀᴼᵀ{FT}
 end
 
 """
-Bᵀᴼᵀ(Sᵖ, Pᴮᵀᴼᵀ)
+    Bᵀᴼᵀ(Sᵖ, Pᴮᵀᴼᵀ)
 
 Return total borate concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Uppström (1974), cited by  Dickson et al. (2007, chapter 5, p 10)
@@ -147,7 +148,7 @@ Base.@kwdef struct Pᶜᵃᵀᴼᵀ{FT}
 end
 
 """
-Caᵀᴼᵀ(Sᵖ,Pᶜᵃᵀᴼᵀ)
+    Caᵀᴼᵀ(Sᵖ,Pᶜᵃᵀᴼᵀ)
 
 Return calcium concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Culkin and Cox (1966), 
@@ -166,7 +167,7 @@ Base.@kwdef struct Pᶠᵀᴼᵀ{FT}
 end
 
 """
-Fᵀᴼᵀ(Sᵖ,Pᶠᵀᴼᵀ)
+    Fᵀᴼᵀ(Sᵖ,Pᶠᵀᴼᵀ)
 
 Return total fluoride concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Culkin (1965) (???)
@@ -183,7 +184,7 @@ Base.@kwdef struct Pˢᴼ⁴ᵀᴼᵀ{FT}
 end
 
 """
-SO₄ᵀᴼᵀ(Sᵖ, Pˢᴼ⁴ᵀᴼᵀ)
+    SO₄ᵀᴼᵀ(Sᵖ, Pˢᴼ⁴ᵀᴼᵀ)
 
 Return total sulfate concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Morris, A.W. and Riley, J.P. (1966) quoted in Handbook (2007)
@@ -273,7 +274,7 @@ Base.@kwdef struct Pᵈⁱᶜₖ₀{FT}
 end
 
 """
-Cᵈⁱᶜₖ₀(Θᴷ,Sᵖ,Pᵈⁱᶜₖ₀)
+    Fᵈⁱᶜₖ₀(Θᴷ,Sᵖ,Pᵈⁱᶜₖ₀)
 
 Return hydration constant of CO₂ in (mol/kg-SW)/atm given temperature 
 in K, `Θᴷ`, practical salinity, `Sᵖ`, and coefficients, `Pᵈⁱᶜₖ₀`.
@@ -315,7 +316,7 @@ Base.@kwdef struct Pᵈⁱᶜₖ₁ᵣ₉₃{FT}
 end
 
 """
-Cᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ᵣ₉₃)
+    Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ᵣ₉₃)
 
 Return the first dissociation constant of carbonic acid in mol/kg-SW, given
 temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, 
@@ -373,7 +374,7 @@ Base.@kwdef struct Pᵈⁱᶜₖ₂ᵣ₉₃{FT}
 end
  
 """
-Cᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ᵣ₉₃)
+    Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ᵣ₉₃)
 
 Return the second dissociation constant of carbonic acid in mol/kg-SW, given
 temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and
@@ -432,7 +433,7 @@ end
 
 
 """
-Cᵈⁱᶜₖ₁ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₘ₉₅)
+    Fᵈⁱᶜₖ₁ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₘ₉₅)
 
 Return the first dissociation constant of carbonic acid in mol/kg-SW, given
 temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, 
@@ -489,7 +490,7 @@ Base.@kwdef struct Pᵈⁱᶜₖ₂ₘ₉₅{FT}
 end
 
 """
-Cᵈⁱᶜₖ₂ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₘ₉₅)
+    Fᵈⁱᶜₖ₂ₘ₉₅(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₘ₉₅)
 
 Return the second dissociation constant of carbonic acid in mol/kg-SW, given
 temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and
@@ -545,7 +546,7 @@ Base.@kwdef struct Pᵈⁱᶜₖ₁ₗ₀₀{FT}
 end
 
 """
-Cᵈⁱᶜₖ₁ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₗ₀₀)
+    Fᵈⁱᶜₖ₁ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₁ₗ₀₀)
 
 Return the first dissociation constant of carbonic acid in mol/kg-SW, given
 temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, 
@@ -599,7 +600,7 @@ Base.@kwdef struct Pᵈⁱᶜₖ₂ₗ₀₀{FT}
 end
 
 """
-Cᵈⁱᶜₖ₂ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₗ₀₀)
+    Fᵈⁱᶜₖ₂ₗ₀₀(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵈⁱᶜₖ₂ₗ₀₀)
 
 Return the second dissociation constant of carbonic acid in mol/kg-SW, given
 temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and
@@ -720,7 +721,7 @@ Base.@kwdef struct Pᴴ²ᴼₖ₁{FT}
 end
 
 """
-Cᴴ²ᴼₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ᴼₖ₁)
+    Fᴴ²ᴼₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ᴼₖ₁)
 
 Return dissociation constant of water in (mol/kg-SW)^2, given temperature in K,
 `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴴ²ᴼₖ₁`.
@@ -770,7 +771,7 @@ Base.@kwdef struct Pᴾᴼ⁴ₖ₁{FT}
 end
 
 """
-Cᴾᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₁)
+    Fᴾᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₁)
 
 Return the first dissociation constant of phosphoric acid (H3PO4) in seawater, given 
 temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴾᴼ⁴ₖ₁`.
@@ -822,7 +823,7 @@ Base.@kwdef struct Pᴾᴼ⁴ₖ₂{FT}
 end
 
 """
-Cᴾᴼ⁴ₖ₂(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₂)
+    Fᴾᴼ⁴ₖ₂(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₂)
 
 Return the second dissociation constant of phosphoric acid (H3PO4) in seawater, given
 temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴾᴼ⁴ₖ₂`.
@@ -873,7 +874,7 @@ Base.@kwdef struct Pᴾᴼ⁴ₖ₃{FT}
 end
 
 """
-Cᴾᴼ⁴ₖ₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₃)
+    Fᴾᴼ⁴ₖ₃(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴾᴼ⁴ₖ₃)
 
 Return the third dissociation constant of phosphoric acid (H3PO4) in seawater, given 
 temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴾᴼ⁴ₖ₃`.
@@ -927,7 +928,7 @@ Base.@kwdef struct Pˢⁱᵗₖ₁{FT}
 end
 
 """
-Cˢⁱᵗₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pˢⁱᵗₖ₁)
+    Fˢⁱᵗₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pˢⁱᵗₖ₁)
 
 Return the first dissociation constant of silicic acid (H4SiO4) in seawater, given 
 temperature in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pˢⁱᵗₖ₁`.
@@ -984,9 +985,9 @@ Base.@kwdef struct Pᴴ²ˢₖ₁{FT}
 end
 
 """
-Cᴴ²ˢₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ˢₖ₁)
+    Fᴴ²ˢₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴ²ˢₖ₁)
 
-Returns the dissociation constant of hydrogen sulfide in sea-water, given temperature in K,
+Return the dissociation constant of hydrogen sulfide in sea-water, given temperature in K,
 `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴴ²ˢₖ₁`.
 
 References: Millero et al. (1988) (cited by Millero (1995)
@@ -1035,7 +1036,7 @@ Base.@kwdef struct Pᴺᴴ⁴ₖ₁{FT}
 end
 
 """
-Cᴺᴴ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴺᴴ⁴ₖ₁)
+    Fᴺᴴ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴺᴴ⁴ₖ₁)
 
 Return the dissociation constant of ammonium in sea-water [mol/kg-SW], given temperature
 in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴺᴴ⁴ₖ₁`.
@@ -1082,7 +1083,7 @@ Base.@kwdef struct Pᴴᶠᵦ₁{FT}
 end
 
 """
-Cᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁)
+    Fᴴᶠᵦ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠᵦ₁)
 
 Return the association constant of HF in (mol/kg-SW)^-1, , given temperature
 in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴴᶠᵦ₁`.
@@ -1131,7 +1132,7 @@ Base.@kwdef struct Pᴴᶠₖ₁{FT}
 end
 
 """
-Cᴴᶠₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠₖ₁)
+    Fᴴᶠₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴᶠₖ₁)
 
 Return the dissociation constant for hydrogen fluoride in mol/kg-SW, given temperature
 in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴴᶠₖ₁`.
@@ -1181,9 +1182,9 @@ Base.@kwdef struct Pᴴˢᴼ⁴ₖ₁{FT}
 end
 
 """
-Cᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁)
+    Fᴴˢᴼ⁴ₖ₁(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᴴˢᴼ⁴ₖ₁)
 
-@inline function returns the dissociation constant of hydrogen sulfate (bisulfate) , given temperature
+Return the dissociation constant of hydrogen sulfate (bisulfate) , given temperature
 in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴴˢᴼ⁴ₖ₁`.
 
 References: Dickson (1990) -- also Handbook (2007)
@@ -1237,9 +1238,9 @@ Base.@kwdef struct Pᶜᵃˡᶜⁱᵗᵉₛₚ{FT}
 end
 
 """
-    Cᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᶜᵃˡᶜⁱᵗᵉₛₚ)
+    Fᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᶜᵃˡᶜⁱᵗᵉₛₚ)
 
-Return the stoechiometric solubility product of calcite, `Ω`, in seawater, given temperature
+Return the stoichiometric solubility product of calcite, `Ω`, in seawater, given temperature
 in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᶜᵃˡᶜⁱᵗᵉₛₚ`
 
 References: Mucci (1983)
@@ -1290,9 +1291,9 @@ Base.@kwdef struct Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ{FT}
 end
 
 """
-Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ)
+    Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ,Sᵖ,Δpᵦₐᵣ,Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ)
 
-@inline function returns stoechiometric solubility product, `Ω`, of aragonite in seawater, given temperature
+Return stoichiometric solubility product, `Ω`, of aragonite in seawater, given temperature
 in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ`.
 
 References: Mucci (1983)
@@ -1327,9 +1328,9 @@ Units     : (mol/kg-SW)^2
 end
 
 """
-H⁺ₛoverH⁺ₜ(Θᴷ,Sᵖ,Δpᵦₐᵣ)
+    H⁺ₛoverH⁺ₜ(Θᴷ,Sᵖ,Δpᵦₐᵣ)
 
-Returns the ratio H_SWS/H_Tot as a @inline function of salinity, `Sᵖ`.
+Return the ratio H_SWS/H_Tot as a @inline function of salinity, `Sᵖ`.
 Reference:  Munhoven
 pH scale:   all
 """
@@ -1341,9 +1342,9 @@ pH scale:   all
 end
 
 """
-H⁺ₜoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
+    H⁺ₜoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
 
-@inline function returns the ratio H_Tot/H_free as a @inline function of salinity, `Sᵖ`.
+Return the ratio H_Tot/H_free as a @inline function of salinity, `Sᵖ`.
 Reference:  Munhoven
 pH scale:   N/A
 """
@@ -1352,9 +1353,9 @@ pH scale:   N/A
 end
 
 """
-H⁺ₛoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
+    H⁺ₛoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)
 
-@inline function returns the ratio H_SWS/H_free as a @inline function
+Return the ratio H_SWS/H_free as a @inline function
 of salinity, `Sᵖ`.
 """
 @inline function H⁺ₛoverH⁺₃(Θᴷ,Sᵖ,Δpᵦₐᵣ)

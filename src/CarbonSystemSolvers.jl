@@ -33,7 +33,7 @@ end
     FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the bicarbonate ion concentration in seawater
-   given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
+given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
 """
 @inline function FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
@@ -50,7 +50,7 @@ end
     FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the carbonate concentration in seawater
-   given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
+given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
 """
 @inline function FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
@@ -78,7 +78,7 @@ end
     FpCO₂HCO₃⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the bicarbonate ion concentration in seawater
-   given the pCO₂, pH, and the carbon chemistry coefficients.
+given the pCO₂, pH, and the carbon chemistry coefficients.
 """
 @inline function FpCO₂HCO₃⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
@@ -91,7 +91,7 @@ end
     FpCO₂CO₃²⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the carbonate concentration in seawater
-   given the pCO₂, pH, and the carbon chemistry coefficients.
+given the pCO₂, pH, and the carbon chemistry coefficients.
 """
 @inline function FpCO₂CO₃²⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
@@ -211,7 +211,7 @@ Calculate the dihydrogen phosphate (H₂PO₄⁻) contribution to Aᶜ
 end
 
 """
-HPO₄²⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+    HPO₄²⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
 
 Calculate the monohydrogen phosphate (HPO₄²⁻) contribution to Aᶜ
 """
@@ -343,10 +343,10 @@ end # end function
 """
     Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
-    Solve for ocean DIC given total Alkalinity and pCO₂
+Solve for ocean DIC given total Alkalinity and pCO₂
 
-    Estimate H⁺ (hydrogen ion conc) using estimate of Aᶜ, carbonate alkalinity
-    after (Follows et al., 2006)
+Estimate H⁺ (hydrogen ion conc) using estimate of Aᶜ, carbonate alkalinity
+after (Follows et al., 2006)
 """
 @inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
@@ -436,7 +436,7 @@ end # end function
 """
     Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂ᵃᵗᵐ, pH, Pᶜᵒᵉᶠᶠ)
 
-    Solve for DIC given total Alkalinity and pCO₂
+Solve for DIC given total Alkalinity and pCO₂
 """
 @inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂, pH, Pᶜᵒᵉᶠᶠ)
     # Find the real roots of the polynomial using RootSolvers.jl 
