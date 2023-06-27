@@ -9,7 +9,7 @@
 
 # ```julia
 # using Pkg
-# pkg"add Oceananigans, CairoMakie"
+# pkg"add Oceananigans, ClimaOceanBiogeochemistry, CairoMakie"
 # ```
 
 using Oceananigans
