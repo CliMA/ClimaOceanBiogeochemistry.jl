@@ -2,7 +2,6 @@ pushfirst!(LOAD_PATH, joinpath(@__DIR__, "..")) # add ClimaOceanBiogeochemistry 
 
 using
   Documenter,
-  Glob,
   Literate,
   ClimaOceanBiogeochemistry
   ClimaOceanBiogeochemistry.CarbonSystemSolvers
