@@ -1,6 +1,8 @@
 module CarbonSystemSolvers
 export CarbonSystem
 
+include("carbon_chemistry_coefficients.jl")
+
 struct CarbonSystem{FT}
     pH     :: FT
     CO₂ˢᵒˡ :: FT
@@ -105,8 +107,8 @@ module AlkalinityCorrectionCarbonSolver
 export AlkalinityCorrectionCarbonSystem,
         CarbonSystem
 
-using ..CarbonSystemSolvers: CarbonSystem, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, FCᵀHCO₃⁻
-include("carbon_chemistry_coefficients.jl")
+using ..CarbonSystemSolvers: CarbonSystem, CarbonChemistryCoefficients, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, FCᵀHCO₃⁻
+#include("carbon_chemistry_coefficients.jl")
 
 """
     AlkalinityCorrectionCarbonSystem(
@@ -384,8 +386,8 @@ export DirectCubicCarbonSystem,
         CarbonSystem
 
 using RootSolvers
-using ..CarbonSystemSolvers: CarbonSystem, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, FCᵀHCO₃⁻
-include("carbon_chemistry_coefficients.jl")
+using ..CarbonSystemSolvers: CarbonSystem, CarbonChemistryCoefficients, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, FCᵀHCO₃⁻
+#include("carbon_chemistry_coefficients.jl")
 
 """
     DirectCubicCarbonSystem(
