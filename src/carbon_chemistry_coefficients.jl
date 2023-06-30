@@ -1085,7 +1085,7 @@ end
 """
     Fᴴᶠᵦ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᴴᶠᵦ₁)
 
-Return the association constant of HF in (mol/kg-SW)^-1, , given temperature
+Return the association constant of HF in (mol/kg-SW)^-1, given temperature
 in K, `Θᴷ`, practical salinity, `Sᵖ`, applied pressure, `Δpᵦₐᵣ`, and coefficients, `Pᴴᶠᵦ₁`.
 
 HF <-> H⁺ + F⁻ 
