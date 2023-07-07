@@ -15,7 +15,7 @@ using CairoMakie
 #
 # We set up a single column grid with 4 m grid spacing that's 256 m deep:
 
-grid = RectilinearGrid(size = 90,
+grid = RectilinearGrid(size = 100,
                        z = (-1000, 0),
                        topology = (Flat, Flat, Bounded))
 
@@ -62,15 +62,8 @@ set!(model, b=bᵢ, P=1e-1, B=1e-1, D=Dᵢ, N=10, e=1e-6)
 # We construct a simple simulation that emits a message every 10 iterations
 # and outputs tracer fields.
 
-#simulation = Simulation(model, Δt=10minutes, stop_time=12days)
 simulation = Simulation(model, Δt=10minutes, stop_time=3days)
 
-#progress(sim) = @printf("Iteration: %d, time: %s, max(P): %.2e, max(N): %.2e, max(B): %.2e, max(D): %.2e \n",
-#                        iteration(sim), prettytime(sim),
-#                        maximum(model.tracers.P),
-#                        maximum(model.tracers.N),
-#                        maximum(model.tracers.B),
-#                        maximum(model.tracers.D))
 progress(sim) = @printf("Iteration: %d, time: %s, TotalN: %.2e \n",
                         iteration(sim), prettytime(sim),
                         sum(model.tracers.N)+sum(model.tracers.P)+sum(model.tracers.B)+sum(model.tracers.D))
@@ -114,7 +107,6 @@ xlims!(axP, 0, 0.2)
 slider = Slider(fig[2, 1:4], range=1:nt, startvalue=1)
 n = slider.value
 
-#title = @lift @sprintf("Convecting plankton at t = %d hours", t[$n] / hour)
 title = @lift @sprintf("t = %d days", t[$n] / day)
 Label(fig[0, 1:4], title)
 
