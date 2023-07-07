@@ -32,7 +32,7 @@ Parameters
   * `detritus_half_saturation`: (mmol m⁻³) Half-saturation of nutrients for bacteria production.
                                 Deafult = 10.0 mmol m⁻³.
 
-  * `PAR_half_saturation`: (W m⁻²) Half-saturation of photosynthetically available radiation (PAR)
+  * `PAR_half_saturation`: (Nondimensionalized from W m⁻²) Half-saturation of photosynthetically available radiation (PAR)
                            for plankton production.
 
   * `PAR_attenuation_scale`: (m) Depth scale over which photosynthetically available radiation (PAR)
@@ -55,12 +55,12 @@ Biogeochemical functions
 """
 Base.@kwdef struct NutrientsPlanktonBacteriaDetritus{FT} <: AbstractBiogeochemistry
     maximum_plankton_growth_rate :: FT = 1/day
-    maximum_bacteria_growth_rate :: FT = 0.5/day
+    maximum_bacteria_growth_rate :: FT = 1/day
     bacteria_yield :: FT               = 0.2
     quadratic_mortality_rate :: FT     = 1/day # m³/mmol/day
     nutrient_half_saturation :: FT     = 0.1   # mmol m⁻³
     detritus_half_saturation :: FT     = 0.1   # mmol m⁻³
-    PAR_half_saturation :: FT          = 10.0  # W m⁻²
+    PAR_half_saturation :: FT          = 10/700.0  # nondim (from avg surface PAR of 700 W m⁻²)
     PAR_attenuation_scale :: FT        = 25.0  # m
     detritus_sinking_speed :: FT       = 10/day # m s⁻¹
 end
