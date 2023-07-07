@@ -15,7 +15,7 @@ using CairoMakie
 #
 # We set up a single column grid with 4 m grid spacing that's 256 m deep:
 
-grid = RectilinearGrid(size = 100,
+grid = RectilinearGrid(size = 90,
                        z = (-1000, 0),
                        topology = (Flat, Flat, Bounded))
 
