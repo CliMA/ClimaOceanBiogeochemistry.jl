@@ -55,7 +55,7 @@ Biogeochemical functions
 """
 Base.@kwdef struct NutrientsPlanktonBacteriaDetritus{FT} <: AbstractBiogeochemistry
     maximum_plankton_growth_rate :: FT = 1/day
-    maximum_bacteria_growth_rate :: FT = 0.5/day
+    maximum_bacteria_growth_rate :: FT = 1/day
     bacteria_yield :: FT               = 0.2
     quadratic_mortality_rate :: FT     = 1/day # m³/mmol/day
     nutrient_half_saturation :: FT     = 0.1   # mmol m⁻³
