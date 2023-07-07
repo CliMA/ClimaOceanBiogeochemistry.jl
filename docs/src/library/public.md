@@ -7,6 +7,9 @@ See the Internals section of the manual for internal package docs covering all s
 ## ClimaOceanBiogeochemistry
 
 ```@autodocs
-Modules = [ClimaOceanBiogeochemistry]
+Modules = [ClimaOceanBiogeochemistry, 
+           ClimaOceanBiogeochemistry.CarbonSystemSolvers,
+           ClimaOceanBiogeochemistry.CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver,
+           ClimaOceanBiogeochemistry.CarbonSystemSolvers.DirectCubicCarbonSolver]
 Private = false
 ```
