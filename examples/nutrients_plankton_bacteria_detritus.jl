@@ -3,7 +3,7 @@
 # This example illustrates how to use ClimaOceanBiogeochemistry's
 # `NutrientsPlanktonBacteriaDetrius` model in a single column context.
 
-using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus_EJZmod
+using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus
 
 using Oceananigans
 using Oceananigans.Units
@@ -33,8 +33,9 @@ b_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(Qᵇ))
 # The important line here is `biogeochemistry = NutrientsPlanktonBacteriaDetritus()`.
 # We use all default parameters.
 
-model = HydrostaticFreeSurfaceModel(; grid,
-                                    biogeochemistry = NutrientsPlanktonBacteriaDetritus_EJZmod(),
+biogeochemistry = NutrientsPlanktonBacteriaDetritus(maximum_bacteria_growth_rate = 10/day)
+
+model = HydrostaticFreeSurfaceModel(; grid, biogeochemistry, 
                                     closure = CATKEVerticalDiffusivity(),
                                     tracers = (:b, :e),
                                     buoyancy = BuoyancyTracer(),
@@ -76,7 +77,7 @@ progress(sim) = @printf("Iteration: %d, time: %s, TotalN: %.2e \n",
 
 simulation.callbacks[:progress] = Callback(progress, IterationInterval(10))
 
-filename = "nutrients_plankton_bacteria_detritus_EJZmod.jld2"
+filename = "nutrients_plankton_bacteria_detritus.jld2"
 
 simulation.output_writers[:fields] = JLD2OutputWriter(model, model.tracers;
                                                       filename,
@@ -135,7 +136,7 @@ axislegend(axP)
 lines!(axN, Nn, z)
 
 #record(fig, "nutrients_plankton_bacteria_detritus.mp4", 1:nt, framerate=24) do nn
-record(fig, "nutrients_plankton_bacteria_detritus_EJZmod.mp4", 1:nt, framerate=24) do nn
+record(fig, "nutrients_plankton_bacteria_detritus.mp4", 1:nt, framerate=24) do nn
     n[] = nn
 end
 #nothing #hide
