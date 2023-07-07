@@ -2,9 +2,9 @@ pushfirst!(LOAD_PATH, joinpath(@__DIR__, "..")) # add ClimaOceanBiogeochemistry 
 
 using
   Documenter,
-  Glob,
   Literate,
   ClimaOceanBiogeochemistry
+  ClimaOceanBiogeochemistry.CarbonSystemSolvers
 
 #####
 ##### Generate examples
@@ -14,7 +14,7 @@ const EXAMPLES_DIR = joinpath(@__DIR__, "..", "examples")
 const OUTPUT_DIR   = joinpath(@__DIR__, "src/literated")
 
 to_be_literated = [
-    "nutrients_plankton_bacteria_detritus.jl",
+    "single_column_nutrients_plankton_bacteria_detritus.jl",
 ]
   
 for file in to_be_literated
@@ -26,10 +26,6 @@ end
 ##### Build and deploy docs
 #####
 
-# Set up a timer to print a space ' ' every 240 seconds. This is to avoid CI
-# timing out when building demanding Literate.jl examples.
-Timer(t -> println(" "), 0, interval=240)
-
 format = Documenter.HTML(collapselevel = 2,
                          prettyurls = get(ENV, "CI", nothing) == "true",
                          canonical = "https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/")
@@ -37,7 +33,7 @@ format = Documenter.HTML(collapselevel = 2,
 pages = [
     "Home" => "index.md",
     "Examples" => [
-        "Nutrients, plankton, bacteria, detritus" => "literated/nutrients_plankton_bacteria_detritus.md",
+        "Single column nutrients, plankton, bacteria, detritus" => "literated/single_column_nutrients_plankton_bacteria_detritus.md",
     ],
     "Library" => [ 
         "Contents" => "library/outline.md",
@@ -48,13 +44,39 @@ pages = [
 ]
 
 makedocs(sitename = "ClimaOceanBiogeochemistry.jl",
-         modules = [ClimaOceanBiogeochemistry],
+         modules = [ClimaOceanBiogeochemistry, 
+                    ClimaOceanBiogeochemistry.CarbonSystemSolvers,
+                    ClimaOceanBiogeochemistry.CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver,
+                    ClimaOceanBiogeochemistry.CarbonSystemSolvers.DirectCubicCarbonSolver],
          format = format,
          pages = pages,
          doctest = true,
          strict = true,
          clean = true,
          checkdocs = :exports)
+
+
+@info "Clean up temporary .jld2/.nc files created by doctests..."
+
+"""
+    recursive_find(directory, pattern)
+
+Return list of filepaths within `directory` that contains the `pattern::Regex`.
+"""
+recursive_find(directory, pattern) =
+    mapreduce(vcat, walkdir(directory)) do (root, dirs, files)
+        joinpath.(root, filter(contains(pattern), files))
+    end
+
+files = []
+for pattern in [r"\.jld2", r"\.nc"]
+    global files = vcat(files, recursive_find(@__DIR__, pattern))
+end
+
+for file in files
+    rm(file)
+end
+
 
 withenv("GITHUB_REPOSITORY" => "CliMA/ClimaOceanBiogeochemistry.jl") do
     deploydocs(repo = "github.com/CliMA/ClimaOceanBiogeochemistry.jl.git",
