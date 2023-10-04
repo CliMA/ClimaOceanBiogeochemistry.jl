@@ -14,6 +14,7 @@
 
 using Oceananigans
 using Oceananigans.Units
+using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
 using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus
 
 # ## Grid
@@ -22,11 +23,11 @@ using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus
 
 Lx = 1000kilometers # east-west extent [m]
 Ly = 1000kilometers # north-south extent [m]
-Lz = 200            # depth [m]
+Lz = 1kilometers    # depth [m]
 
 Nx = 64
 Ny = 64
-Nz = 40
+Nz = 64
 
 grid = RectilinearGrid(size = (Nx, Ny, Nz),
                        x = (0, Lx),
@@ -69,10 +70,10 @@ nothing #hide
 # We then use `ramp(y, Δy)` to construct an initial buoyancy configuration of a baroclinically
 # unstable front. The front has a buoyancy jump `Δb` over a latitudinal width `Δy`.
 
-N² = 4e-6 # [s⁻²] buoyancy frequency / stratification
-M² = 8e-8 # [s⁻²] horizontal buoyancy gradient
+N² = 1e-5 # [s⁻²] buoyancy frequency / stratification
+M² = 1e-7 # [s⁻²] horizontal buoyancy gradient
 
-Δy = 50kilometers # width of the region of the front
+Δy = 100kilometers # width of the region of the front
 Δb = Δy * M²      # buoyancy jump associated with the front
 ϵb = 1e-2 * Δb    # noise amplitude
 
@@ -84,15 +85,36 @@ D₀ = 1e-1 # Surface detritus concentration
 dᴺ = 50.0 # Nutrient mixed layer depth
 N² = 1e-5 # Buoyancy gradient, s⁻²
 
-bᵢ(x, y, z) = N² * z
+#bᵢ(x, y, z) = N² * z
 Nᵢ(x, y, z) = N₀ * max(1, exp(-(z + dᴺ) / 100))
 Dᵢ(x, y, z) = D₀ * exp(z / 10)
 
 set!(model, b=bᵢ, P=1e-1, B=1e-1, D=Dᵢ, N=Nᵢ, e=1e-6)
 
+# Let's visualize the initial buoyancy distribution.
+
+using CairoMakie
+
+## Build coordinates with units of kilometers
+x, y, z = 1e-3 .* nodes(grid, (Center(), Center(), Center()))
+
+b = model.tracers.b
+
+fig, ax, hm = heatmap(y, z, interior(b)[1, :, :],
+                      colormap=:deep,
+                      axis = (xlabel = "y [km]",
+                              ylabel = "z [km]",
+                              title = "b(x=0, y, z, t=0)",
+                              titlesize = 24))
+
+Colorbar(fig[1, 2], hm, label = "[m s⁻²]")
+
+# save("baroclinic_adjustment_with_bgc_init.png", fig)
+nothing
+
 # Now let's built a `Simulation`.
 
-Δt₀ = 5minutes
+Δt₀ = 20minutes
 stop_time = 40days
 
 simulation = Simulation(model, Δt=Δt₀, stop_time=stop_time)
@@ -134,7 +156,7 @@ simulation.callbacks[:print_progress] = Callback(print_progress, IterationInterv
 u, v, w = model.velocities
 
 averages = NamedTuple(name => Average(model.tracers[name], dims=1) for name in keys(model.tracers))
-filename = "baroclinic_adjustment"
+filename = "baroclinic_adjustment_with_bgc"
 save_fields_interval = 0.5day
 
 slicers = (west = (1, :, :),
@@ -154,7 +176,7 @@ for side in keys(slicers)
 end
 
 simulation.output_writers[:zonal] = JLD2OutputWriter(model, averages;
-                                                     filename = filename * "_zonal_average",
+                                                     filename = filename *  "_zonal_average",
                                                      schedule = TimeInterval(save_fields_interval),
                                                      overwrite_existing = true)
 
@@ -171,9 +193,6 @@ run!(simulation)
 # Now we are ready to visualize our resutls! We use `CairoMakie` in this example.
 # On a system with OpenGL `using GLMakie` is more convenient as figures will be
 # displayed on the screen.
-
-using CairoMakie
-
 # We load the saved buoyancy output on the top, bottom, and east surface as `FieldTimeSeries`es.
 
 sides = keys(slicers)
@@ -186,6 +205,33 @@ b_timeserieses = (east   = FieldTimeSeries(slice_filenames.east, "b"),
 
 avg_b_timeseries = FieldTimeSeries(filename * "_zonal_average.jld2", "b")
 
+slice_filenames = NamedTuple(side => filename * "_$(side)_slice.jld2" for side in sides)
+
+p_timeserieses = (east   = FieldTimeSeries(slice_filenames.east, "P"),
+                  north  = FieldTimeSeries(slice_filenames.north, "P"),
+                  bottom = FieldTimeSeries(slice_filenames.bottom, "P"),
+                  top    = FieldTimeSeries(slice_filenames.top, "P"))
+
+avg_p_timeseries = FieldTimeSeries(filename * "_zonal_average.jld2", "P")
+
+slice_filenames = NamedTuple(side => filename * "_$(side)_slice.jld2" for side in sides)
+
+d_timeserieses = (east   = FieldTimeSeries(slice_filenames.east, "D"),
+                  north  = FieldTimeSeries(slice_filenames.north, "D"),
+                  bottom = FieldTimeSeries(slice_filenames.bottom, "D"),
+                  top    = FieldTimeSeries(slice_filenames.top, "D"))
+
+avg_d_timeseries = FieldTimeSeries(filename * "_zonal_average.jld2", "D")
+
+slice_filenames = NamedTuple(side => filename * "_$(side)_slice.jld2" for side in sides)
+
+n_timeserieses = (east   = FieldTimeSeries(slice_filenames.east, "N"),
+                  north  = FieldTimeSeries(slice_filenames.north, "N"),
+                  bottom = FieldTimeSeries(slice_filenames.bottom, "N"),
+                  top    = FieldTimeSeries(slice_filenames.top, "N"))
+
+avg_n_timeseries = FieldTimeSeries(filename * "_zonal_average.jld2", "N")
+
 times = avg_b_timeseries.times
 
 nothing #hide
@@ -197,13 +243,14 @@ x, y, z = nodes(b_timeserieses.east)
 x = x .* 1e-3 # convert m -> km
 y = y .* 1e-3 # convert m -> km
 
+Nx, Ny, Nz = size(grid)
 x_xz = repeat(x, 1, Nz)
 y_xz_north = y[end] * ones(Nx, Nz)
 z_xz = repeat(reshape(z, 1, Nz), Nx, 1)
 
 x_yz_east = x[end] * ones(Ny, Nz)
 y_yz = repeat(y, 1, Nz)
-z_yz = repeat(reshape(z, 1, Nz), grid.Ny, 1)
+z_yz = repeat(reshape(z, 1, Nz), Ny, 1)
 
 x_xy = x
 y_xy = y
@@ -218,11 +265,16 @@ fig = Figure(resolution = (900, 520))
 
 zonal_slice_displacement = 1.2
 
-ax = Axis3(fig[2, 1], aspect=(1, 1, 1/5),
-           xlabel="x (km)", ylabel="y (km)", zlabel="z (m)",
+ax = Axis3(fig[2, 1], 
+           aspect=(1, 1, 1/5),
+           xlabel="x (km)", 
+           ylabel="y (km)", 
+           zlabel="z (m)",
            limits = ((x[1], zonal_slice_displacement * x[end]), (y[1], y[end]), (z[1], z[end])),
-           elevation = 0.45, azimuth = 6.8,
-           xspinesvisible = false, zgridvisible=false,
+           elevation = 0.45, 
+           azimuth = 6.8,
+           xspinesvisible = false, 
+           zgridvisible=false,
            protrusions=40,
            perspectiveness=0.7)
 
@@ -243,7 +295,7 @@ b_slices = (east   = @lift(interior(b_timeserieses.east[$n], 1, :, :)),
 
 avg_b = @lift interior(avg_b_timeseries[$n], 1, :, :)
 
-clims = @lift 1.1 .* extrema(b_timeserieses.top[$n][:])
+clims = @lift 1.1 .* extrema(b_timeserieses.east[$n][:])
 
 kwargs = (colorrange = clims, colormap = :deep)
 
@@ -270,7 +322,7 @@ fig
 
 frames = 1:length(times)
 
-record(fig, filename * ".mp4", frames, framerate=8) do i
+record(fig, filename * "_b" * ".mp4", frames, framerate=8) do i
     msg = string("Plotting frame ", i, " of ", frames[end])
     print(msg * " \r")
     n[] = i
@@ -278,3 +330,62 @@ end
 nothing #hide
 
 # ![](baroclinic_adjustment.mp4)
+
+fig = Figure(resolution = (900, 520))
+
+ax = Axis3(fig[2, 1], 
+           aspect=(1, 1, 1/5),
+           xlabel="x (km)", 
+           ylabel="y (km)", 
+           zlabel="z (m)",
+           limits = ((x[1], zonal_slice_displacement * x[end]), (y[1], y[end]), (z[1], z[end])),
+           elevation = 0.45, 
+           azimuth = 6.8,
+           xspinesvisible = false, 
+           zgridvisible=false,
+           protrusions=40,
+           perspectiveness=0.7)
+
+nothing #hide
+
+n_slices = (east   = @lift(interior(n_timeserieses.east[$n], 1, :, :)),
+            north  = @lift(interior(n_timeserieses.north[$n], :, 1, :)),
+            bottom = @lift(interior(n_timeserieses.bottom[$n], :, :, 1)),
+            top    = @lift(interior(n_timeserieses.top[$n], :, :, 1)))
+
+avg_n = @lift interior(avg_n_timeseries[$n], 1, :, :)
+
+clims = @lift 1.1 .* extrema(n_timeserieses.east[$n][:])
+
+kwargs = (colorrange = clims, colormap = :deep)
+
+surface!(ax, x_yz_east, y_yz, z_yz;    color = n_slices.east, kwargs...)
+surface!(ax, x_xz, y_xz_north, z_xz;   color = n_slices.north, kwargs...)
+surface!(ax, x_xy, y_xy, z_xy_bottom ; color = n_slices.bottom, kwargs...)
+surface!(ax, x_xy, y_xy, z_xy_top;     color = n_slices.top, kwargs...)
+
+sf = surface!(ax, zonal_slice_displacement .* x_yz_east, y_yz, z_yz; color = avg_n, kwargs...)
+
+contour!(ax, y, z, avg_n; transformation = (:yz, zonal_slice_displacement * x[end]),
+         levels = 15, linewidth = 2, color = :black)
+
+Colorbar(fig[2, 2], sf, label = "mol N m⁻³", height = 200, tellheight=false)
+
+title = @lift "Nitrate at t = " * string(round(times[$n] / day, digits=1)) * " days"
+
+fig[1, 1:2] = Label(fig, title; fontsize = 24, tellwidth = false, padding = (0, 0, -120, 0))
+
+current_figure() # hide
+fig
+
+# Finally, we add a figure title with the time of the snapshot and then record a movie.
+
+frames = 1:length(times)
+
+record(fig, filename * "_n" * ".mp4", frames, framerate=8) do i
+    msg = string("Plotting frame ", i, " of ", frames[end])
+    print(msg * " \r")
+    n[] = i
+end
+nothing #hide
+
