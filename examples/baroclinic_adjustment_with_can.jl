@@ -18,16 +18,14 @@ using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
 using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 
 # ## Grid
-
 # We use a three-dimensional channel that is periodic in the `x` direction:
-
 Lx = 1000kilometers # east-west extent [m]
 Ly = 1000kilometers # north-south extent [m]
-Lz = 1kilometers    # depth [m]
+Lz = 200    # depth [m]
 
 Nx = 64
 Ny = 64
-Nz = 64
+Nz = 40
 
 grid = RectilinearGrid(size = (Nx, Ny, Nz),
                        x = (0, Lx),
@@ -39,19 +37,21 @@ grid = RectilinearGrid(size = (Nx, Ny, Nz),
 #
 # We use the `SeawaterBuoyancy` model with a linear equation of state,
 
-buoyancy = SeawaterBuoyancy(equation_of_state=LinearEquationOfState(thermal_expansion = 2e-4,
-                                                                    haline_contraction = 8e-4))
+#buoyancy = SeawaterBuoyancy(equation_of_state=LinearEquationOfState(thermal_expansion = 2e-4,
+#                                                                    haline_contraction = 8e-4))
 
 # ## Model
 
 # We built a `HydrostaticFreeSurfaceModel` with an `ImplicitFreeSurface` solver.
 # Regarding Coriolis, we use a beta-plane centered at 45° South.
 
-model = HydrostaticFreeSurfaceModel(; grid, buoyancy,
+model = HydrostaticFreeSurfaceModel(; grid, #buoyancy,
+                                    buoyancy = BuoyancyTracer(),
                                     biogeochemistry = CarbonAlkalinityNutrients(),
                                     closure = CATKEVerticalDiffusivity(),
                                     coriolis = BetaPlane(latitude = -45),
-                                    tracers = (:T, :S, :e),
+                                    #tracers = (:T, :S, :e),
+                                    tracers = (:b, :e),
                                     momentum_advection = WENO(),
                                     tracer_advection = WENO())
 
@@ -82,13 +82,13 @@ M² = 8e-8 # [s⁻²] horizontal buoyancy gradient
 Δy = 50kilometers # width of the region of the front
 Δb = Δy * M²      # buoyancy jump associated with the front
 ϵb = 1e-2 * Δb    # noise amplitude
-α = buoyancy.equation_of_state.thermal_expansion
-g = buoyancy.gravitational_acceleration
+#α = buoyancy.equation_of_state.thermal_expansion
+#g = buoyancy.gravitational_acceleration
 
 
 
-Tᵢ(x, y, z) = 1/(α*g) * (N² * z + Δb * ramp(y, Δy) + ϵb * randn())
-#bᵢ(x, y, z) = N² * z + Δb * ramp(y, Δy) + ϵb * randn()
+#Tᵢ(x, y, z) = 1/(α*g) * (N² * z + Δb * ramp(y, Δy) + ϵb * randn())
+bᵢ(x, y, z) = N² * z + Δb * ramp(y, Δy) + ϵb * randn()
 
 # BGC initial conditions
 N₀ = 16e-3 # Surface nutrient concentration
@@ -102,11 +102,11 @@ Nᵢ(x, y, z) = N₀ * max(1, exp(-(z + dᴺ) / 100))
 Pᵢ(x, y, z) = P₀ * max(1, exp(-(z + dᴺ) / 100))
 Dᵢ(x, y, z) = D₀ * exp(z / 10)
 
-set!(model, T=Tᵢ, S=35, DIC=2.2, Alk=2.5, PO₄=Pᵢ, NO₃=Nᵢ, DOP=Dᵢ, Fe=1e-6, e=1e-6)
+set!(model, b=bᵢ, DIC=2.2, Alk=2.5, PO₄=Pᵢ, NO₃=Nᵢ, DOP=Dᵢ, Fe=1e-6, e=1e-6)
 
 # Now let's built a `Simulation`.
 Δt₀ = 5minutes
-stop_time = 40days
+stop_time = 1days
 
 simulation = Simulation(model, Δt=Δt₀, stop_time=stop_time)
 

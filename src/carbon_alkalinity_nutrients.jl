@@ -186,58 +186,49 @@ the lowest active grid cell in depth are remineralized locally, or allowed  to e
 out of the domain.
 """
 @inline function particulate_remin(
-    i, j, k, grid, fields, λ, α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, ɼ = "power law", b = 0.84, ⎵ = false
+    i, j, k, grid, 
+    #α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ,
+    PPʳᵉᶠ, 
+    ɼ = "power law", b = 0.84, ⎵ = false
     )
 
     # Set the initial remineralization input to zero
     dPdt = 0.0
-    
-    # Available photosynthetic radiation at each reference depth above the current depth
-    Iʳᵉᶠ = exp.(grid.zᵃᵃᶜ[k:1:grid.Nz] ./ λ)
 
-    # Get the local concentrations of the different nutrients at each reference depth
-    @inbounds Pʳᵉᶠ = fields.PO₄[i, j, k:1:grid.Nz]
-    @inbounds Nʳᵉᶠ = fields.NO₃[i, j, k:1:grid.Nz]
-    @inbounds Fʳᵉᶠ = fields.Fe[i, j, k:1:grid.Nz]
-
-    # Calculate the net community production at each reference depth above the current depth
-    PPʳᵉᶠ = α .* net_community_production(
-        μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
-        )
+#    # Calculate the net community production at each reference depth above the current depth
+#    PPʳᵉᶠ = α .* net_community_production(
+#        μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+#        )
 
     # Loop over all layers above the current one, and determine if any particles
     #    are produced, and if so, how much remineralization there is.
-    for (ikʳᵉᶠ,kʳᵉᶠ) ∈ enumerate(k:1:grid.Nz)
-        if PPʳᵉᶠ[ikʳᵉᶠ] > zero(1.0) # or some small number?
-        # There will be production of particles exported below this reference depth. 
-        #   Calculate  depth change in the fraction of particle remineralization 
-        #   given by the remin profile at current depth.
-            zʳᵉᶠ = znode(i, j, kʳᵉᶠ, grid, Center(), Center(), Face())
-
-            dFdz = ∂z(
-                FunctionField{Center,Center,Face}(
-                    remin_profile,
-                    grid,
-                    clock      = nothing,
-                    parameters = ParticleReminParms(zʳᵉᶠ, ɼ, b),
-                )
+    @inbounds for (ikʳᵉᶠ,kʳᵉᶠ) ∈ enumerate(k:grid.Nz)
+    #if PPʳᵉᶠ[ikʳᵉᶠ] > zero(1.0) # or some small number?
+    # There will be production of particles exported below this reference depth. 
+    #   Calculate  depth change in the fraction of particle remineralization 
+    #   given by the remin profile at current depth.
+        zʳᵉᶠ = znode(i, j, kʳᵉᶠ, grid, Center(), Center(), Face())
+        dFdz = ∂z(
+            FunctionField{Center,Center,Face}(
+                remin_profile,
+                grid,
+                clock      = nothing,
+                parameters = ParticleReminParms(zʳᵉᶠ, ɼ, b),
             )
-
-        # ...then multiply by reference level export to calculate
-        #  change in concentration due to remineralization of particles
-            dPdt += dFdz[i, j, k] * PPʳᵉᶠ[ikʳᵉᶠ]
-        
-            if ⎵ # Flux particles from this reference depth through the bottom of the domain?
-            # find if this is the bottom-most "active" grid cell
-                if ! active_cell(i,j,k-1,grid)
-                # Integrate remin frac to find out what's left of the particles... 
-                    ∫F=Field(Integral(dFdz,dims=3))
-
-                    # ...and remineralize them here                
-                    dP_dz += (1 - ∫F[i, j]) * PPʳᵉᶠ[ikʳᵉᶠ]
-                end
-            end
+        )
+    # ...then multiply by reference level export to calculate
+    #  change in concentration due to remineralization of particles
+        dPdt += dFdz[i, j, k] * PPʳᵉᶠ[ikʳᵉᶠ]
+    
+        # find if this is the bottom-most "active" grid cell and flux particles
+        #  from this reference depth through the bottom of the domain?
+        if ⎵ && ! active_cell(i,j,k-1,grid)
+            # Integrate remin frac to find out what's left of the particles... 
+            ∫F=Field(Integral(dFdz,dims=3))
+            # ...and remineralize them here                
+            dP_dz += (1 - ∫F[i, j]) * PPʳᵉᶠ[ikʳᵉᶠ]
         end
+    #end
     end
 
     # Return total amount of inorganic constituent remineralized from sinking particles
@@ -311,19 +302,41 @@ Tracer sources and sinks for DIC
     ⎵ᴾᴵᶜ = bgc.particulate_inorganic_carbon_bottom_remin
 
     # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
-
+    z = znode(i, j, k:grid.Nz, grid, Center(), Center(), Center())
+    
+    I = exp.(z[1] ./ λ)
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
-    F = @inbounds fields.Fe[i, j, k]
+    F = @inbounds fields.Fe[ i, j, k]
     D = @inbounds fields.DOP[i, j, k]
-    
+
+    Iʳᵉᶠ = exp.(z ./ λ)
+    Pʳᵉᶠ = @inbounds fields.PO₄[i, j, k:grid.Nz]
+    Nʳᵉᶠ = @inbounds fields.NO₃[i, j, k:grid.Nz]
+    Fʳᵉᶠ = @inbounds fields.Fe[ i, j, k:grid.Nz]
+    Dʳᵉᶠ = @inbounds fields.DOP[i, j, k:grid.Nz]
+
     return Rᶜᴾ * (dissolved_organic_phosphate_remin(γ, D) -
-                 (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-                 particulate_remin( i, j, k, grid, fields, λ, α,            μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ)) + #POC
-                 particulate_remin( i, j, k, grid, fields, λ, Rᶜᴾ*Rᶜᵃᶜᵒ³*α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, ɼᴾᴵᶜ, bᴾᴵᶜ, ⎵ᴾᴵᶜ) -  #PIC
-           air_sea_flux_co2() -
+                 (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(
+                    μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F
+                    ) +
+                 particulate_remin( 
+                    i, j, k, grid, 
+                    α.*net_community_production(
+                        μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+                        ), 
+                    ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ
+                    )) +
+                 #particulate_remin( i, j, k, grid, α,            μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ)) + #POC
+                 #particulate_remin( i, j, k, grid, Rᶜᴾ*Rᶜᵃᶜᵒ³*α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ, ɼᴾᴵᶜ, bᴾᴵᶜ, ⎵ᴾᴵᶜ) -  #PIC
+                 particulate_remin( 
+                    i, j, k, grid, 
+                    Rᶜᴾ.*Rᶜᵃᶜᵒ³.*α.*net_community_production(
+                        μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+                        ), 
+                    ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ
+                    ) -
+           - air_sea_flux_co2() -
            freshwater_virtual_flux()
 end
 
@@ -354,19 +367,42 @@ Tracer sources and sinks for ALK
     ⎵ᴾᴵᶜ = bgc.particulate_inorganic_carbon_bottom_remin
 
     # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+    z = znode(i, j, k:grid.Nz, grid, Center(), Center(), Center())
 
+    I = exp.(z[1] ./ λ)
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
-    F = @inbounds fields.Fe[i, j, k]
+    F = @inbounds fields.Fe[ i, j, k]
     D = @inbounds fields.DOP[i, j, k]
+
+    Iʳᵉᶠ = exp.(z ./ λ)
+    Pʳᵉᶠ = @inbounds fields.PO₄[i, j, k:grid.Nz]
+    Nʳᵉᶠ = @inbounds fields.NO₃[i, j, k:grid.Nz]
+    Fʳᵉᶠ = @inbounds fields.Fe[ i, j, k:grid.Nz]
+    Dʳᵉᶠ = @inbounds fields.DOP[i, j, k:grid.Nz]
     
     return -Rᴺᴾ * (
-        - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-        dissolved_organic_phosphate_remin(γ, D) +
-        particulate_remin( i, j, k, grid, fields, λ, α,            μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ)) + #POC
-    2 * particulate_remin( i, j, k, grid, fields, λ, Rᶜᴾ*Rᶜᵃᶜᵒ³*α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, ɼᴾᴵᶜ, bᴾᴵᶜ, ⎵ᴾᴵᶜ)  #PIC
+        - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(
+            μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F
+            ) +
+        particulate_remin( 
+            i, j, k, grid, 
+            α.*net_community_production(
+                μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+                ), 
+            ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ
+            ) +
+    #    particulate_remin( i, j, k, grid, α,            μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ) + #POC
+        dissolved_organic_phosphate_remin(γ, D)
+        ) + 
+     2 * particulate_remin(
+        i, j, k, grid, 
+        Rᶜᴾ.*Rᶜᵃᶜᵒ³.*α.*net_community_production(
+            μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+            ), 
+        ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ
+        )   
+    #2 * particulate_remin( i, j, k, grid, Rᶜᴾ*Rᶜᵃᶜᵒ³*α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ, ɼᴾᴵᶜ, bᴾᴵᶜ, ⎵ᴾᴵᶜ)  #PIC
 end
 
 """
@@ -393,17 +429,31 @@ Tracer sources and sinks for PO₄
     ⎵ᴾᴼᴾ = bgc.particulate_organic_phosphate_bottom_remin
 
     # Available photosynthetic radiation
-    z = znode(i, j, k, grid, Center(), Center(), Center())
-    I = exp(z / λ)
-
+    z = znode(i, j, k:grid.Nz, grid, Center(), Center(), Center())
+ 
+    I = exp.(z[1] ./ λ)
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
-    F = @inbounds fields.Fe[i, j, k]
+    F = @inbounds fields.Fe[ i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
-    return - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-           dissolved_organic_phosphate_remin(γ, D) +
-           particulate_remin( i, j, k, grid, fields, λ, α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ)
+    Iʳᵉᶠ = exp.(z ./ λ)
+    Pʳᵉᶠ = @inbounds fields.PO₄[i, j, k:grid.Nz]
+    Nʳᵉᶠ = @inbounds fields.NO₃[i, j, k:grid.Nz]
+    Fʳᵉᶠ = @inbounds fields.Fe[ i, j, k:grid.Nz]
+
+    return - net_community_production(
+        μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F
+        ) +
+#    particulate_remin( i, j, k, grid, α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ) +
+    particulate_remin(
+        i, j, k, grid, 
+        α.*net_community_production(
+            μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+            ), 
+        ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ
+        ) +
+    dissolved_organic_phosphate_remin(γ, D)
 end
 
 """
@@ -430,18 +480,33 @@ Tracer sources and sinks for NO₃
     ⎵ᴾᴼᴾ = bgc.particulate_organic_phosphate_bottom_remin
 
     # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+    z = znode(i, j, k:grid.Nz, grid, Center(), Center(), Center())
 
+    I = exp.(z[1] ./ λ)
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
-    F = @inbounds fields.Fe[i, j, k]
+    F = @inbounds fields.Fe[ i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
+    Iʳᵉᶠ = exp.(z ./ λ)
+    Pʳᵉᶠ = @inbounds fields.PO₄[i, j, k:grid.Nz]
+    Nʳᵉᶠ = @inbounds fields.NO₃[i, j, k:grid.Nz]
+    Fʳᵉᶠ = @inbounds fields.Fe[ i, j, k:grid.Nz]
+    Dʳᵉᶠ = @inbounds fields.DOP[i, j, k:grid.Nz]
+
     return Rᴺᴾ * (
-           - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-           dissolved_organic_phosphate_remin(γ, D) +
-           particulate_remin( i, j, k, grid, fields, λ, α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ)) #POP
+           - net_community_production(
+            μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F
+            ) +
+           particulate_remin(
+                i, j, k, grid, α.*net_community_production(
+                    μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+                    ), 
+                ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ
+                ) +
+           #particulate_remin( i, j, k, grid, α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ) + #POP
+           dissolved_organic_phosphate_remin(γ, D)
+           )
         end
 
 """
@@ -465,18 +530,32 @@ Tracer sources and sinks for FeT
     ⎵ᴾᴼᴾ = bgc.particulate_organic_phosphate_bottom_remin
 
     # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+    z = znode(i, j, k:grid.Nz, grid, Center(), Center(), Center())
 
+    I = exp.(z[1] ./ λ)
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
-    F = @inbounds fields.Fe[i, j, k]
+    F = @inbounds fields.Fe[ i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
+    Iʳᵉᶠ = exp.(z ./ λ)
+    Pʳᵉᶠ = @inbounds fields.PO₄[i, j, k:grid.Nz]
+    Nʳᵉᶠ = @inbounds fields.NO₃[i, j, k:grid.Nz]
+    Fʳᵉᶠ = @inbounds fields.Fe[ i, j, k:grid.Nz]
+    Dʳᵉᶠ = @inbounds fields.DOP[i, j, k:grid.Nz]
+
     return Rᶠᴾ * (
-                - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
+                - net_community_production(
+                    μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F
+                    ) +
                  dissolved_organic_phosphate_remin(γ, D) +
-                 particulate_remin( i, j, k, grid, fields, λ, α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ) + #POC
+                 particulate_remin( 
+                    i, j, k, grid, α.*net_community_production(
+                        μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+                        ), 
+                    ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ
+                    ) +
+                 #particulate_remin( i, j, k, grid, α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ) + #POC
                  iron_sources() +
                  iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β))
     end
@@ -495,14 +574,22 @@ Tracer sources and sinks for DOP
     α = bgc.fraction_of_particulate_export     
 
     # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+    z = znode(i, j, k:grid.Nz, grid, Center(), Center(), Center())
 
+    I = exp.(z[1] ./ λ)
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
-    F = @inbounds fields.Fe[i, j, k]
+    F = @inbounds fields.Fe[ i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
+    Iʳᵉᶠ = exp.(z ./ λ)
+    Pʳᵉᶠ = @inbounds fields.PO₄[i, j, k:grid.Nz]
+    Nʳᵉᶠ = @inbounds fields.NO₃[i, j, k:grid.Nz]
+    Fʳᵉᶠ = @inbounds fields.Fe[ i, j, k:grid.Nz]
+    Dʳᵉᶠ = @inbounds fields.DOP[i, j, k:grid.Nz]
+
     return - dissolved_organic_phosphate_remin(γ, D) +
-             (1 - α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F)
+             (1 - α) * net_community_production(
+                μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F
+                )
 end
