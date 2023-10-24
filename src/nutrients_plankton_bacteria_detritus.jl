@@ -102,7 +102,9 @@ end
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+
+    # TODO: design a user interface for prescribing incoming shortwave
+    I = 700 * exp(z / λ)
 
     P = @inbounds fields.P[i, j, k]
     D = @inbounds fields.D[i, j, k]
@@ -121,7 +123,9 @@ end
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+
+    # TODO: design a user interface for prescribing incoming shortwave
+    I = 700 * exp(z / λ)
 
     P = @inbounds fields.P[i, j, k]
     N = @inbounds fields.N[i, j, k]
