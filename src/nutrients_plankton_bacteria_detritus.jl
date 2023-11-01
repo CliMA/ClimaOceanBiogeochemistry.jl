@@ -25,12 +25,14 @@ Parameters
                       relative to consumption of detritus such that ``∂_t N / ∂_t D = 1 - y``,
                       where `y = bacteria_yield`. Default: 0.2.
 
-  * `quadratic_mortality_rate`: (s⁻¹) Mortality rate of both plankton and bacteria.
+  * `linear_mortality_rate`: (s⁻¹) Linear term of the mortality rate of both plankton and bacteria.
+
+  * `quadratic_mortality_rate`: (s⁻¹) Quadratic term of the mortality rate of both plankton and bacteria.
 
   * `nutrient_half_saturation`: (mmol m⁻³) Half-saturation of nutrients for plankton production.
 
   * `detritus_half_saturation`: (mmol m⁻³) Half-saturation of nutrients for bacteria production.
-                                Deafult = 10.0 mmol m⁻³.
+                                Default = 10.0 mmol m⁻³.
 
   * `PAR_half_saturation`: (W m⁻²) Half-saturation of photosynthetically available radiation (PAR)
                            for plankton production.
@@ -57,6 +59,7 @@ Base.@kwdef struct NutrientsPlanktonBacteriaDetritus{FT} <: AbstractBiogeochemis
     maximum_plankton_growth_rate :: FT = 1/day
     maximum_bacteria_growth_rate :: FT = 0.5/day
     bacteria_yield :: FT               = 0.2
+    linear_mortality_rate :: FT        = 0.01/day # m³/mmol/day
     quadratic_mortality_rate :: FT     = 1/day # m³/mmol/day
     nutrient_half_saturation :: FT     = 0.1   # mmol m⁻³
     detritus_half_saturation :: FT     = 0.1   # mmol m⁻³
@@ -86,9 +89,9 @@ end
 #
 
 @inline bacteria_production(μᵇ, kᴰ, D, B) = μᵇ * D / (D + kᴰ) * B
-@inline plankton_production(μᵖ, kᴺ, kᴵ, I, N, P) = μᵖ * (N / (N + kᴺ) * I / (I + kᴵ)) * P
-@inline bacteria_mortality(m, B) = m * B^2
-@inline plankton_mortality(m, P) = m * P^2
+@inline plankton_production(μᵖ, kᴺ, kᴵ, I, N, P) = μᵖ * min(N / (N + kᴺ) , I / (I + kᴵ)) * P
+@inline bacteria_mortality(m, B) = mlin * B + mq * B^2
+@inline plankton_mortality(m, P) = mlin * P + mq * P^2
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:N}, clock, fields)
     μᵖ = bgc.maximum_plankton_growth_rate
@@ -97,7 +100,8 @@ end
     kᴺ = bgc.nutrient_half_saturation
     kᴵ = bgc.PAR_half_saturation
     λ = bgc.PAR_attenuation_scale
-    m = bgc.quadratic_mortality_rate
+    mlin = bgc.linear_mortality_rate
+    mq = bgc.quadratic_mortality_rate
     y = bgc.bacteria_yield
 
     # Available photosynthetic radiation
