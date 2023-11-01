@@ -90,8 +90,8 @@ end
 
 @inline bacteria_production(μᵇ, kᴰ, D, B) = μᵇ * D / (D + kᴰ) * B
 @inline plankton_production(μᵖ, kᴺ, kᴵ, I, N, P) = μᵖ * min(N / (N + kᴺ) , I / (I + kᴵ)) * P
-@inline bacteria_mortality(m, B) = mlin * B + mq * B^2
-@inline plankton_mortality(m, P) = mlin * P + mq * P^2
+@inline bacteria_mortality(mlin,mq, B) = mlin * B + mq * B^2
+@inline plankton_mortality(mlin,mq, P) = mlin * P + mq * P^2
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:N}, clock, fields)
     μᵖ = bgc.maximum_plankton_growth_rate
@@ -123,7 +123,8 @@ end
     kᴺ = bgc.nutrient_half_saturation
     kᴵ = bgc.PAR_half_saturation
     λ = bgc.PAR_attenuation_scale
-    m = bgc.quadratic_mortality_rate
+    mlin = bgc.linear_mortality_rate
+    mq = bgc.quadratic_mortality_rate
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -134,29 +135,31 @@ end
     P = @inbounds fields.P[i, j, k]
     N = @inbounds fields.N[i, j, k]
 
-    return plankton_production(μᵖ, kᴺ, kᴵ, I, N, P) - plankton_mortality(m, P)
+    return plankton_production(μᵖ, kᴺ, kᴵ, I, N, P) - plankton_mortality(mlin, mq, P)
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:B}, clock, fields)
     μᵇ = bgc.maximum_bacteria_growth_rate
     kᴰ = bgc.detritus_half_saturation
-    m = bgc.quadratic_mortality_rate
+    mlin = bgc.linear_mortality_rate
+    mq = bgc.quadratic_mortality_rate
 
     D = @inbounds fields.D[i, j, k]
     B = @inbounds fields.B[i, j, k]
 
-    return bacteria_production(μᵇ, kᴰ, D, B) - bacteria_mortality(m, B)
+    return bacteria_production(μᵇ, kᴰ, D, B) - bacteria_mortality(mlin, mq, B)
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:D}, clock, fields)
     μᵇ = bgc.maximum_bacteria_growth_rate
     kᴰ = bgc.detritus_half_saturation
     y = bgc.bacteria_yield
-    m = bgc.quadratic_mortality_rate
+    mlin = bgc.linear_mortality_rate
+    mq = bgc.quadratic_mortality_rate
 
     P = @inbounds fields.P[i, j, k]
     D = @inbounds fields.D[i, j, k]
     B = @inbounds fields.B[i, j, k]
 
-    return bacteria_mortality(m, B) + plankton_mortality(m, P) - bacteria_production(μᵇ, kᴰ, D, B) / y
+    return bacteria_mortality(mlin, mq, B) + plankton_mortality(mlin, mq, P) - bacteria_production(μᵇ, kᴰ, D, B) / y
 end
