@@ -88,8 +88,11 @@ end
 #   -> P⁺ = P⁻ / (1 + Δt * m)
 #
 
-@inline bacteria_production(μᵇ, kᴰ, D, B) = μᵇ * D / (D + kᴰ) * B
-@inline plankton_production(μᵖ, kᴺ, kᴵ, I, N, P) = μᵖ * min(N / (N + kᴺ) , I / (I + kᴵ)) * P
+# Temperature modification to metabolic rates, following the Arrhenius equation
+@inline temp_fun(Temp) = 0.8 .* exp.(-4000 .*(1 ./ (Temp .+ 273.15) .- 1 ./ 293.15))
+
+@inline bacteria_production(μᵇ, kᴰ, D, B) = (μᵇ * D / (D + kᴰ) * B)*temp_fun(Temp)
+@inline plankton_production(μᵖ, kᴺ, kᴵ, I, N, P) = (μᵖ * min(N / (N + kᴺ) , I / (I + kᴵ)) * P)*temp_fun(Temp)
 @inline bacteria_mortality(mlin,mq, B) = mlin * B + mq * B^2
 @inline plankton_mortality(mlin,mq, P) = mlin * P + mq * P^2
 

@@ -13,13 +13,16 @@ using GLMakie #CairoMakie
 
 # ## A single column grid
 #
-# We set up a single column grid with 4 m grid spacing that's 256 m deep:
+# We set up a single column grid with Nz m grid spacing that's H m deep:
 
 H = 1000
 z = (-H, 0)
 Nz = 100
 
 grid = RectilinearGrid(size = Nz; z, topology = (Flat, Flat, Bounded))
+
+# A depth-dependent temperature curve from Zakem (2018)
+Temp = 12 .*exp.(z./ 150) .+ 12 .*exp.(z ./ 500) .+ 2
 
 # A prescribed vertical tracer diffusivity
 # 
@@ -52,7 +55,7 @@ model = HydrostaticFreeSurfaceModel(; grid,
 
 set!(model, P=1e-1, B=1e-1, D=1e-1, N=10)
 
-simulation = Simulation(model, Δt=1hour, stop_time=360days)
+simulation = Simulation(model, Δt=30minutes, stop_time=100days)
 
 function progress(sim)
     @printf("Iteration: %d, time: %s, max(P): %.2e, max(N): %.2e, max(B): %.2e, max(D): %.2e \n",
