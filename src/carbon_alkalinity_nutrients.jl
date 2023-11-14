@@ -1,5 +1,6 @@
+using KernelAbstractions.Extras.LoopInfo: @unroll
 import Oceananigans.Biogeochemistry:
-    biogeochemical_drift_velocity, required_biogeochemical_tracers
+    required_biogeochemical_tracers
 
 using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
 using Oceananigans.Fields: ConstantField, ZeroField, FunctionField
@@ -145,6 +146,7 @@ struct ParticleReminParms{FT}
     remin_profile_reference_depth :: FT
     remin_profile_shape           :: String
     remin_profile_exponent        :: FT
+#    remin_profile_bottom_boundary :: Bool
 end 
 
 """
@@ -166,6 +168,49 @@ and any coefficients to the profile, such as remin_profile_exponent.
     return F
 end
 
+#"""
+#    remin_fraction(grid, params::ParticleReminParms)
+#
+#Pre-calculate the differentiated remineralization profile, with parameters passed in 
+#a struct of type ParticleReminParms. Multiply dFdz by the vector of reference level export
+#and sum over all reference levels at local k to get the total source of nutrients or carbon
+#due to remineralization of sinking particles.
+#"""
+#@inline function remin_fraction(grid, params::ParticleReminParms)
+#    ɼ    = params.remin_profile_shape
+#    b    = params.remin_profile_exponent
+#    ⎵    = params.remin_profile_bottom_boundary
+#
+#    dFdz = zeros(grid.Nz,grid.Nz)
+#    ∫Fdz = zeros(grid.Nz,grid.Nz)
+#
+#    @inbounds for kʳᵉᶠ in 1:grid.Nz
+#        zʳᵉᶠ = znode(1, 1, kʳᵉᶠ, grid, Center(), Center(), Face())    
+#        dFdz[kʳᵉᶠ,:] = view(
+#                        interior(
+#                                ∂z(
+#                                    FunctionField{Center,Center,Face}(
+#                                    remin_profile,
+#                                    grid,
+#                                    clock      = nothing,
+#                                    parameters = ParticleReminParms(zʳᵉᶠ, ɼ, b, ⎵),
+#                                    )
+#                                    )
+#                                ),
+#                            1,1,:)
+#    end
+#    
+#    if ⎵
+#        @inbounds for kᵇᵒᵗ in 1:grid.Nz
+#        # find if this is the bottom-most "active" grid cell and flux particles
+#        #  from this reference depth through the bottom of the domain?
+#            ∫Fdz[kᵇᵒᵗ,:] = sum(dFdz[kᵇᵒᵗ:grid.Nz,:].*grid.Δzᵃᵃᶠ)
+#        end
+#    end
+#
+#    return dFdz, ∫Fdz
+#end
+
 """
    particulate_remin(i, j, k, grid, fields, λ, α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, ɼ = "power law", b = 0.84, ⎵ = false)
 Calculate the degradation of sinking particles and return the tendency of local concentration. 
@@ -185,6 +230,22 @@ profile (if it has one), and  and ⎵ ("the bottom") is a boolean that determine
 the lowest active grid cell in depth are remineralized locally, or allowed  to export nutrients and carbon
 out of the domain.
 """
+#@inline function particulate_remin(
+#    i, j, k, grid,
+#    PPʳᵉᶠ, dFdz, ∫Fdz,
+#    ɼ = "power law", b = 0.84, ⎵ = false
+#    )
+#
+#    dPdt = sum(transpose(PPʳᵉᶠ).*dFdz, dims=2)[k]
+#
+#    # find if this is the bottom-most "active" grid cell and flux particles
+#    #  from this reference depth through the bottom of the domain?
+#    if ⎵ && ! active_cell(i,j,k-1,grid)
+#        # Integrate remin frac to find out what's left of the particles... 
+#        # ...and remineralize them here                
+#        dPdt += sum((1 - ∫Fdz) .* transpose(PPʳᵉᶠ), dims=2)[k]
+#    end
+#    return dPdt
 @inline function particulate_remin(
     i, j, k, grid, 
     #α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ,
@@ -202,7 +263,7 @@ out of the domain.
 
     # Loop over all layers above the current one, and determine if any particles
     #    are produced, and if so, how much remineralization there is.
-    @inbounds for (ikʳᵉᶠ,kʳᵉᶠ) ∈ enumerate(k:grid.Nz)
+    @inbounds @unroll for (ikʳᵉᶠ,kʳᵉᶠ) in enumerate(1:grid.Nz)
     #if PPʳᵉᶠ[ikʳᵉᶠ] > zero(1.0) # or some small number?
     # There will be production of particles exported below this reference depth. 
     #   Calculate  depth change in the fraction of particle remineralization 
@@ -226,7 +287,7 @@ out of the domain.
             # Integrate remin frac to find out what's left of the particles... 
             ∫F=Field(Integral(dFdz,dims=3))
             # ...and remineralize them here                
-            dP_dz += (1 - ∫F[i, j]) * PPʳᵉᶠ[ikʳᵉᶠ]
+            dPdt += (1 - ∫F[i, j]) * PPʳᵉᶠ[ikʳᵉᶠ]
         end
     #end
     end

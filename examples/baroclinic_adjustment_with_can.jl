@@ -85,8 +85,6 @@ M² = 8e-8 # [s⁻²] horizontal buoyancy gradient
 #α = buoyancy.equation_of_state.thermal_expansion
 #g = buoyancy.gravitational_acceleration
 
-
-
 #Tᵢ(x, y, z) = 1/(α*g) * (N² * z + Δb * ramp(y, Δy) + ϵb * randn())
 bᵢ(x, y, z) = N² * z + Δb * ramp(y, Δy) + ϵb * randn()
 
