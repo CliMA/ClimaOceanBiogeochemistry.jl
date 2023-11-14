@@ -1,11 +1,13 @@
-using Oceananigans.Units: day
-using Oceananigans.Grids: znode, Center
-using Oceananigans.Fields: ZeroField, ConstantField
+using KernelAbstractions.Extras.LoopInfo: @unroll
+import Oceananigans.Biogeochemistry:
+    required_biogeochemical_tracers
+
 using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
-
-import Oceananigans.Biogeochemistry: required_biogeochemical_tracers, biogeochemical_drift_velocity
-
-const c = Center()
+using Oceananigans.Fields: ConstantField, ZeroField, FunctionField
+using Oceananigans.ImmersedBoundaries: active_cell
+using Oceananigans.Grids: Center, Face, znode
+using Oceananigans.Units: day
+using Oceananigans.AbstractOperations: ∂z
 
 """
     CarbonAlkalinityNutrients(; kw...)
@@ -32,51 +34,64 @@ Biogeochemical functions
     a constant `detritus_sinking_speed`.
 """
 struct CarbonAlkalinityNutrients{FT} <: AbstractBiogeochemistry
-    maximum_net_community_production_rate      :: FT # mol P m⁻³ s⁻¹
-    phosphate_half_saturation                  :: FT # mol P m⁻³
-    nitrate_half_saturation                    :: FT # mol N m⁻³
-    iron_half_saturation                       :: FT # mol Fe m⁻³
-    PAR_half_saturation                        :: FT  # W m⁻²
-    PAR_attenuation_scale                      :: FT  # m
-    fraction_of_particulate_export             :: FT
-    dissolved_organic_phosphate_remin_timescale:: FT # s⁻¹
-    stoichoimetric_ratio_carbon_to_phosphate   :: FT 
-    stoichoimetric_ratio_nitrate_to_phosphate  :: FT 
-    stoichoimetric_ratio_phosphate_to_oxygen   :: FT 
-    stoichoimetric_ratio_phosphate_to_iron     :: FT 
-    stoichoimetric_ratio_carbon_to_nitrate     :: FT 
-    stoichoimetric_ratio_carbon_to_oxygen      :: FT 
-    stoichoimetric_ratio_carbon_to_iron        :: FT 
-    stoichoimetric_ratio_silicate_to_phosphate :: FT 
-    rain_ratio_inorganic_to_organic_carbon     :: FT 
-    martin_curve_exponent                      :: FT 
-    iron_scavenging_rate                       :: FT # s⁻¹
-    ligand_concentration                       :: FT # mol L m⁻³
-    ligand_stability_coefficient               :: FT
+    maximum_net_community_production_rate       :: FT # mol P m⁻³ s⁻¹
+    phosphate_half_saturation                   :: FT # mol P m⁻³
+    nitrate_half_saturation                     :: FT # mol N m⁻³
+    iron_half_saturation                        :: FT # mol Fe m⁻³
+    PAR_half_saturation                         :: FT  # W m⁻²
+    PAR_attenuation_scale                       :: FT  # m
+    fraction_of_particulate_export              :: FT
+    dissolved_organic_phosphate_remin_timescale :: FT # s⁻¹
+    stoichoimetric_ratio_carbon_to_phosphate    :: FT 
+    stoichoimetric_ratio_nitrate_to_phosphate   :: FT 
+    stoichoimetric_ratio_phosphate_to_oxygen    :: FT 
+    stoichoimetric_ratio_phosphate_to_iron      :: FT 
+    stoichoimetric_ratio_carbon_to_nitrate      :: FT 
+    stoichoimetric_ratio_carbon_to_oxygen       :: FT 
+    stoichoimetric_ratio_carbon_to_iron         :: FT 
+    stoichoimetric_ratio_silicate_to_phosphate  :: FT 
+    rain_ratio_inorganic_to_organic_carbon      :: FT 
+    martin_curve_exponent                       :: FT 
+    iron_scavenging_rate                        :: FT # s⁻¹
+    ligand_concentration                        :: FT # mol L m⁻³
+    ligand_stability_coefficient                :: FT
+    particulate_organic_phosphate_remin_exponent:: FT
+    particulate_organic_phosphate_remin_curve   :: String
+    particulate_organic_phosphate_bottom_remin  :: Bool
+    particulate_inorganic_carbon_remin_exponent :: FT # s⁻¹
+    particulate_inorganic_carbon_remin_curve    :: String
+    particulate_inorganic_carbon_bottom_remin   :: Bool
 end
 
-function CarbonAlkalinityNutrients(; reference_density = 1024,
-                                   maximum_net_community_production_rate      = 1 / day, # mol P m⁻³ s⁻¹
-                                   phosphate_half_saturation                  = 1e-7 * reference_density, # mol P m⁻³
-                                   nitrate_half_saturation                    = 1.6e-6 * reference_density, # mol N m⁻³
-                                   iron_half_saturation                       = 1e-10 * reference_density, # mol Fe m⁻³
-                                   PAR_half_saturation                        = 10.0,  # W m⁻²
-                                   PAR_attenuation_scale                      = 25.0,  # m
-                                   fraction_of_particulate_export             = 0.33,
-                                   dissolved_organic_phosphate_remin_timescale= 1 / 30day, # s⁻¹
-                                   stoichoimetric_ratio_carbon_to_phosphate   = 106.0,
-                                   stoichoimetric_ratio_nitrate_to_phosphate  = 16.0,
-                                   stoichoimetric_ratio_phosphate_to_oxygen   = 170.0, 
-                                   stoichoimetric_ratio_phosphate_to_iron     = 4.68e-4,
-                                   stoichoimetric_ratio_carbon_to_nitrate     = 106 / 16,
-                                   stoichoimetric_ratio_carbon_to_oxygen      = 106 / 170, 
-                                   stoichoimetric_ratio_carbon_to_iron        = 106 / 1.e-3,
-                                   stoichoimetric_ratio_silicate_to_phosphate = 15.0,
-                                   rain_ratio_inorganic_to_organic_carbon     = 1e-1,
-                                   martin_curve_exponent                      = 0.84,
-                                   iron_scavenging_rate                       = 5e-4 / day, # s⁻¹
-                                   ligand_concentration                       = 1e-9 * reference_density, # mol L m⁻³
-                                   ligand_stability_coefficient               = 1e8)
+function CarbonAlkalinityNutrients(; reference_density                         = 1024.5, # kg m⁻³
+                                   maximum_net_community_production_rate       = 1 / day, # mol P m⁻³ s⁻¹
+                                   phosphate_half_saturation                   = 1e-7 * reference_density, # mol P m⁻³
+                                   nitrate_half_saturation                     = 1.6e-6 * reference_density, # mol N m⁻³
+                                   iron_half_saturation                        = 1e-10 * reference_density, # mol Fe m⁻³
+                                   PAR_half_saturation                         = 10.0,  # W m⁻²
+                                   PAR_attenuation_scale                       = 25.0,  # m
+                                   fraction_of_particulate_export              = 0.33,
+                                   dissolved_organic_phosphate_remin_timescale = 1 / 30day, # s⁻¹
+                                   stoichoimetric_ratio_carbon_to_phosphate    = 106.0, # mol C mol P⁻¹
+                                   stoichoimetric_ratio_nitrate_to_phosphate   = 16.0, # mol N mol P⁻¹
+                                   stoichoimetric_ratio_phosphate_to_oxygen    = 170.0, # mol P mol O⁻¹
+                                   stoichoimetric_ratio_phosphate_to_iron      = 4.68e-4, # mol P mol Fe⁻¹
+                                   stoichoimetric_ratio_carbon_to_nitrate      = 106 / 16, # mol C mol N⁻¹
+                                   stoichoimetric_ratio_carbon_to_oxygen       = 106 / 170, # mol C mol O⁻¹
+                                   stoichoimetric_ratio_carbon_to_iron         = 106 / 1.e-3, # mol C mol Fe⁻¹
+                                   stoichoimetric_ratio_silicate_to_phosphate  = 15.0, # mol Si mol P⁻¹
+                                   rain_ratio_inorganic_to_organic_carbon      = 1e-1, # mol C mol C⁻¹
+                                   martin_curve_exponent                       = 0.84, #
+                                   iron_scavenging_rate                        = 5e-4 / day, # s⁻¹
+                                   ligand_concentration                        = 1e-9 * reference_density, # mol L m⁻³
+                                   ligand_stability_coefficient                = 1e8, # s-1
+                                   particulate_organic_phosphate_remin_exponent= 0.84,
+                                   particulate_organic_phosphate_remin_curve   = "power law",
+                                   particulate_organic_phosphate_bottom_remin  = false,
+                                   particulate_inorganic_carbon_remin_exponent = 0.0,
+                                   particulate_inorganic_carbon_remin_curve    = "exponential",
+                                   particulate_inorganic_carbon_bottom_remin   = false,
+                                   )
 
     return CarbonAlkalinityNutrients(maximum_net_community_production_rate,
                                      phosphate_half_saturation,
@@ -98,36 +113,228 @@ function CarbonAlkalinityNutrients(; reference_density = 1024,
                                      martin_curve_exponent,
                                      iron_scavenging_rate,
                                      ligand_concentration,
-                                     ligand_stability_coefficient)
+                                     ligand_stability_coefficient,
+                                     particulate_organic_phosphate_remin_exponent,
+                                     particulate_organic_phosphate_remin_curve,
+                                     particulate_organic_phosphate_bottom_remin,
+                                     particulate_inorganic_carbon_remin_exponent,
+                                     particulate_inorganic_carbon_remin_curve,
+                                     particulate_inorganic_carbon_bottom_remin,
+                                     )
 end
 
 const CAN = CarbonAlkalinityNutrients
 
 @inline required_biogeochemical_tracers(::CAN) = (:DIC, :Alk, :PO₄, :NO₃, :DOP, :Fe)
 
+"""
+    net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F)
+Calculate the rate of net community production, as the 
+maximum growth rate, limited by the availability of light, phosphate, nitrate and iron.
+"""
 @inline function net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F)
-    return μᵖ * I / (I + kᴵ) * min(P / (P + kᴾ), N / (N + kᴺ), F / (F + kᶠ))
+    return μᵖ .* (I ./ (I .+ kᴵ)) .* min.(P ./ (P .+ kᴾ), N ./ (N .+ kᴺ), F ./ (F .+ kᶠ))
 end
 
+"""
+    dissolved_organic_phosphate_remin(γ, D)
+Calculate the degradation of DOP to phosphate, with remineralization rate γ.
+"""
 @inline dissolved_organic_phosphate_remin(γ, D) = γ * D
 
-# Martin Curve
-@inline particulate_organic_phosphate_remin() = 0.0
-
-# exponential remineralization or below the lysocline
-@inline particulate_inorganic_carbon_remin() = 0.0
-
-@inline air_sea_flux_co2() = 0.0
-
-@inline freshwater_virtual_flux() = 0.0
+struct ParticleReminParms{FT}
+    remin_profile_reference_depth :: FT
+    remin_profile_shape           :: String
+    remin_profile_exponent        :: FT
+#    remin_profile_bottom_boundary :: Bool
+end 
 
 """
-Iron scavenging should depend on free iron, involves solving a quadratic equation in terms
-of ligand concentration and stability coefficient, but this is a simple first order approximation.
+    remin_profile(x, y, z, params::ParticleReminParms)
+Calculate the remineralization profile, with parameters passed in a struct of type ParticleReminParms,
+including remin_profile_reference_depth, remin_profile_shape, (either a "power law" or an "exponential"),
+and any coefficients to the profile, such as remin_profile_exponent.
 """
-@inline iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β) = kˢᶜᵃᵛ * ( F - Lₜ )
+@inline function remin_profile(x, y, z, params::ParticleReminParms)
+    zʳᵉᶠ = params.remin_profile_reference_depth
+    ɼ    = params.remin_profile_shape
+    b    = params.remin_profile_exponent
 
-@inline iron_sources() = 0.0
+    if ɼ == "power law"
+        F = (min(z, zʳᵉᶠ) / zʳᵉᶠ)^-b
+    elseif ɼ == "exponential"
+        F = exp(-min(z, zʳᵉᶠ) / zʳᵉᶠ)
+    end
+    return F
+end
+
+#"""
+#    remin_fraction(grid, params::ParticleReminParms)
+#
+#Pre-calculate the differentiated remineralization profile, with parameters passed in 
+#a struct of type ParticleReminParms. Multiply dFdz by the vector of reference level export
+#and sum over all reference levels at local k to get the total source of nutrients or carbon
+#due to remineralization of sinking particles.
+#"""
+#@inline function remin_fraction(grid, params::ParticleReminParms)
+#    ɼ    = params.remin_profile_shape
+#    b    = params.remin_profile_exponent
+#    ⎵    = params.remin_profile_bottom_boundary
+#
+#    dFdz = zeros(grid.Nz,grid.Nz)
+#    ∫Fdz = zeros(grid.Nz,grid.Nz)
+#
+#    @inbounds for kʳᵉᶠ in 1:grid.Nz
+#        zʳᵉᶠ = znode(1, 1, kʳᵉᶠ, grid, Center(), Center(), Face())    
+#        dFdz[kʳᵉᶠ,:] = view(
+#                        interior(
+#                                ∂z(
+#                                    FunctionField{Center,Center,Face}(
+#                                    remin_profile,
+#                                    grid,
+#                                    clock      = nothing,
+#                                    parameters = ParticleReminParms(zʳᵉᶠ, ɼ, b, ⎵),
+#                                    )
+#                                    )
+#                                ),
+#                            1,1,:)
+#    end
+#    
+#    if ⎵
+#        @inbounds for kᵇᵒᵗ in 1:grid.Nz
+#        # find if this is the bottom-most "active" grid cell and flux particles
+#        #  from this reference depth through the bottom of the domain?
+#            ∫Fdz[kᵇᵒᵗ,:] = sum(dFdz[kᵇᵒᵗ:grid.Nz,:].*grid.Δzᵃᵃᶠ)
+#        end
+#    end
+#
+#    return dFdz, ∫Fdz
+#end
+
+"""
+   particulate_remin(i, j, k, grid, fields, λ, α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, ɼ = "power law", b = 0.84, ⎵ = false)
+Calculate the degradation of sinking particles and return the tendency of local concentration. 
+At depth z, there will be particles that  originate from the different surface layers, and 
+remineralize according to a profile referenced to each layer. Thus we have to loop over all the 
+productive surface layers to figure out how much remineralization affects local (deep) concentrations.
+
+We can use light, depending on attenuation coefficient, λ, as a proxy otherwise would have to 
+cycle throughout the entire watercolumn.
+
+α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ relate to calculation of net community production in the productive surface layers. In
+particular, α is the portion of production that is exported as sinking particles which could be set differently
+for organic and inorganic particles such as organic carbon/phosphate or inorganic calcium carbonate.
+
+ɼ is the remineralization profile, either "power law" or "exponential", b is the exponent of the remineralization 
+profile (if it has one), and  and ⎵ ("the bottom") is a boolean that determines whether particles that reach 
+the lowest active grid cell in depth are remineralized locally, or allowed  to export nutrients and carbon
+out of the domain.
+"""
+#@inline function particulate_remin(
+#    i, j, k, grid,
+#    PPʳᵉᶠ, dFdz, ∫Fdz,
+#    ɼ = "power law", b = 0.84, ⎵ = false
+#    )
+#
+#    dPdt = sum(transpose(PPʳᵉᶠ).*dFdz, dims=2)[k]
+#
+#    # find if this is the bottom-most "active" grid cell and flux particles
+#    #  from this reference depth through the bottom of the domain?
+#    if ⎵ && ! active_cell(i,j,k-1,grid)
+#        # Integrate remin frac to find out what's left of the particles... 
+#        # ...and remineralize them here                
+#        dPdt += sum((1 - ∫Fdz) .* transpose(PPʳᵉᶠ), dims=2)[k]
+#    end
+#    return dPdt
+@inline function particulate_remin(
+    i, j, k, grid, 
+    #α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ,
+    PPʳᵉᶠ, 
+    ɼ = "power law", b = 0.84, ⎵ = false
+    )
+
+    # Set the initial remineralization input to zero
+    dPdt = 0.0
+
+#    # Calculate the net community production at each reference depth above the current depth
+#    PPʳᵉᶠ = α .* net_community_production(
+#        μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+#        )
+
+    # Loop over all layers above the current one, and determine if any particles
+    #    are produced, and if so, how much remineralization there is.
+    @inbounds @unroll for (ikʳᵉᶠ,kʳᵉᶠ) in enumerate(1:grid.Nz)
+    #if PPʳᵉᶠ[ikʳᵉᶠ] > zero(1.0) # or some small number?
+    # There will be production of particles exported below this reference depth. 
+    #   Calculate  depth change in the fraction of particle remineralization 
+    #   given by the remin profile at current depth.
+        zʳᵉᶠ = znode(i, j, kʳᵉᶠ, grid, Center(), Center(), Face())
+        dFdz = ∂z(
+            FunctionField{Center,Center,Face}(
+                remin_profile,
+                grid,
+                clock      = nothing,
+                parameters = ParticleReminParms(zʳᵉᶠ, ɼ, b),
+            )
+        )
+    # ...then multiply by reference level export to calculate
+    #  change in concentration due to remineralization of particles
+        dPdt += dFdz[i, j, k] * PPʳᵉᶠ[ikʳᵉᶠ]
+    
+        # find if this is the bottom-most "active" grid cell and flux particles
+        #  from this reference depth through the bottom of the domain?
+        if ⎵ && ! active_cell(i,j,k-1,grid)
+            # Integrate remin frac to find out what's left of the particles... 
+            ∫F=Field(Integral(dFdz,dims=3))
+            # ...and remineralize them here                
+            dPdt += (1 - ∫F[i, j]) * PPʳᵉᶠ[ikʳᵉᶠ]
+        end
+    #end
+    end
+
+    # Return total amount of inorganic constituent remineralized from sinking particles
+    return dPdt
+end
+
+"""
+    air_sea_flux_co2()
+Calculate the air-sea flux of CO₂, according to the gas exchange parameterization 
+of Wanninkhof (1992).
+"""
+@inline function air_sea_flux_co2()
+    return 0.0
+end
+
+"""
+    freshwater_virtual_flux()
+Calculate the virtual flux of carbon and alkalinity, due to FW fluxes
+"""
+@inline function freshwater_virtual_flux()
+    return 0.0
+end
+
+"""
+    iron_scavenging(kˢᶜᵃᵛ, Fₜ, Lₜ, β)
+Linear loss of free iron by scavenging onto sinking particles or precipitation.
+"""
+@inline function iron_scavenging(kˢᶜᵃᵛ, Fₜ, Lₜ, β)
+       # solve for the equilibrium free iron concentration
+       β⁻¹ = 1/β
+       R₁  = 1
+       R₂  = (Lₜ + β⁻¹ - Fₜ) 
+       R₃  = -(Fₜ * β⁻¹) 
+
+       # simple quadratic solution for roots
+       discriminant = ( R₂*R₂ - ( 4*R₁*R₃ ))^(1/2)
+
+       # directly solve for the free iron concentration
+       Feᶠʳᵉᵉ = (-R₂ + discriminant) / (2*R₁) 
+
+       # return the linear scavenging rate
+       return - (kˢᶜᵃᵛ * Feᶠʳᵉᵉ)
+end
+
+@inline iron_sources() = 1e-6
 
 """
 Tracer sources and sinks for DIC
@@ -148,21 +355,49 @@ Tracer sources and sinks for DIC
     Rᶜᴼ = bgc.stoichoimetric_ratio_carbon_to_oxygen      
     Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron        
     Rᶜᵃᶜᵒ³ = bgc.rain_ratio_inorganic_to_organic_carbon     
+    bᴾᴼᴾ = bgc.particulate_organic_phosphate_remin_exponent
+    ɼᴾᴼᴾ = bgc.particulate_organic_phosphate_remin_curve
+    ⎵ᴾᴼᴾ = bgc.particulate_organic_phosphate_bottom_remin
+    bᴾᴵᶜ = bgc.particulate_inorganic_carbon_remin_exponent
+    ɼᴾᴵᶜ = bgc.particulate_inorganic_carbon_remin_curve
+    ⎵ᴾᴵᶜ = bgc.particulate_inorganic_carbon_bottom_remin
 
     # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
-
+    z = znode(i, j, k:grid.Nz, grid, Center(), Center(), Center())
+    
+    I = exp.(z[1] ./ λ)
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
-    F = @inbounds fields.Fe[i, j, k]
+    F = @inbounds fields.Fe[ i, j, k]
     D = @inbounds fields.DOP[i, j, k]
-    
+
+    Iʳᵉᶠ = exp.(z ./ λ)
+    Pʳᵉᶠ = @inbounds fields.PO₄[i, j, k:grid.Nz]
+    Nʳᵉᶠ = @inbounds fields.NO₃[i, j, k:grid.Nz]
+    Fʳᵉᶠ = @inbounds fields.Fe[ i, j, k:grid.Nz]
+    Dʳᵉᶠ = @inbounds fields.DOP[i, j, k:grid.Nz]
+
     return Rᶜᴾ * (dissolved_organic_phosphate_remin(γ, D) -
-                 (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-                  particulate_organic_phosphate_remin()) +
-           particulate_inorganic_carbon_remin() -
-           air_sea_flux_co2() -
+                 (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(
+                    μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F
+                    ) +
+                 particulate_remin( 
+                    i, j, k, grid, 
+                    α.*net_community_production(
+                        μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+                        ), 
+                    ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ
+                    )) +
+                 #particulate_remin( i, j, k, grid, α,            μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ)) + #POC
+                 #particulate_remin( i, j, k, grid, Rᶜᴾ*Rᶜᵃᶜᵒ³*α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ, ɼᴾᴵᶜ, bᴾᴵᶜ, ⎵ᴾᴵᶜ) -  #PIC
+                 particulate_remin( 
+                    i, j, k, grid, 
+                    Rᶜᴾ.*Rᶜᵃᶜᵒ³.*α.*net_community_production(
+                        μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+                        ), 
+                    ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ
+                    ) -
+           - air_sea_flux_co2() -
            freshwater_virtual_flux()
 end
 
@@ -185,21 +420,50 @@ Tracer sources and sinks for ALK
     Rᶜᴼ = bgc.stoichoimetric_ratio_carbon_to_oxygen      
     Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron        
     Rᶜᵃᶜᵒ³ = bgc.rain_ratio_inorganic_to_organic_carbon     
+    bᴾᴼᴾ = bgc.particulate_organic_phosphate_remin_exponent
+    ɼᴾᴼᴾ = bgc.particulate_organic_phosphate_remin_curve
+    ⎵ᴾᴼᴾ = bgc.particulate_organic_phosphate_bottom_remin
+    bᴾᴵᶜ = bgc.particulate_inorganic_carbon_remin_exponent
+    ɼᴾᴵᶜ = bgc.particulate_inorganic_carbon_remin_curve
+    ⎵ᴾᴵᶜ = bgc.particulate_inorganic_carbon_bottom_remin
 
     # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+    z = znode(i, j, k:grid.Nz, grid, Center(), Center(), Center())
 
+    I = exp.(z[1] ./ λ)
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
-    F = @inbounds fields.Fe[i, j, k]
+    F = @inbounds fields.Fe[ i, j, k]
     D = @inbounds fields.DOP[i, j, k]
+
+    Iʳᵉᶠ = exp.(z ./ λ)
+    Pʳᵉᶠ = @inbounds fields.PO₄[i, j, k:grid.Nz]
+    Nʳᵉᶠ = @inbounds fields.NO₃[i, j, k:grid.Nz]
+    Fʳᵉᶠ = @inbounds fields.Fe[ i, j, k:grid.Nz]
+    Dʳᵉᶠ = @inbounds fields.DOP[i, j, k:grid.Nz]
     
     return -Rᴺᴾ * (
-        - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-        dissolved_organic_phosphate_remin(γ, D) +
-        particulate_organic_phosphate_remin()) +
-        2 * particulate_inorganic_carbon_remin()
+        - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(
+            μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F
+            ) +
+        particulate_remin( 
+            i, j, k, grid, 
+            α.*net_community_production(
+                μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+                ), 
+            ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ
+            ) +
+    #    particulate_remin( i, j, k, grid, α,            μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ) + #POC
+        dissolved_organic_phosphate_remin(γ, D)
+        ) + 
+     2 * particulate_remin(
+        i, j, k, grid, 
+        Rᶜᴾ.*Rᶜᵃᶜᵒ³.*α.*net_community_production(
+            μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+            ), 
+        ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ
+        )   
+    #2 * particulate_remin( i, j, k, grid, Rᶜᴾ*Rᶜᵃᶜᵒ³*α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ, ɼᴾᴵᶜ, bᴾᴵᶜ, ⎵ᴾᴵᶜ)  #PIC
 end
 
 """
@@ -221,19 +485,36 @@ Tracer sources and sinks for PO₄
     Rᶜᴼ = bgc.stoichoimetric_ratio_carbon_to_oxygen      
     Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron        
     Rᶜᵃᶜᵒ³ = bgc.rain_ratio_inorganic_to_organic_carbon     
+    bᴾᴼᴾ = bgc.particulate_organic_phosphate_remin_exponent
+    ɼᴾᴼᴾ = bgc.particulate_organic_phosphate_remin_curve
+    ⎵ᴾᴼᴾ = bgc.particulate_organic_phosphate_bottom_remin
 
     # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
-
+    z = znode(i, j, k:grid.Nz, grid, Center(), Center(), Center())
+ 
+    I = exp.(z[1] ./ λ)
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
-    F = @inbounds fields.Fe[i, j, k]
+    F = @inbounds fields.Fe[ i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
-    return - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-           dissolved_organic_phosphate_remin(γ, D) +
-           particulate_organic_phosphate_remin()
+    Iʳᵉᶠ = exp.(z ./ λ)
+    Pʳᵉᶠ = @inbounds fields.PO₄[i, j, k:grid.Nz]
+    Nʳᵉᶠ = @inbounds fields.NO₃[i, j, k:grid.Nz]
+    Fʳᵉᶠ = @inbounds fields.Fe[ i, j, k:grid.Nz]
+
+    return - net_community_production(
+        μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F
+        ) +
+#    particulate_remin( i, j, k, grid, α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ) +
+    particulate_remin(
+        i, j, k, grid, 
+        α.*net_community_production(
+            μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+            ), 
+        ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ
+        ) +
+    dissolved_organic_phosphate_remin(γ, D)
 end
 
 """
@@ -255,21 +536,39 @@ Tracer sources and sinks for NO₃
     Rᶜᴼ = bgc.stoichoimetric_ratio_carbon_to_oxygen      
     Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron        
     Rᶜᵃᶜᵒ³ = bgc.rain_ratio_inorganic_to_organic_carbon     
+    bᴾᴼᴾ = bgc.particulate_organic_phosphate_remin_exponent
+    ɼᴾᴼᴾ = bgc.particulate_organic_phosphate_remin_curve
+    ⎵ᴾᴼᴾ = bgc.particulate_organic_phosphate_bottom_remin
 
     # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+    z = znode(i, j, k:grid.Nz, grid, Center(), Center(), Center())
 
+    I = exp.(z[1] ./ λ)
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
-    F = @inbounds fields.Fe[i, j, k]
+    F = @inbounds fields.Fe[ i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
+    Iʳᵉᶠ = exp.(z ./ λ)
+    Pʳᵉᶠ = @inbounds fields.PO₄[i, j, k:grid.Nz]
+    Nʳᵉᶠ = @inbounds fields.NO₃[i, j, k:grid.Nz]
+    Fʳᵉᶠ = @inbounds fields.Fe[ i, j, k:grid.Nz]
+    Dʳᵉᶠ = @inbounds fields.DOP[i, j, k:grid.Nz]
+
     return Rᴺᴾ * (
-           - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-           dissolved_organic_phosphate_remin(γ, D) +
-           particulate_organic_phosphate_remin())
-end
+           - net_community_production(
+            μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F
+            ) +
+           particulate_remin(
+                i, j, k, grid, α.*net_community_production(
+                    μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+                    ), 
+                ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ
+                ) +
+           #particulate_remin( i, j, k, grid, α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ) + #POP
+           dissolved_organic_phosphate_remin(γ, D)
+           )
+        end
 
 """
 Tracer sources and sinks for FeT
@@ -282,31 +581,44 @@ Tracer sources and sinks for FeT
     kᴵ = bgc.PAR_half_saturation
     λ = bgc.PAR_attenuation_scale
     γ = bgc.dissolved_organic_phosphate_remin_timescale
-    α = bgc.fraction_of_particulate_export
-    Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
-    Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
-    Rᴾᴼ = bgc.stoichoimetric_ratio_phosphate_to_oxygen   
-    Rᶜᴺ = bgc.stoichoimetric_ratio_carbon_to_nitrate     
-    Rᶜᴼ = bgc.stoichoimetric_ratio_carbon_to_oxygen      
-    Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron        
+    α = bgc.fraction_of_particulate_export       
     Rᶠᴾ = bgc.stoichoimetric_ratio_phosphate_to_iron
-    Rᶜᵃᶜᵒ³ = bgc.rain_ratio_inorganic_to_organic_carbon     
+    Lₜ = bgc.ligand_concentration
+    β = bgc.ligand_stability_coefficient
+    kˢᶜᵃᵛ = bgc.iron_scavenging_rate
+    bᴾᴼᴾ = bgc.particulate_organic_phosphate_remin_exponent
+    ɼᴾᴼᴾ = bgc.particulate_organic_phosphate_remin_curve
+    ⎵ᴾᴼᴾ = bgc.particulate_organic_phosphate_bottom_remin
 
     # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+    z = znode(i, j, k:grid.Nz, grid, Center(), Center(), Center())
 
+    I = exp.(z[1] ./ λ)
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
-    F = @inbounds fields.Fe[i, j, k]
+    F = @inbounds fields.Fe[ i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
+    Iʳᵉᶠ = exp.(z ./ λ)
+    Pʳᵉᶠ = @inbounds fields.PO₄[i, j, k:grid.Nz]
+    Nʳᵉᶠ = @inbounds fields.NO₃[i, j, k:grid.Nz]
+    Fʳᵉᶠ = @inbounds fields.Fe[ i, j, k:grid.Nz]
+    Dʳᵉᶠ = @inbounds fields.DOP[i, j, k:grid.Nz]
+
     return Rᶠᴾ * (
-                - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-                + dissolved_organic_phosphate_remin(γ, D))
-           #    + particulate_organic_phosphate_remin()) +
-           #    + iron_sources()
-           #    - iron_scavenging())
+                - net_community_production(
+                    μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F
+                    ) +
+                 dissolved_organic_phosphate_remin(γ, D) +
+                 particulate_remin( 
+                    i, j, k, grid, α.*net_community_production(
+                        μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ
+                        ), 
+                    ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ
+                    ) +
+                 #particulate_remin( i, j, k, grid, α, μᵖ, kᴺ, kᴾ, kᶠ, kᴵ, Iʳᵉᶠ, Pʳᵉᶠ, Nʳᵉᶠ, Fʳᵉᶠ, ɼᴾᴼᴾ, bᴾᴼᴾ, ⎵ᴾᴼᴾ) + #POC
+                 iron_sources() +
+                 iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β))
     end
 
 """
@@ -323,15 +635,22 @@ Tracer sources and sinks for DOP
     α = bgc.fraction_of_particulate_export     
 
     # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+    z = znode(i, j, k:grid.Nz, grid, Center(), Center(), Center())
 
+    I = exp.(z[1] ./ λ)
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
-    F = @inbounds fields.Fe[i, j, k]
+    F = @inbounds fields.Fe[ i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
-    return - dissolved_organic_phosphate_remin(γ, D) +
-             (1 - α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F)
+    Iʳᵉᶠ = exp.(z ./ λ)
+    Pʳᵉᶠ = @inbounds fields.PO₄[i, j, k:grid.Nz]
+    Nʳᵉᶠ = @inbounds fields.NO₃[i, j, k:grid.Nz]
+    Fʳᵉᶠ = @inbounds fields.Fe[ i, j, k:grid.Nz]
+    Dʳᵉᶠ = @inbounds fields.DOP[i, j, k:grid.Nz]
 
+    return - dissolved_organic_phosphate_remin(γ, D) +
+             (1 - α) * net_community_production(
+                μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F
+                )
 end
