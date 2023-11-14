@@ -52,7 +52,7 @@ model = HydrostaticFreeSurfaceModel(; grid,
 
 set!(model, P=1e-1, Z=1e-1, B=1e-2, D=5e-1, N=2)
 
-simulation = Simulation(model, Δt=30minutes, stop_time=100days)
+simulation = Simulation(model, Δt=30minutes, stop_time=200days)
 
 function progress(sim)
     @printf("Iteration: %d, time: %s, max(P): %.2e, max(Z): %.2e, max(N): %.2e, max(B): %.2e, max(D): %.2e \n",

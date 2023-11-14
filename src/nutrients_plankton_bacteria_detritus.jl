@@ -71,7 +71,7 @@ Base.@kwdef struct NutrientsPlanktonBacteriaDetritus{FT} <: AbstractBiogeochemis
     quadratic_mortality_rate :: FT       = 1/day # m³/mmol/day
     nutrient_half_saturation :: FT       = 0.1   # mmol m⁻³
     detritus_half_saturation :: FT       = 0.1   # mmol m⁻³
-    phytoplankton_half_saturation :: FT  = 0.2   # mmol m⁻³
+    phytoplankton_half_saturation :: FT  = 0.1   # mmol m⁻³
     PAR_half_saturation :: FT            = 10.0  # W m⁻²
     PAR_attenuation_scale :: FT          = 25.0  # m
     detritus_sinking_speed :: FT         = 10/day # m s⁻¹
