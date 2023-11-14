@@ -51,7 +51,6 @@ makedocs(sitename = "ClimaOceanBiogeochemistry.jl",
          format = format,
          pages = pages,
          doctest = true,
-         strict = true,
          clean = true,
          checkdocs = :exports)
 
