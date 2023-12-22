@@ -25,7 +25,11 @@ Parameters
     
     * `bacteria_yield`: Determines fractional nutrient production by bacteria production                          relative to consumption of detritus such that ``∂_t N / ∂_t D = 1 - y``,
                        where `y = bacteria_yield`. Default: 0.2.
-    
+
+    * `linear_remineralization_rate`: (s⁻¹) Remineralization rate constant of detritus 'D', 
+                                        assuming linear remineralization of 'D', while 
+                                        implicitly modeling bacteria 'B'. Default = 0.3/day.
+
     * `linear_mortality_rate`: (s⁻¹) Linear term of the mortality rate of both plankton and bacteria.
     
     * `quadratic_mortality_rate`: (s⁻¹) Quadratic term of the mortality rate of both plankton and bacteria.
@@ -66,6 +70,7 @@ Base.@kwdef struct NutrientsPlanktonBacteriaDetritus{FT} <: AbstractBiogeochemis
     maximum_bacteria_growth_rate :: FT   = 1/day
     maximum_grazing_rate :: FT           = 3/day 
     bacteria_yield :: FT                 = 0.2
+    linear_remineralization_rate :: FT   = 0.3/day 
     zooplankton_yield :: FT              = 0.3
     linear_mortality_rate :: FT          = 0.01/day # m³/mmol/day
     quadratic_mortality_rate :: FT       = 0.1/day # m³/mmol/day
@@ -115,6 +120,7 @@ end
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:N}, clock, fields)
     μᵖ = bgc.maximum_plankton_growth_rate
     μᵇ = bgc.maximum_bacteria_growth_rate
+    r = bgc.linear_remineralization_rate
     gₘ = bgc.maximum_grazing_rate
     kᴰ = bgc.detritus_half_saturation
     kᴺ = bgc.nutrient_half_saturation
@@ -136,7 +142,13 @@ end
     B = @inbounds fields.B[i, j, k]
     N = @inbounds fields.N[i, j, k]
     
-    return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) + bacteria_production(μᵇ, kᴰ, D, B) * (1/y - 1) + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1) + zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1/γ - 1)
+    if sum(B) > 0
+        return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) + bacteria_production(μᵇ, kᴰ, D, B) * (1/y - 1) 
+               + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1) + zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1/γ - 1)
+    elseif sum(B) == 0
+        return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) + detritus_reminerlization(r, D)
+        + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1)
+    end 
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:P}, clock, fields)
@@ -196,6 +208,7 @@ end
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:D}, clock, fields)
     μᵇ = bgc.maximum_bacteria_growth_rate
     kᴰ = bgc.detritus_half_saturation
+    r = bgc.linear_remineralization_rate
     y = bgc.bacteria_yield
     mlin = bgc.linear_mortality_rate
     mq = bgc.quadratic_mortality_rate
@@ -206,5 +219,9 @@ end
     D = @inbounds fields.D[i, j, k]
     B = @inbounds fields.B[i, j, k]
 
-    return bacteria_mortality(mlin, mq, B) + phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - bacteria_production(μᵇ, kᴰ, D, B) / y 
+    if sum(B) > 0
+        return bacteria_mortality(mlin, mq, B) + phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - bacteria_production(μᵇ, kᴰ, D, B) / y 
+    elseif sum(B) == 0
+        return phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - detritus_reminerlization(r, D)
+    end    
 end
