@@ -69,22 +69,72 @@ Biogeochemical functions
   * `biogeochemical_drift_velocity` for `D2`, modeling the sinking of detritus at
     a constant `detritus_sinking_speed`.
 """
-Base.@kwdef struct NutrientsPlanktonBacteriaDetritus{FT} <: AbstractBiogeochemistry
-    maximum_plankton_growth_rate :: FT   = 1/day # Add reference for each parameter
-    maximum_bacteria_growth_rate :: FT   = 1/day
-    maximum_grazing_rate :: FT           = 3/day 
-    bacteria_yield :: FT                 = 0.2
-    zooplankton_yield :: FT              = 0.3
-    linear_remineralization_rate :: FT   = 0.03/day 
-    linear_mortality_rate :: FT          = 0.01/day # m³/mmol/day
-    quadratic_mortality_rate :: FT       = 0.1/day # m³/mmol/day
-    quadratic_mortality_rate_Z :: FT     = 1/day # m³/mmol/day (zooplankton quadratic mortality)
-    nutrient_half_saturation :: FT       = 0.1   # mmol m⁻³
-    detritus_half_saturation :: FT       = 0.1   # mmol m⁻³
-    grazing_half_saturation  :: FT       = 3.0  # mmol m⁻³
-    PAR_half_saturation :: FT            = 10.0  # W m⁻²
-    PAR_attenuation_scale :: FT          = 25.0  # m
-    detritus_sinking_speed :: FT         = 10/day # m s⁻¹
+struct NutrientsPlanktonBacteriaDetritus{FT, W} <: AbstractBiogeochemistry
+    maximum_plankton_growth_rate :: FT 
+    maximum_bacteria_growth_rate :: FT 
+    maximum_grazing_rate :: FT         
+    bacteria_yield :: FT               
+    zooplankton_yield :: FT            
+    linear_remineralization_rate :: FT 
+    linear_mortality_rate :: FT        
+    quadratic_mortality_rate :: FT     
+    quadratic_mortality_rate_Z :: FT   
+    nutrient_half_saturation :: FT     
+    detritus_half_saturation :: FT     
+    grazing_half_saturation  :: FT     
+    PAR_half_saturation :: FT          
+    PAR_attenuation_scale :: FT        
+    detritus_vertical_velocity :: W        
+end
+
+function NutrientsPlanktonBacteriaDetritus(grid,
+                                           maximum_plankton_growth_rate   = 1/day, # Add reference for each parameter
+                                           maximum_bacteria_growth_rate   = 1/day,
+                                           maximum_grazing_rate           = 3/day,
+                                           bacteria_yield                 = 0.2,
+                                           zooplankton_yield              = 0.3
+                                           linear_remineralization_rate   = 0.03/day, 
+                                           linear_mortality_rate          = 0.01/day, # m³/mmol/day
+                                           quadratic_mortality_rate       = 0.1/day, # m³/mmol/day
+                                           quadratic_mortality_rate_Z     = 1/day, # m³/mmol/day (zooplankton quadratic mortality)
+                                           nutrient_half_saturation       = 0.1,   # mmol m⁻³
+                                           detritus_half_saturation       = 0.1,   # mmol m⁻³
+                                           grazing_half_saturation        = 3.0,  # mmol m⁻³
+                                           PAR_half_saturation            = 10.0,  # W m⁻²
+                                           PAR_attenuation_scale          = 25.0,  # m
+                                           detritus_vertical_velocity     = -10/day) # m s⁻¹
+
+    if detritus_vertical_velocity isa Number        
+        w₀ = detritus_vertical_velocity 
+        no_penetration = ImpenetrableBoundaryCondition()
+
+        bcs = FieldBoundaryConditions(grid, (Center, Center, Face),
+                                      top=no_penetration, bottom=no_penetration)
+
+        detritus_vertical_velocity = ZFaceField(grid, boundary_conditions = bcs)
+
+        set!(detritus_vertical_velocity, w₀)
+
+        fill_halo_regions!(detritus_vertical_velocity)
+    end
+
+    FT = eltype(grid)
+
+    return NutrientsPlanktonBacteriaDetritus(convert(FT, maximum_plankton_growth_rate),   
+                                             convert(FT, maximum_bacteria_growth_rate),   
+                                             convert(FT, maximum_grazing_rate),           
+                                             convert(FT, bacteria_yield),                 
+                                             convert(FT, zooplankton_yield),              
+                                             convert(FT, linear_remineralization_rate),   
+                                             convert(FT, linear_mortality_rate),          
+                                             convert(FT, quadratic_mortality_rate),       
+                                             convert(FT, quadratic_mortality_rate_Z),     
+                                             convert(FT, nutrient_half_saturation),       
+                                             convert(FT, detritus_half_saturation),       
+                                             convert(FT, grazing_half_saturation),        
+                                             convert(FT, PAR_half_saturation),            
+                                             convert(FT, PAR_attenuation_scale),          
+                                             detritus_vertical_velocity)
 end
 
 const NPZBD = NutrientsPlanktonBacteriaDetritus
@@ -94,15 +144,7 @@ const NPZBD = NutrientsPlanktonBacteriaDetritus
 @inline function biogeochemical_drift_velocity(bgc::NPZBD, ::Val{:D2})
     u = ZeroField()
     v = ZeroField()
-
-    grid = RectilinearGrid(size=100, z = (-1000, 0), topology = (Flat, Flat, Bounded))
-    no_penetration = ImpenetrableBoundaryCondition()
-    bcs = FieldBoundaryConditions(grid, (Center, Center, Face),
-                                  top=no_penetration, bottom=no_penetration)
-    w = ZFaceField(grid, boundary_conditions = bcs)
-    set!(w, - bgc.detritus_sinking_speed)
-    fill_halo_regions!(w)
-
+    w = bgc.detritus_vertical_velocity
     return (; u, v, w)
 end
 
