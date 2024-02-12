@@ -13,120 +13,139 @@ using CairoMakie
 
 # ## A single column grid
 #
-# We set up a single column grid with 4 m grid spacing that's 256 m deep:
+# We set up a single column grid with Nz m grid spacing that's H m deep:
 
-grid = RectilinearGrid(size = 64,
-                       z = (-256, 0),
-                       topology = (Flat, Flat, Bounded))
+H = 1000
+z = (-H, 0)
+Nz = 100
 
-# ## Convection then quiet
-#
-# To illustrate the dynamics of `NutrientsPlanktonBacteriaDetritus`,
-# we set up a physical scenario in which strong convection drives turbulent mixing
-# for 4 days, and then abruptly shuts off. Once the convective turbulence dies
-# down, plankton start to grow.
+grid = RectilinearGrid(size = Nz; z, topology = (Flat, Flat, Bounded))
 
-Qᵇ(x, y, t) = ifelse(t < 4days, 1e-7, 0.0)
-b_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(Qᵇ))
+# A prescribed vertical tracer diffusivity
+# 
+# We define a tracer diffusivity that mixes a lot near the surface
+# (in the top 50 m), and less down below.
+
+@inline κ(x, y, z, t) = 1e-4 + 1e-2 * exp(z / 25) + 1e-2 * exp(-(z + 1000) / 50)
+vertical_diffusion = VerticalScalarDiffusivity(; κ)
 
 # We put the pieces together.
 # The important line here is `biogeochemistry = NutrientsPlanktonBacteriaDetritus()`.
 # We use all default parameters.
 
 model = HydrostaticFreeSurfaceModel(; grid,
+                                    velocities = PrescribedVelocityFields(),
                                     biogeochemistry = NutrientsPlanktonBacteriaDetritus(),
-                                    closure = CATKEVerticalDiffusivity(),
-                                    tracers = (:b, :e),
-                                    buoyancy = BuoyancyTracer(),
-                                    boundary_conditions = (; b=b_bcs))
+                                    tracers = (:N, :P, :Z, :B, :D1, :D2),
+                                    tracer_advection = WENO(),
+                                    buoyancy = nothing,
+                                    closure = vertical_diffusion)
+                                    #closure = CATKEVerticalDiffusivity(),
+                                    #tracers = (:b, :e),
+                                    #buoyancy = BuoyancyTracer(),
+                                    #boundary_conditions = (; b=b_bcs))
 
 # ## Initial conditions
 #
 # We initialize the model with reasonable nutrients, detritus, and a nutrient
 # mixed layer.
 
-N₀ = 1e-1 # Surface nutrient concentration
-D₀ = 1e-1 # Surface detritus concentration
-dᴺ = 50.0 # Nutrient mixed layer depth
-N² = 1e-5 # Buoyancy gradient, s⁻²
+set!(model, N=3, P=1e-1, Z=1e-1, B=1e-1, D1=8e-2, D2=2e-2)
 
-bᵢ(x, y, z) = N² * z
-Nᵢ(x, y, z) = N₀ * max(1, exp(-(z + dᴺ) / 100))
-Dᵢ(x, y, z) = D₀ * exp(z / 10)
+simulation = Simulation(model, Δt=30minutes, stop_time=100days)
 
-set!(model, b=bᵢ, P=1e-1, B=1e-1, D=Dᵢ, N=Nᵢ, e=1e-6)
-
-# ## A simulation of physical-biological interaction
-# 
-# We construct a simple simulation that emits a message every 10 iterations
-# and outputs tracer fields.
-
-simulation = Simulation(model, Δt=10minutes, stop_time=12days)
-
-progress(sim) = @printf("Iteration: %d, time: %s, max(P): %.2e, max(N): %.2e, max(B): %.2e, max(D): %.2e \n",
-                        iteration(sim), prettytime(sim),
-                        maximum(model.tracers.P),
-                        maximum(model.tracers.N),
-                        maximum(model.tracers.B),
-                        maximum(model.tracers.D))
+function progress(sim)
+    @printf("Iteration: %d, time: %s, total(N): %.2e \n",
+            iteration(sim), prettytime(sim),
+            sum(model.tracers.N)+sum(model.tracers.P)+sum(model.tracers.B)+sum(model.tracers.D1)+sum(model.tracers.D2))
+    return nothing
+end
 
 simulation.callbacks[:progress] = Callback(progress, IterationInterval(10))
+
+N = model.tracers.N
+P = model.tracers.P
+Z = model.tracers.Z
+B = model.tracers.B
+D1 = model.tracers.D1 
+D2 = model.tracers.D2
+
+z = znodes(N)
+
+fig = Figure()
+
+axN = Axis(fig[1, 1], xlabel="Nutrient concentration (N)", ylabel="z (m)")
+axP = Axis(fig[1, 2], xlabel="Phytoplankton concentration (P)", ylabel="z (m)")
+axZ = Axis(fig[1, 3], xlabel="Zooplankton concentration (Z)", ylabel="z (m)")
+axB = Axis(fig[1, 4], xlabel="Bacteria concentration (B)", ylabel="z (m)")
+axD1 = Axis(fig[1, 5], xlabel="Detritus concentration (D1)", ylabel="z (m)")
+axD2 = Axis(fig[1, 6], xlabel="Detritus concentration (D2)", ylabel="z (m)")
+
+lines!(axN, interior(N, 1, 1, :), z)
+lines!(axP, interior(P, 1, 1, :), z)
+lines!(axZ, interior(Z, 1, 1, :), z)
+lines!(axB, interior(B, 1, 1, :), z)
+lines!(axD1, interior(D1, 1, 1, :), z)
+lines!(axD2, interior(D2, 1, 1, :), z)
+
+display(fig)
 
 filename = "nutrients_plankton_bacteria_detritus.jld2"
 
 simulation.output_writers[:fields] = JLD2OutputWriter(model, model.tracers;
                                                       filename,
-                                                      schedule = TimeInterval(20minutes),
+                                                      schedule = TimeInterval(1day),
                                                       overwrite_existing = true)
 
 run!(simulation)
 
-# ## Visualization
+# ###################### Visualization ######################
 #
 # All that's left is to visualize the results.
 
-bt = FieldTimeSeries(filename, "b")
-et = FieldTimeSeries(filename, "e")
 Pt = FieldTimeSeries(filename, "P")
+Zt = FieldTimeSeries(filename, "Z")
 Bt = FieldTimeSeries(filename, "B")
-Dt = FieldTimeSeries(filename, "D")
+D1t = FieldTimeSeries(filename, "D1")
+D2t = FieldTimeSeries(filename, "D2")
 Nt = FieldTimeSeries(filename, "N")
 
-t = bt.times
+t = Pt.times
 nt = length(t)
-z = znodes(bt)
+z = znodes(Pt)
 
 fig = Figure(resolution=(1200, 600))
 
-axb = Axis(fig[1, 1], ylabel="z (m)", xlabel="Buoyancy (m² s⁻³)")
-axe = Axis(fig[1, 2], ylabel="z (m)", xlabel="Turbulent kinetic energy (m² s²)")
-axP = Axis(fig[1, 3], ylabel="z (m)", xlabel="Concentration (mmol)")
-axN = Axis(fig[1, 4], ylabel="z (m)", xlabel="Nutrient concentration (mmol)")
+axN = Axis(fig[1, 1], ylabel="z (m)", xlabel="[Nutrient] (mmol m⁻³)")
+axP = Axis(fig[1, 2], ylabel="z (m)", xlabel="[Phytoplankton] (mmol m⁻³)")
+axZ = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Zooplankton] (mmol m⁻³)")
+axB = Axis(fig[1, 4], ylabel="z (m)", xlabel="[Bacteria] (mmol m⁻³)")
+axD1 = Axis(fig[1, 5], ylabel="z (m)", xlabel="[Dissolved Detritus] (mmol m⁻³)")
+axD2 = Axis(fig[1, 6], ylabel="z (m)", xlabel="[Particulate Detritus] (mmol m⁻³)")
 
-xlims!(axe, -1e-5, 1e-3)
-xlims!(axP, 0, 0.2)
+#xlims!(axP, -0.1, 2)
+#xlims!(axZ, -0.1, 0.5)
+#xlims!(axB, -0.1, 1)
+#xlims!(axD, -0.1, 1)
 
-slider = Slider(fig[2, 1:4], range=1:nt, startvalue=1)
+slider = Slider(fig[2, 1:6], range=1:nt, startvalue=1)
 n = slider.value
 
-title = @lift @sprintf("Convecting plankton at t = %d hours", t[$n] / hour)
-Label(fig[0, 1:4], title)
+title = @lift @sprintf("Equilibrium biogeochemistry at t = %d days", t[$n] / day)
+Label(fig[0, 1:6], title)
 
-bn = @lift interior(bt[$n], 1, 1, :)
-en = @lift interior(et[$n], 1, 1, :)
-Pn = @lift interior(Pt[$n], 1, 1, :)
-Bn = @lift interior(Bt[$n], 1, 1, :)
-Dn = @lift interior(Dt[$n], 1, 1, :)
 Nn = @lift interior(Nt[$n], 1, 1, :)
+Pn = @lift interior(Pt[$n], 1, 1, :)
+Zn = @lift interior(Zt[$n], 1, 1, :)
+Bn = @lift interior(Bt[$n], 1, 1, :)
+D1n = @lift interior(D1t[$n], 1, 1, :)
+D2n = @lift interior(D2t[$n], 1, 1, :)
 
-lines!(axb, bn, z)
-lines!(axe, en, z)
-
-lines!(axP, Pn, z, label="Plankton")
-lines!(axP, Dn, z, label="Detritus")
-lines!(axP, Bn, z, label="Bacteria")
-axislegend(axP)
-
+lines!(axP, Pn, z)
+lines!(axZ, Zn, z)
+lines!(axD1, D1n, z)
+lines!(axD2, D2n, z)
+lines!(axB, Bn, z)
 lines!(axN, Nn, z)
 
 record(fig, "nutrients_plankton_bacteria_detritus.mp4", 1:nt, framerate=24) do nn
@@ -136,3 +155,58 @@ nothing #hide
 
 # ![](nutrients_plankton_bacteria_detritus.mp4)
 
+# Figure 1: Extract the last frame
+Nn_last = interior(Nt[end], 1, 1, :)
+Pn_last = interior(Pt[end], 1, 1, :)
+Zn_last = interior(Zt[end], 1, 1, :)
+Bn_last = interior(Bt[end], 1, 1, :)
+D1n_last = interior(D1t[end], 1, 1, :)
+D2n_last = interior(D2t[end], 1, 1, :)
+
+last_frame = Figure(resolution=(1200, 600))
+axN = Axis(last_frame[1, 1], ylabel="z (m)", xlabel="[N] (mmol m⁻³)")
+axP = Axis(last_frame[1, 2], xlabel="[P] (mmol m⁻³)")
+axZ = Axis(last_frame[1, 3], xlabel="[Z] (mmol m⁻³)")
+axB = Axis(last_frame[1, 4], xlabel="[B] (mmol m⁻³)")
+axD1 = Axis(last_frame[1, 5], xlabel="[dD] (mmol m⁻³)")
+axD2 = Axis(last_frame[1, 6], xlabel="[pD] (mmol m⁻³)")
+
+lines!(axP, Pn_last, z)
+lines!(axZ, Zn_last, z)
+lines!(axD1, D1n_last, z)
+lines!(axD2, D2n_last, z)
+lines!(axB, Bn_last, z)
+lines!(axN, Nn_last, z)
+
+# Save the last frame as a figure
+save("NPZDB.png", last_frame)
+
+# Figure 2: sum of each variable vs. time
+N_time = zeros(1:nt)
+P_time = zeros(1:nt)
+Z_time = zeros(1:nt)
+B_time = zeros(1:nt)
+D1_time = zeros(1:nt)
+D2_time = zeros(1:nt)
+
+for times = 1:nt
+    N_time[times] = sum(Nt[:,:,:,times])
+    P_time[times] = sum(Pt[:,:,:,times])
+    Z_time[times] = sum(Zt[:,:,:,times])
+    B_time[times] = sum(Bt[:,:,:,times])
+    D1_time[times] = sum(D1t[:,:,:,times])
+    D2_time[times] = sum(D2t[:,:,:,times])
+end
+
+TimeVar = Figure()
+ax2 = Axis(TimeVar[1,1], title="Variable over time",ylabel="Variable (mmol m⁻³)", xlabel="Time (days)")
+lines!(ax2, 1:nt, N_time, label="N")  
+lines!(ax2, 1:nt, P_time, label="P")  
+lines!(ax2, 1:nt, Z_time, label="Z")  
+lines!(ax2, 1:nt, B_time, label="B")  
+lines!(ax2, 1:nt, D1_time, label="dD") 
+lines!(ax2, 1:nt, D2_time, label="pD") 
+
+axislegend()
+ 
+save("TimeVariations.png", TimeVar)
