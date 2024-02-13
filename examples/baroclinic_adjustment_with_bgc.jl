@@ -40,7 +40,7 @@ grid = RectilinearGrid(size = (Nx, Ny, Nz),
 # Regarding Coriolis, we use a beta-plane centered at 45° South.
 
 model = HydrostaticFreeSurfaceModel(; grid,
-                                    biogeochemistry = NutrientsPlanktonBacteriaDetritus(),
+                                    biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid),
                                     closure = CATKEVerticalDiffusivity(),
                                     coriolis = BetaPlane(latitude = -45),
                                     buoyancy = BuoyancyTracer(),

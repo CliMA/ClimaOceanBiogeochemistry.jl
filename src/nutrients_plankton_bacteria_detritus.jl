@@ -29,9 +29,9 @@ Parameters
                     relative to consumption of detritus such that ``∂_t N / ∂_t D = 1 - y``,
                     where `y = bacteria_yield`. Default: 0.2.
 
-    * `linear_remineralization_rate`: (s⁻¹) Remineralization rate constant of detritus 'D', 
-                                      assuming linear remineralization of 'D', while 
-                                      implicitly modeling bacteria 'B'. Default = 0.3/day.
+* `linear_remineralization_rate`: (s⁻¹) Remineralization rate constant of detritus 'D', 
+                                  assuming linear remineralization of 'D', while 
+                                  implicitly modeling bacteria 'B'. Default = 0.3/day.
 
 * `linear_mortality_rate`: (s⁻¹) Linear term of the mortality rate of both plankton and bacteria.
 
@@ -87,7 +87,7 @@ struct NutrientsPlanktonBacteriaDetritus{FT, W} <: AbstractBiogeochemistry
     detritus_vertical_velocity :: W        
 end
 
-function NutrientsPlanktonBacteriaDetritus(grid,
+function NutrientsPlanktonBacteriaDetritus(; grid,
                                            maximum_plankton_growth_rate = 1/day, # Add reference for each parameter
                                            maximum_bacteria_growth_rate = 1/day,
                                            maximum_grazing_rate         = 3/day,

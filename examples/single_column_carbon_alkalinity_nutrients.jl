@@ -1,9 +1,9 @@
 # # Nutrients, plankton, bacteria, detritus
 #
 # This example illustrates how to use ClimaOceanBiogeochemistry's
-# `NutrientsPlanktonBacteriaDetrius` model in a single column context.
+# `CarbonAlkalinityNutrients` model in a single column context.
 
-using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus, CarbonAlkalinityNutrients
+using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 
 using Oceananigans
 using Oceananigans.Units
@@ -21,7 +21,7 @@ grid = RectilinearGrid(size = 64,
 
 # ## Convection then quiet
 #
-# To illustrate the dynamics of `NutrientsPlanktonBacteriaDetritus`,
+# To illustrate the dynamics of `CarbonAlkalinityNutrients`,
 # we set up a physical scenario in which strong convection drives turbulent mixing
 # for 4 days, and then abruptly shuts off. Once the convective turbulence dies
 # down, plankton start to grow.
@@ -30,7 +30,7 @@ Qᵇ(x, y, t) = ifelse(t < 4days, 1e-7, 0.0)
 b_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(Qᵇ))
 
 # We put the pieces together.
-# The important line here is `biogeochemistry = NutrientsPlanktonBacteriaDetritus()`.
+# The important line here is `biogeochemistry = CarbonAlkalinityNutrients()`.
 # We use all default parameters.
 
 model = HydrostaticFreeSurfaceModel(; grid,
