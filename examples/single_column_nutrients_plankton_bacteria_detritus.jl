@@ -114,7 +114,7 @@ t = Pt.times
 nt = length(t)
 z = znodes(Pt)
 
-fig = Figure(resolution=(1200, 600))
+fig = Figure(size=(1200, 600))
 
 axN = Axis(fig[1, 1], ylabel="z (m)", xlabel="[Nutrient] (mmol m⁻³)")
 axP = Axis(fig[1, 2], ylabel="z (m)", xlabel="[Phytoplankton] (mmol m⁻³)")
@@ -163,7 +163,7 @@ Bn_last = interior(Bt[end], 1, 1, :)
 D1n_last = interior(D1t[end], 1, 1, :)
 D2n_last = interior(D2t[end], 1, 1, :)
 
-last_frame = Figure(resolution=(1200, 600))
+last_frame = Figure(size=(1200, 600))
 axN = Axis(last_frame[1, 1], ylabel="z (m)", xlabel="[N] (mmol m⁻³)")
 axP = Axis(last_frame[1, 2], xlabel="[P] (mmol m⁻³)")
 axZ = Axis(last_frame[1, 3], xlabel="[Z] (mmol m⁻³)")

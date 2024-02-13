@@ -93,7 +93,7 @@ t = bt.times
 nt = length(t)
 z = znodes(bt)
 
-fig = Figure(resolution=(1200, 600))
+fig = Figure(size=(1200, 600))
 
 axb = Axis(fig[1, 1], ylabel="z (m)", xlabel="Buoyancy (m² s⁻³)")
 axe = Axis(fig[1, 2], ylabel="z (m)", xlabel="Turbulent kinetic energy (m² s²)")
