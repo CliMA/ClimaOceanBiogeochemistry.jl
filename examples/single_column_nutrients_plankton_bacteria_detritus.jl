@@ -116,10 +116,10 @@ z = znodes(Pt)
 
 fig = Figure(size=(1200, 600))
 
-axN = Axis(fig[1, 1], ylabel="z (m)", xlabel="[Nutrient] (mmol m⁻³)")
-axP = Axis(fig[1, 2], ylabel="z (m)", xlabel="[Phytoplankton] (mmol m⁻³)")
-axZ = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Zooplankton] (mmol m⁻³)")
-axB = Axis(fig[1, 4], ylabel="z (m)", xlabel="[Bacteria] (mmol m⁻³)")
+axN  = Axis(fig[1, 1], ylabel="z (m)", xlabel="[Nutrient] (mmol m⁻³)")
+axP  = Axis(fig[1, 2], ylabel="z (m)", xlabel="[Phytoplankton] (mmol m⁻³)")
+axZ  = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Zooplankton] (mmol m⁻³)")
+axB  = Axis(fig[1, 4], ylabel="z (m)", xlabel="[Bacteria] (mmol m⁻³)")
 axD1 = Axis(fig[1, 5], ylabel="z (m)", xlabel="[Dissolved Detritus] (mmol m⁻³)")
 axD2 = Axis(fig[1, 6], ylabel="z (m)", xlabel="[Particulate Detritus] (mmol m⁻³)")
 
@@ -134,10 +134,10 @@ n = slider.value
 title = @lift @sprintf("Equilibrium biogeochemistry at t = %d days", t[$n] / day)
 Label(fig[0, 1:6], title)
 
-Nn = @lift interior(Nt[$n], 1, 1, :)
-Pn = @lift interior(Pt[$n], 1, 1, :)
-Zn = @lift interior(Zt[$n], 1, 1, :)
-Bn = @lift interior(Bt[$n], 1, 1, :)
+Nn  = @lift interior(Nt[$n], 1, 1, :)
+Pn  = @lift interior(Pt[$n], 1, 1, :)
+Zn  = @lift interior(Zt[$n], 1, 1, :)
+Bn  = @lift interior(Bt[$n], 1, 1, :)
 D1n = @lift interior(D1t[$n], 1, 1, :)
 D2n = @lift interior(D2t[$n], 1, 1, :)
 
@@ -156,18 +156,18 @@ nothing #hide
 # ![](nutrients_plankton_bacteria_detritus.mp4)
 
 # Figure 1: Extract the last frame
-Nn_last = interior(Nt[end], 1, 1, :)
-Pn_last = interior(Pt[end], 1, 1, :)
-Zn_last = interior(Zt[end], 1, 1, :)
-Bn_last = interior(Bt[end], 1, 1, :)
+Nn_last  = interior(Nt[end], 1, 1, :)
+Pn_last  = interior(Pt[end], 1, 1, :)
+Zn_last  = interior(Zt[end], 1, 1, :)
+Bn_last  = interior(Bt[end], 1, 1, :)
 D1n_last = interior(D1t[end], 1, 1, :)
 D2n_last = interior(D2t[end], 1, 1, :)
 
 last_frame = Figure(size=(1200, 600))
-axN = Axis(last_frame[1, 1], ylabel="z (m)", xlabel="[N] (mmol m⁻³)")
-axP = Axis(last_frame[1, 2], xlabel="[P] (mmol m⁻³)")
-axZ = Axis(last_frame[1, 3], xlabel="[Z] (mmol m⁻³)")
-axB = Axis(last_frame[1, 4], xlabel="[B] (mmol m⁻³)")
+axN  = Axis(last_frame[1, 1], ylabel="z (m)", xlabel="[N] (mmol m⁻³)")
+axP  = Axis(last_frame[1, 2], xlabel="[P] (mmol m⁻³)")
+axZ  = Axis(last_frame[1, 3], xlabel="[Z] (mmol m⁻³)")
+axB  = Axis(last_frame[1, 4], xlabel="[B] (mmol m⁻³)")
 axD1 = Axis(last_frame[1, 5], xlabel="[dD] (mmol m⁻³)")
 axD2 = Axis(last_frame[1, 6], xlabel="[pD] (mmol m⁻³)")
 
@@ -182,10 +182,10 @@ lines!(axN, Nn_last, z)
 save("NPZDB.png", last_frame)
 
 # Figure 2: sum of each variable vs. time
-N_time = zeros(1:nt)
-P_time = zeros(1:nt)
-Z_time = zeros(1:nt)
-B_time = zeros(1:nt)
+N_time  = zeros(1:nt)
+P_time  = zeros(1:nt)
+Z_time  = zeros(1:nt)
+B_time  = zeros(1:nt)
 D1_time = zeros(1:nt)
 D2_time = zeros(1:nt)
 
@@ -199,7 +199,7 @@ for times = 1:nt
 end
 
 TimeVar = Figure()
-ax2 = Axis(TimeVar[1,1], title="Variable over time",ylabel="Variable (mmol m⁻³)", xlabel="Time (days)")
+ax2 = Axis(TimeVar[1,1], title="Variable over time", ylabel="Variable (mmol m⁻³)", xlabel="Time (days)")
 lines!(ax2, 1:nt, N_time, label="N")  
 lines!(ax2, 1:nt, P_time, label="P")  
 lines!(ax2, 1:nt, Z_time, label="Z")  
