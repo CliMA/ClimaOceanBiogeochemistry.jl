@@ -51,7 +51,7 @@ makedocs(sitename = "ClimaOceanBiogeochemistry.jl",
          format = format,
          pages = pages,
          doctest = true,
-         strict = true,
+         warnonly = [:cross_references],
          clean = true,
          checkdocs = :exports)
 
