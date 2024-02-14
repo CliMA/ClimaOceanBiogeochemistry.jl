@@ -6,8 +6,8 @@
 using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus
 
 using Oceananigans
-using Oceananigans.Units
-using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
+Oceananigans.Units
+
 using Printf
 using CairoMakie
 
