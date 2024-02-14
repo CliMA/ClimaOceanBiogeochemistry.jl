@@ -6,7 +6,7 @@
 using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus
 
 using Oceananigans
-Oceananigans.Units
+using Oceananigans.Units
 
 using Printf
 using CairoMakie
@@ -15,7 +15,7 @@ using CairoMakie
 #
 # We set up a single column grid whose depth is `H` and with `Nz` points
 
-H = 1000
+H = 1000meters
 z = (-H, 0)
 Nz = 100
 
