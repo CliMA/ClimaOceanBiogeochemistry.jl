@@ -70,14 +70,14 @@ D2 = model.tracers.D2
 
 z = znodes(N)
 
-fig = Figure()
+fig = Figure(size=(1200, 600))
 
 axN  = Axis(fig[1, 1], xlabel="Nutrient concentration (N)", ylabel="z (m)")
-axP  = Axis(fig[1, 2], xlabel="Phytoplankton concentration (P)", ylabel="z (m)")
-axZ  = Axis(fig[1, 3], xlabel="Zooplankton concentration (Z)", ylabel="z (m)")
-axB  = Axis(fig[1, 4], xlabel="Bacteria concentration (B)", ylabel="z (m)")
-axD1 = Axis(fig[1, 5], xlabel="Detritus concentration (D1)", ylabel="z (m)")
-axD2 = Axis(fig[1, 6], xlabel="Detritus concentration (D2)", ylabel="z (m)")
+axP  = Axis(fig[1, 2], xlabel="Phytoplankton concentration (P)")
+axZ  = Axis(fig[1, 3], xlabel="Zooplankton concentration (Z)")
+axB  = Axis(fig[1, 4], xlabel="Bacteria concentration (B)")
+axD1 = Axis(fig[1, 5], xlabel="Detritus concentration (D1)")
+axD2 = Axis(fig[1, 6], xlabel="Detritus concentration (D2)")
 
 lines!(axN, interior(N, 1, 1, :), z)
 lines!(axP, interior(P, 1, 1, :), z)
