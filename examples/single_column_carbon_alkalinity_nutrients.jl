@@ -8,6 +8,7 @@ using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 using Oceananigans
 using Oceananigans.Units
 using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
+
 using Printf
 using CairoMakie
 
@@ -95,10 +96,10 @@ z = znodes(bt)
 
 fig = Figure(size=(1200, 600))
 
-axb = Axis(fig[1, 1], ylabel="z (m)", xlabel="Buoyancy (m² s⁻³)")
-axe = Axis(fig[1, 2], ylabel="z (m)", xlabel="Turbulent kinetic energy (m² s²)")
-axP = Axis(fig[1, 3], ylabel="z (m)", xlabel="Concentration (mmol)")
-axN = Axis(fig[1, 4], ylabel="z (m)", xlabel="Nutrient concentration (mmol)")
+axb = Axis(fig[1, 1], xlabel="Buoyancy (m² s⁻³)", ylabel="z (m)")
+axe = Axis(fig[1, 2], xlabel="Turbulent kinetic energy (m² s²)")
+axP = Axis(fig[1, 3], xlabel="Concentration (mmol)")
+axN = Axis(fig[1, 4], xlabel="Nutrient concentration (mmol)")
 
 xlims!(axe, -1e-5, 1e-3)
 xlims!(axP, 0, 0.2)
@@ -134,4 +135,3 @@ end
 nothing #hide
 
 # ![](carbon_alkalinity_nutrients.mp4)
-#
