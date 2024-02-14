@@ -13,7 +13,7 @@ using CairoMakie
 
 # ## A single column grid
 #
-# We set up a single column grid with Nz m grid spacing that's H m deep:
+# We set up a single column grid whose depth is `H` and with `Nz` points
 
 H = 1000
 z = (-H, 0)
@@ -40,10 +40,6 @@ model = HydrostaticFreeSurfaceModel(; grid,
                                     tracer_advection = WENO(),
                                     buoyancy = nothing,
                                     closure = vertical_diffusion)
-                                    #closure = CATKEVerticalDiffusivity(),
-                                    #tracers = (:b, :e),
-                                    #buoyancy = BuoyancyTracer(),
-                                    #boundary_conditions = (; b=b_bcs))
 
 # ## Initial conditions
 #
