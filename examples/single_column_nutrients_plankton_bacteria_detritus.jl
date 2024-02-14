@@ -174,8 +174,8 @@ lines!(axD2, D2n_last, z)
 lines!(axB, Bn_last, z)
 lines!(axN, Nn_last, z)
 
-# Save the last frame as a figure
 save("NPZDB.png", last_frame)
+nothing #hide
 
 # ![](NPZDB.png)
 
@@ -198,7 +198,7 @@ for times = 1:nt
 end
 
 TimeVar = Figure()
-ax2 = Axis(TimeVar[1, 1], title="Variable over time", ylabel="Variable (mmol m⁻³)", xlabel="Time (days)")
+ax2 = Axis(TimeVar[1, 1], title="Nutrients evolution", ylabel="Variable (mmol m⁻³)", xlabel="Time (days)")
 lines!(ax2, 1:nt, N_time, label="N")  
 lines!(ax2, 1:nt, P_time, label="P")  
 lines!(ax2, 1:nt, Z_time, label="Z")  
@@ -209,5 +209,6 @@ lines!(ax2, 1:nt, D2_time, label="pD")
 axislegend()
 
 save("TimeVariations.png", TimeVar)
+nothing #hide
 
 # ![](TimeVariations.png)
