@@ -92,7 +92,7 @@ function NutrientsPlanktonBacteriaDetritus(grid,
                                            maximum_bacteria_growth_rate   = 1/day,
                                            maximum_grazing_rate           = 3/day,
                                            bacteria_yield                 = 0.2,
-                                           zooplankton_yield              = 0.3
+                                           zooplankton_yield              = 0.3,
                                            linear_remineralization_rate   = 0.03/day, 
                                            linear_mortality_rate          = 0.01/day, # m³/mmol/day
                                            quadratic_mortality_rate       = 0.1/day, # m³/mmol/day

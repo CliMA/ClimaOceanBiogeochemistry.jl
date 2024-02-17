@@ -1,5 +1,5 @@
 using Oceananigans
-using Oceananigans.Architectures: arch_array
+using Oceananigans.Architectures: arch_array, architecture
 using Oceananigans.Units: day
 using Oceananigans.Grids: znode, Center, AbstractTopology, Flat, Bounded
 using Oceananigans.BoundaryConditions: ImpenetrableBoundaryCondition, fill_halo_regions!
@@ -96,10 +96,10 @@ struct MultiNPZBD{P, B, Z, D, BDC, PNC, ZPC, FT, W} <: AbstractBiogeochemistry
     zooplankton_plankton_connectivity :: ZPC
     PAR_half_saturation :: FT          
     PAR_attenuation_scale :: FT        
-    detritus_vertical_velocities :: W
+    detritus_vertical_velocity :: W
 end
 
-arrayify(grid, n, t::Number) = arch_array(architecture(grid), [FT(t) for _ = 1:n])
+arrayify(grid, n, t::Number) = arch_array(architecture(grid), [convert(eltype(grid), t) for _ = 1:n])
 arrayify(grid, n, t::Array)  = arch_array(architecture(grid), t)
 arrayify(grid, n, t)         = arch_array(architecture(grid), [t for _ = 1:n])
 
@@ -112,7 +112,7 @@ bgc.maximum_plankton_growth_rate[1] = 1/day
 bgc.maximum_plankton_growth_rate[2] = 2/day
 ```
 """
-function MultiNPZBD(grid,
+function MultiNPZBD(grid;
                     nutrient_types = 1,
                     plankton_populations = 1,
                     bacteria_populations = 1,
@@ -122,7 +122,7 @@ function MultiNPZBD(grid,
                     maximum_bacteria_growth_rate         = 1/day,
                     maximum_grazing_rate                 = 3/day,
                     bacteria_yield                       = 0.2,
-                    zooplankton_yield                    = 0.3
+                    zooplankton_yield                    = 0.3,
                     linear_remineralization_rate         = 0.03/day, 
                     linear_plankton_mortality_rate       = 0.01/day, # m³/mmol/day
                     linear_bacteria_mortality_rate       = 0.01/day,
@@ -136,6 +136,7 @@ function MultiNPZBD(grid,
                     bacteria_detritus_connectivity       = nothing,
                     plankton_nutrient_connectivity       = nothing,
                     zooplankton_plankton_connectivity    = nothing,
+                    detritus_vertical_velocity           = - 10 / day,
                     PAR_half_saturation                  = 10.0,
                     PAR_attenuation_scale                = 25.0)
 
@@ -181,30 +182,33 @@ function MultiNPZBD(grid,
 
     FT = eltype(grid)
 
-    return MultiNPZBD(NN, NP, NZ, NB, ND,
-                      maximum_plankton_growth_rate,
-                      maximum_bacteria_growth_rate,       
-                      maximum_grazing_rate,               
-                      bacteria_yield,                     
-                      zooplankton_yield,                  
-                      linear_remineralization_rate,       
-                      linear_plankton_mortality_rate,     
-                      linear_bacteria_mortality_rate,     
-                      linear_zooplankton_mortality_rate,  
-                      quadratic_plankton_mortality_rate,  
-                      quadratic_bacteria_mortality_rate,  
-                      quadratic_zooplankton_mortality_rate,
-                      nutrient_half_saturation,           
-                      detritus_half_saturation,           
-                      grazing_half_saturation,            
-                      bacteria_detritus_connectivity,
-                      plankton_nutrient_connectivity,
-                      zooplankton_plankton_connectivity,
-                      convert(FT, PAR_half_saturation),            
-                      convert(FT, PAR_attenuation_scale),          
-                      detritus_vertical_velocity)
+    npzbd = MultiNPZBD(NN, NP, NZ, NB, ND,
+                       maximum_plankton_growth_rate,
+                       maximum_bacteria_growth_rate,       
+                       maximum_grazing_rate,               
+                       bacteria_yield,                     
+                       zooplankton_yield,                  
+                       linear_remineralization_rate,       
+                       linear_plankton_mortality_rate,     
+                       linear_bacteria_mortality_rate,     
+                       linear_zooplankton_mortality_rate,  
+                       quadratic_plankton_mortality_rate,  
+                       quadratic_bacteria_mortality_rate,  
+                       quadratic_zooplankton_mortality_rate,
+                       nutrient_half_saturation,           
+                       detritus_half_saturation,           
+                       grazing_half_saturation,            
+                       bacteria_detritus_connectivity,
+                       plankton_nutrient_connectivity,
+                       zooplankton_plankton_connectivity,
+                       convert(FT, PAR_half_saturation),            
+                       convert(FT, PAR_attenuation_scale),          
+                       detritus_vertical_velocity)
+
+    return npzbd
 end
 
+#=
 const NPZBD = NutrientsPlanktonBacteriaDetritus
 
 @inline function required_biogeochemical_tracers(m::MultiNPZBD)
@@ -393,3 +397,4 @@ end
         return phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - detritus_remineralization(r, D)
     end 
 end
+=#
