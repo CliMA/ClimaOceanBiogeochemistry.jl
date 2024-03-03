@@ -60,13 +60,12 @@ Tracer names
   * `P`: phytoplankton
   * `Z`: zooplankton
   * `B`: bacteria
-  * `D1`: detritus 1 - dissolved
-  * `D2`: detritus 2 - particulate
+  * `D`: detritus 
 
 Biogeochemical functions
 ========================
-  * transitions for `N`, `P`, `Z`, `B`, `D1`, `D2`
-  * `biogeochemical_drift_velocity` for `D2`, modeling the sinking of detritus at
+  * transitions for `N`, `P`, `Z`, `B`, `D`
+  * `biogeochemical_drift_velocity` for `D`, modeling the sinking of detritus at
     a constant `detritus_sinking_speed`.
 """
 struct NutrientsPlanktonBacteriaDetritus{FT, W} <: AbstractBiogeochemistry
@@ -87,7 +86,7 @@ struct NutrientsPlanktonBacteriaDetritus{FT, W} <: AbstractBiogeochemistry
     detritus_vertical_velocity :: W        
 end
 
-function NutrientsPlanktonBacteriaDetritus(grid,
+function NutrientsPlanktonBacteriaDetritus(grid;
                                            maximum_plankton_growth_rate   = 1/day, # Add reference for each parameter
                                            maximum_bacteria_growth_rate   = 1/day,
                                            maximum_grazing_rate           = 3/day,
@@ -139,9 +138,9 @@ end
 
 const NPZBD = NutrientsPlanktonBacteriaDetritus
 
-@inline required_biogeochemical_tracers(::NPZBD) = (:N, :P, :Z, :B, :D1, :D2)
+@inline required_biogeochemical_tracers(::NPZBD) = (:N, :P, :Z, :B, :D)
 
-@inline function biogeochemical_drift_velocity(bgc::NPZBD, ::Val{:D2})
+@inline function biogeochemical_drift_velocity(bgc::NPZBD, ::Val{:D})
     u = ZeroField()
     v = ZeroField()
     w = bgc.detritus_vertical_velocity
@@ -193,9 +192,7 @@ end
 
     P = @inbounds fields.P[i, j, k]
     Z = @inbounds fields.Z[i, j, k]
-    D1 = @inbounds fields.D1[i, j, k] 
-    D2 = @inbounds fields.D2[i, j, k]
-    D = D1.+D2
+    D = @inbounds fields.D[i, j, k] 
     B = @inbounds fields.B[i, j, k]
     N = @inbounds fields.N[i, j, k]
     
@@ -257,16 +254,14 @@ end
     y = bgc.bacteria_yield
     γ = bgc.zooplankton_yield
 
-    D1 = @inbounds fields.D1[i, j, k] 
-    D2 = @inbounds fields.D2[i, j, k]
-    D = D1.+D2
+    D = @inbounds fields.D[i, j, k] 
     B = @inbounds fields.B[i, j, k]
     Z = @inbounds fields.Z[i, j, k]
 
     return bacteria_production(μᵇ, kᴰ, y, D, B) - bacteria_mortality(mlin, mq, B) - zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) /γ 
 end
 
-@inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:D1}, clock, fields)
+@inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:D}, clock, fields)
     μᵇ = bgc.maximum_bacteria_growth_rate
     kᴰ = bgc.detritus_half_saturation
     r = bgc.linear_remineralization_rate
@@ -277,28 +272,7 @@ end
 
     P = @inbounds fields.P[i, j, k]
     Z = @inbounds fields.Z[i, j, k]
-    D = @inbounds fields.D1[i, j, k] 
-    B = @inbounds fields.B[i, j, k]
-
-    if sum(B) > 0
-        return bacteria_mortality(mlin, mq, B) + phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - bacteria_production(μᵇ, kᴰ, y, D, B) / y 
-    elseif sum(B) == 0
-        return phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - detritus_remineralization(r, D)
-    end 
-end
-
-@inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:D2}, clock, fields)
-    μᵇ = bgc.maximum_bacteria_growth_rate
-    kᴰ = bgc.detritus_half_saturation
-    r = bgc.linear_remineralization_rate
-    y = bgc.bacteria_yield
-    mlin = bgc.linear_mortality_rate
-    mq = bgc.quadratic_mortality_rate
-    mq_Z = bgc.quadratic_mortality_rate_Z
-
-    P = @inbounds fields.P[i, j, k]
-    Z = @inbounds fields.Z[i, j, k]
-    D = @inbounds fields.D2[i, j, k]
+    D = @inbounds fields.D[i, j, k] 
     B = @inbounds fields.B[i, j, k]
 
     if sum(B) > 0
