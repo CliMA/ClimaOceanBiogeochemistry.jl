@@ -231,11 +231,18 @@ end
 @inline required_biogeochemical_tracers(::MultiNPZBD) = required_biogeochemical_tracers(bgc)
 
 # TODO: How to update ::Val{:Dn} as the input?
-@inline function biogeochemical_drift_velocity(bgc::MultiNPZBD, ::Val{:D4})
-    u = ZeroField()
-    v = ZeroField()
-    w = bgc.detritus_vertical_velocity[4]
-    return (; u, v, w)
+# Change this number and recompile if you would like more detritus types
+MAX_DETRITUS_TYPES = 10
+
+for n = 1:MAX_DETRITUS_TYPES
+    @eval begin
+        @inline function biogeochemical_drift_velocity(bgc::MultiNPZBD, ::Val{:D$n})
+            u = ZeroField()
+            v = ZeroField()
+            w = bgc.detritus_vertical_velocity[$n]
+            return (; u, v, w)
+        end
+    end
 end
 @inline function biogeochemical_drift_velocity(bgc::MultiNPZBD, ::Val{:D5})
     u = ZeroField()
