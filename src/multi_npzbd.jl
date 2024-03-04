@@ -228,28 +228,7 @@ end
                  detritus_names...)   
 end
 
-@inline required_biogeochemical_tracers(::MultiNPZBD) = required_biogeochemical_tracers(bgc)
-
-# TODO: How to update ::Val{:Dn} as the input?
-# Change this number and recompile if you would like more detritus types
-MAX_DETRITUS_TYPES = 10
-
-for n = 1:MAX_DETRITUS_TYPES
-    @eval begin
-        @inline function biogeochemical_drift_velocity(bgc::MultiNPZBD, ::Val{:D$n})
-            u = ZeroField()
-            v = ZeroField()
-            w = bgc.detritus_vertical_velocity[$n]
-            return (; u, v, w)
-        end
-    end
-end
-@inline function biogeochemical_drift_velocity(bgc::MultiNPZBD, ::Val{:D5})
-    u = ZeroField()
-    v = ZeroField()
-    w = bgc.detritus_vertical_velocity[5]
-    return (; u, v, w)
-end
+# @inline required_biogeochemical_tracers(::MultiNPZBD) = required_biogeochemical_tracers(bgc)
 
 # For implicit time stepping, consider:
 #
@@ -267,126 +246,204 @@ end
 # @inline temp_fun(Temp) = 0.8 .* exp.(-4000 .*(1 ./ (Temp .+ 273.15) .- 1 ./ 293.15))
 
 @inline bacteria_production(μᵇ, kᴰ, y, D, B) = y * μᵇ * D / (D + kᴰ) * B 
-@inline phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) = (μᵖ * min(N / (N + kᴺ) , I / (I + kᴵ)) * P) 
+
+@inline function phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P)
+    Ñ = N / (N + kᴺ)
+    Ĩ = I / (I + kᴵ)
+    return μᵖ * P * min(Ñ, Ĩ)
+end
+
 @inline zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) = γ * gₘ * P / (P + kᵍ) * Z
 @inline zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) = γ * gₘ * B / (B + kᵍ) * Z
-@inline bacteria_mortality(mlinB,mqB, B) = mlinB * B + mqB * B^2
-@inline phytoplankton_mortality(mlinP,mqP, P) = mlinP * P + mqP * P^2
-@inline zooplankton_mortality(mlinZ,mqZ, Z) = mlinZ * Z + mqZ * Z^2
+@inline bacteria_mortality(mlinB, mqB, B) = mlinB * B + mqB * B^2
+@inline phytoplankton_mortality(mlinP, mqP, P) = mlinP * P + mqP * P^2
+@inline zooplankton_mortality(mlinZ, mqZ, Z) = mlinZ * Z + mqZ * Z^2
 @inline detritus_remineralization(r, D) = r * D
 
-@inline function (bgc::MultiNPZBD)(i, j, k, grid, ::Val{:N1}, clock, fields)
-    μᵖ = bgc.maximum_plankton_growth_rate
-    μᵇ = bgc.maximum_bacteria_growth_rate
-    r = bgc.linear_remineralization_rate
-    gₘ = bgc.maximum_grazing_rate
-    kᴰ = bgc.detritus_half_saturation
-    kᴺ = bgc.nutrient_half_saturation
-    kᵍ = bgc.grazing_half_saturation
-    kᴵ = bgc.PAR_half_saturation
-    λ = bgc.PAR_attenuation_scale
-    y = bgc.bacteria_yield
-    γ = bgc.zooplankton_yield
 
-    # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
+for C in (:N, :P, :Z, :B, :D)
+    @eval begin
+        @inline numbered_tracer_tuple(::Val{$(Meta.quot(C))}, ::Val{1}, fields) = tuple(getproperty(fields, Symbol($(Meta.quot(C)), 1)))
 
-    # TODO: design a user interface for prescribing incoming shortwave
-    I = 700 * exp(z / λ)
+        @inline numbered_tracer_tuple(::Val{$(Meta.quot(C))}, ::Val{2}, fields) = (getproperty(fields, Symbol($(Meta.quot(C)), 1)),
+                                                                                   getproperty(fields, Symbol($(Meta.quot(C)), 2)))
 
-    N = @inbounds fields.N1[i, j, k]
-    P = @inbounds fields.P1[i, j, k]
-    Z = @inbounds fields.Z1[i, j, k]
-    D = @inbounds fields.D1[i, j, k] 
-    B = @inbounds fields.B1[i, j, k]
-    
-    if sum(B) > 0
-        return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) .+ bacteria_production(μᵇ, kᴰ, y, D, B) * (1/y - 1) .+ zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1) .+ zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1/γ - 1)
-    elseif sum(B) == 0
-        return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) .+ detritus_remineralization(r, D) .+ zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1)
-    end 
+        @inline numbered_tracer_tuple(::Val{$(Meta.quot(C))}, ::Val{3}, fields) = (getproperty(fields, Symbol($(Meta.quot(C)), 1)),
+                                                                                   getproperty(fields, Symbol($(Meta.quot(C)), 2)),
+                                                                                   getproperty(fields, Symbol($(Meta.quot(C)), 3)))
 
+        @inline numbered_tracer_tuple(::Val{$(Meta.quot(C))}, ::Val{4}, fields) = (getproperty(fields, Symbol($(Meta.quot(C)), 1)),
+                                                                                   getproperty(fields, Symbol($(Meta.quot(C)), 2)),
+                                                                                   getproperty(fields, Symbol($(Meta.quot(C)), 3)),
+                                                                                   getproperty(fields, Symbol($(Meta.quot(C)), 4)))
+
+        @inline numbered_tracer_tuple(::Val{$(Meta.quot(C))}, ::Val{5}, fields) = (getproperty(fields, Symbol($(Meta.quot(C)), 1)),
+                                                                                   getproperty(fields, Symbol($(Meta.quot(C)), 2)),
+                                                                                   getproperty(fields, Symbol($(Meta.quot(C)), 3)),
+                                                                                   getproperty(fields, Symbol($(Meta.quot(C)), 4)),
+                                                                                   getproperty(fields, Symbol($(Meta.quot(C)), 5)))
+
+    end
 end
 
-@inline function (bgc::MultiNPZBD)(i, j, k, grid, ::Val{:P1}, clock, fields)
-    μᵖ = bgc.maximum_plankton_growth_rate
-    gₘ = bgc.maximum_grazing_rate
-    kᴺ = bgc.nutrient_half_saturation
-    kᴵ = bgc.PAR_half_saturation
-    kᵍ = bgc.grazing_half_saturation
-    λ = bgc.PAR_attenuation_scale
-    mlinP = bgc.linear_plankton_mortality_rate
-    mqP = bgc.quadratic_plankton_mortality_rate
-    γ = bgc.zooplankton_yield
-
-    # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-
-    # TODO: design a user interface for prescribing incoming shortwave
-    I = 700 * exp(z / λ)
-
-    P = @inbounds fields.P1[i, j, k]
-    Z = @inbounds fields.Z1[i, j, k]
-    N = @inbounds fields.N1[i, j, k]
-
-    return phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) - phytoplankton_mortality(mlinP, mqP, P) - zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) /γ 
+@inline function tupleindex(i, j, k, t::NTuple{N}) where N
+    ntuple(Val(N)) do n
+        @inbounds t[n][i, j, k]
+    end
 end
 
-@inline function (bgc::MultiNPZBD)(i, j, k, grid, ::Val{:Z1}, clock, fields)
-    gₘ = bgc.maximum_grazing_rate
-    kᵍ = bgc.grazing_half_saturation
-    mlinZ = bgc.linear_zooplankton_mortality_rate
-    mqZ = bgc.quadratic_zooplankton_mortality_rate
-    γ = bgc.zooplankton_yield
+# TODO: How to update ::Val{:Dn} as the input?
+# Change this number and recompile if you would like more detritus types
+MAX_TYPES = 5
 
-    P = @inbounds fields.P1[i, j, k]
-    B = @inbounds fields.B1[i, j, k]
-    Z = @inbounds fields.Z1[i, j, k]
+for n = 1:MAX_TYPES
+    @eval begin
 
-    return zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) + zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) - zooplankton_mortality(mlinZ, mqZ, Z)   
+
+        @inline function biogeochemical_drift_velocity(bgc::MultiNPZBD, ::Val{:D$n})
+            u = ZeroField()
+            v = ZeroField()
+            w = bgc.detritus_vertical_velocity[$n]
+            return (; u, v, w)
+        end
+
+        @inline function (bgc::MultiNPZBD)(i, j, k, grid, ::Val{:N$n}, clock, fields)
+            μᵖ = bgc.maximum_plankton_growth_rate
+            μᵇ = bgc.maximum_bacteria_growth_rate
+            r = bgc.linear_remineralization_rate
+            gₘ = bgc.maximum_grazing_rate
+            kᴰ = bgc.detritus_half_saturation
+            kᴺ = bgc.nutrient_half_saturation
+            kᵍ = bgc.grazing_half_saturation
+            kᴵ = bgc.PAR_half_saturation
+            λ = bgc.PAR_attenuation_scale
+            y = bgc.bacteria_yield
+            γ = bgc.zooplankton_yield
+
+            # Available photosynthetic radiation
+            z = znode(i, j, k, grid, c, c, c)
+
+            # TODO: design a user interface for prescribing incoming shortwave
+            I = 700 * exp(z / λ)
+
+            Nᴺ = length(kᴺ)
+            Nᴾ = length(μᵖ)
+            Nᶻ = length(gₘ)
+            Nᴰ = length(kᴰ)
+            Nᴮ = length(μᵇ)
+
+            N = numbered_tracer_tuple(Val(:N), Val(Nᴺ), fields)
+            P = numbered_tracer_tuple(Val(:P), Val(Nᴾ), fields)
+            Z = numbered_tracer_tuple(Val(:Z), Val(Nᶻ), fields)
+            D = numbered_tracer_tuple(Val(:D), Val(Nᴰ), fields)
+            B = numbered_tracer_tuple(Val(:B), Val(Nᴮ), fields)
+
+            Nⁱʲᵏ = tupleindex(N)
+            Pⁱʲᵏ = tupleindex(P)
+            Zⁱʲᵏ = tupleindex(Z)
+            Dⁱʲᵏ = tupleindex(D)
+            Bⁱʲᵏ = tupleindex(B)
+
+            # μᵖ
+            
+            if sum(B) > 0
+                return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) .+
+                         bacteria_production(μᵇ, kᴰ, y, D, B) * (1/y - 1) .+
+                         zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1) .+
+                         zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1/γ - 1)
+
+            elseif sum(B) == 0
+                return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) .+
+                         detritus_remineralization(r, D) .+
+                         zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1)
+            end 
+        end
+
+        @inline function (bgc::MultiNPZBD)(i, j, k, grid, ::Val{:P$n}, clock, fields)
+            μᵖ = bgc.maximum_plankton_growth_rate
+            gₘ = bgc.maximum_grazing_rate
+            kᴺ = bgc.nutrient_half_saturation
+            kᴵ = bgc.PAR_half_saturation
+            kᵍ = bgc.grazing_half_saturation
+            λ = bgc.PAR_attenuation_scale
+            mlinP = bgc.linear_plankton_mortality_rate
+            mqP = bgc.quadratic_plankton_mortality_rate
+            γ = bgc.zooplankton_yield
+
+            # Available photosynthetic radiation
+            z = znode(i, j, k, grid, c, c, c)
+
+            # TODO: design a user interface for prescribing incoming shortwave
+            I = 700 * exp(z / λ)
+
+            Nᴾ = length(μᵖ)
+            P = @inbounds fields.P1[i, j, k]
+                
+
+            Z = @inbounds fields.Z1[i, j, k]
+            N = @inbounds fields.N1[i, j, k]
+
+            return phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) - phytoplankton_mortality(mlinP, mqP, P) - zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) /γ 
+        end
+
+        @inline function (bgc::MultiNPZBD)(i, j, k, grid, ::Val{:Z$n}, clock, fields)
+            gₘ = bgc.maximum_grazing_rate
+            kᵍ = bgc.grazing_half_saturation
+            mlinZ = bgc.linear_zooplankton_mortality_rate
+            mqZ = bgc.quadratic_zooplankton_mortality_rate
+            γ = bgc.zooplankton_yield
+
+            P = @inbounds fields.P1[i, j, k]
+            B = @inbounds fields.B1[i, j, k]
+            Z = @inbounds fields.Z1[i, j, k]
+
+            return zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) + zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) - zooplankton_mortality(mlinZ, mqZ, Z)   
+        end
+
+        @inline function (bgc::MultiNPZBD)(i, j, k, grid, ::Val{:B$n}, clock, fields)
+            μᵇ = bgc.maximum_bacteria_growth_rate
+            gₘ = bgc.maximum_grazing_rate
+            kᴰ = bgc.detritus_half_saturation
+            kᵍ  = bgc.grazing_half_saturation
+            mlinB = bgc.linear_bacteria_mortality_rate
+            mqB = bgc.quadratic_bacteria_mortality_rate
+            y = bgc.bacteria_yield
+            γ = bgc.zooplankton_yield
+
+            D = @inbounds fields.D1[i, j, k] 
+            B = @inbounds fields.B1[i, j, k]
+            Z = @inbounds fields.Z1[i, j, k]
+
+            return bacteria_production(μᵇ, kᴰ, y, D, B) - bacteria_mortality(mlinB, mqB, B) - zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) /γ 
+        end
+
+        @inline function (bgc::MultiNPZBD)(i, j, k, grid, ::Val{:D$n}, clock, fields)
+            μᵇ = bgc.maximum_bacteria_growth_rate
+            kᴰ = bgc.detritus_half_saturation
+            r = bgc.linear_remineralization_rate
+            y = bgc.bacteria_yield
+            mlinP = bgc.linear_plankton_mortality_rate
+            mqP = bgc.quadratic_plankton_mortality_rate
+            mlinZ = bgc.linear_zooplankton_mortality_rate
+            mqZ = bgc.quadratic_zooplankton_mortality_rate
+            mlinB = bgc.linear_bacteria_mortality_rate
+            mqB = bgc.quadratic_bacteria_mortality_rate
+
+            P = @inbounds fields.P1[i, j, k]
+            Z = @inbounds fields.Z1[i, j, k]
+            D = @inbounds fields.D1[i, j, k] 
+            B = @inbounds fields.B1[i, j, k]
+
+            if sum(B) > 0
+                return bacteria_mortality(mlinB, mqB, B) + phytoplankton_mortality(mlinP, mqP, P) + zooplankton_mortality(mlinZ, mqZ, Z) - bacteria_production(μᵇ, kᴰ, y, D, B) / y 
+            elseif sum(B) == 0
+                return phytoplankton_mortality(mlinP, mqP, P) + zooplankton_mortality(mlinZ, mqZ, Z) - detritus_remineralization(r, D)
+            end 
+        end
+    end
 end
 
-@inline function (bgc::MultiNPZBD)(i, j, k, grid, ::Val{:B1}, clock, fields)
-    μᵇ = bgc.maximum_bacteria_growth_rate
-    gₘ = bgc.maximum_grazing_rate
-    kᴰ = bgc.detritus_half_saturation
-    kᵍ  = bgc.grazing_half_saturation
-    mlinB = bgc.linear_bacteria_mortality_rate
-    mqB = bgc.quadratic_bacteria_mortality_rate
-    y = bgc.bacteria_yield
-    γ = bgc.zooplankton_yield
-
-    D = @inbounds fields.D1[i, j, k] 
-    B = @inbounds fields.B1[i, j, k]
-    Z = @inbounds fields.Z1[i, j, k]
-
-    return bacteria_production(μᵇ, kᴰ, y, D, B) - bacteria_mortality(mlinB, mqB, B) - zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) /γ 
-end
-
-@inline function (bgc::MultiNPZBD)(i, j, k, grid, ::Val{:D1}, clock, fields)
-    μᵇ = bgc.maximum_bacteria_growth_rate
-    kᴰ = bgc.detritus_half_saturation
-    r = bgc.linear_remineralization_rate
-    y = bgc.bacteria_yield
-    mlinP = bgc.linear_plankton_mortality_rate
-    mqP = bgc.quadratic_plankton_mortality_rate
-    mlinZ = bgc.linear_zooplankton_mortality_rate
-    mqZ = bgc.quadratic_zooplankton_mortality_rate
-    mlinB = bgc.linear_bacteria_mortality_rate
-    mqB = bgc.quadratic_bacteria_mortality_rate
-
-    P = @inbounds fields.P1[i, j, k]
-    Z = @inbounds fields.Z1[i, j, k]
-    D = @inbounds fields.D1[i, j, k] 
-    B = @inbounds fields.B1[i, j, k]
-
-    if sum(B) > 0
-        return bacteria_mortality(mlinB, mqB, B) + phytoplankton_mortality(mlinP, mqP, P) + zooplankton_mortality(mlinZ, mqZ, Z) - bacteria_production(μᵇ, kᴰ, y, D, B) / y 
-    elseif sum(B) == 0
-        return phytoplankton_mortality(mlinP, mqP, P) + zooplankton_mortality(mlinZ, mqZ, Z) - detritus_remineralization(r, D)
-    end 
-end
-
+#=
 @inline function (bgc::MultiNPZBD)(i, j, k, grid, ::Val{:D2}, clock, fields)
     μᵇ = bgc.maximum_bacteria_growth_rate
     kᴰ = bgc.detritus_half_saturation
@@ -410,3 +467,4 @@ end
         return phytoplankton_mortality(mlinP, mqP, P) + zooplankton_mortality(mlinZ, mqZ, Z) - detritus_remineralization(r, D)
     end 
 end
+=#
