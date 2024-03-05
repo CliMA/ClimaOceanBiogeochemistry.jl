@@ -35,12 +35,10 @@ const c = Center()
    return (μ₀ * exp(z / λ) - m) * P
 end
 
-#####
-##### Set up the model
-#####
+# We set up the model
 
 grid = RectilinearGrid(size = 64,
-                       z = (-256, 0),
+                       z = (-256meters, 0),
                        topology = (Flat, Flat, Bounded))
 
 Qᵇ(x, y, t) = ifelse(t < 4days, 1e-7, 0.0)
@@ -74,7 +72,9 @@ simulation.output_writers[:fields] = JLD2OutputWriter(model, outputs;
 
 run!(simulation)
 
-using GLMakie
+# Now we load the saved output and plot
+
+using CairoMakie
 
 bt = FieldTimeSeries(filename, "b")
 et = FieldTimeSeries(filename, "e")
@@ -84,7 +84,7 @@ t = bt.times
 Nt = length(t)
 z = znodes(bt)
 
-fig = Figure(resolution=(1200, 600))
+fig = Figure(size=(1200, 600))
 
 axb = Axis(fig[1, 1], ylabel="z (m)", xlabel="Buoyancy (m² s⁻³)")
 axe = Axis(fig[1, 2], ylabel="z (m)", xlabel="Turbulent kinetic energy (m² s²)")
@@ -113,3 +113,4 @@ record(fig, "simple_plankton_growth_death.mp4", 1:Nt, framerate=24) do nn
     n[] = nn
 end
 
+# ![](simple_plankton_growth_death.mp4)

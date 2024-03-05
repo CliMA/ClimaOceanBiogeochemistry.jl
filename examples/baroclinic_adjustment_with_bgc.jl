@@ -40,7 +40,7 @@ grid = RectilinearGrid(size = (Nx, Ny, Nz),
 # Regarding Coriolis, we use a beta-plane centered at 45° South.
 
 model = HydrostaticFreeSurfaceModel(; grid,
-                                    biogeochemistry = NutrientsPlanktonBacteriaDetritus(),
+                                    biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid),
                                     closure = CATKEVerticalDiffusivity(),
                                     coriolis = BetaPlane(latitude = -45),
                                     buoyancy = BuoyancyTracer(),
@@ -214,7 +214,7 @@ nothing #hide
 # Then we create a 3D axis. We use `zonal_slice_displacement` to control where the plot of the instantaneous
 # zonal average flow is located.
 
-fig = Figure(resolution = (900, 520))
+fig = Figure(size = (900, 520))
 
 zonal_slice_displacement = 1.2
 
