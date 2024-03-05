@@ -1,13 +1,14 @@
 # # Nutrients, plankton, bacteria, detritus
 #
 # This example illustrates how to use ClimaOceanBiogeochemistry's
-# `NutrientsPlanktonBacteriaDetrius` model in a single column context.
+# `CarbonAlkalinityNutrients` model in a single column context.
 
-using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus, CarbonAlkalinityNutrients
+using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 
 using Oceananigans
 using Oceananigans.Units
 using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
+
 using Printf
 using CairoMakie
 
@@ -21,7 +22,7 @@ grid = RectilinearGrid(size = 64,
 
 # ## Convection then quiet
 #
-# To illustrate the dynamics of `NutrientsPlanktonBacteriaDetritus`,
+# To illustrate the dynamics of `CarbonAlkalinityNutrients`,
 # we set up a physical scenario in which strong convection drives turbulent mixing
 # for 4 days, and then abruptly shuts off. Once the convective turbulence dies
 # down, plankton start to grow.
@@ -30,7 +31,7 @@ Qᵇ(x, y, t) = ifelse(t < 4days, 1e-7, 0.0)
 b_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(Qᵇ))
 
 # We put the pieces together.
-# The important line here is `biogeochemistry = NutrientsPlanktonBacteriaDetritus()`.
+# The important line here is `biogeochemistry = CarbonAlkalinityNutrients()`.
 # We use all default parameters.
 
 model = HydrostaticFreeSurfaceModel(; grid,
@@ -93,12 +94,12 @@ t = bt.times
 nt = length(t)
 z = znodes(bt)
 
-fig = Figure(resolution=(1200, 600))
+fig = Figure(size=(1200, 600))
 
-axb = Axis(fig[1, 1], ylabel="z (m)", xlabel="Buoyancy (m² s⁻³)")
-axe = Axis(fig[1, 2], ylabel="z (m)", xlabel="Turbulent kinetic energy (m² s²)")
-axP = Axis(fig[1, 3], ylabel="z (m)", xlabel="Concentration (mmol)")
-axN = Axis(fig[1, 4], ylabel="z (m)", xlabel="Nutrient concentration (mmol)")
+axb = Axis(fig[1, 1], xlabel="Buoyancy (m² s⁻³)", ylabel="z (m)")
+axe = Axis(fig[1, 2], xlabel="Turbulent kinetic energy (m² s²)")
+axP = Axis(fig[1, 3], xlabel="Concentration (mmol)")
+axN = Axis(fig[1, 4], xlabel="Nutrient concentration (mmol)")
 
 xlims!(axe, -1e-5, 1e-3)
 xlims!(axP, 0, 0.2)
@@ -134,4 +135,3 @@ end
 nothing #hide
 
 # ![](carbon_alkalinity_nutrients.mp4)
-#
