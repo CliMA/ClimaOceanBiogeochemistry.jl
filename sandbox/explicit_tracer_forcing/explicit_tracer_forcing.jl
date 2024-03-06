@@ -61,7 +61,25 @@ end
 
 add_callback!(simulation, progress, IterationInterval(10))
 
+#=
+∂t N1 = N1_rhs
+∂t N2 = N2_rhs
+∂t N3 = N3_rhs
+∂t N4 = N4_rhs
+∂t P1 = P1_rhs
+∂t P2 = P2_rhs
+∂t P3 = P3_rhs
+∂t P4 = P4_rhs
+=#
+
 function update_forcing!(sim)
+    Nx, Ny, Nz = size(sim.model.grid)
+    N1_rhs = nutrient_forcing_arrays[1]
+    for i = 1:Nx, j = 1:Ny, k = 1:Nz
+        @inbounds begin
+            N1_rhs[i, j, k] = 0 
+        end
+    end
     # Do stuff
     return nothing
 end
