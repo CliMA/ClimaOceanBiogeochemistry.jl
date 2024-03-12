@@ -331,7 +331,7 @@ nothing #hide
 
 # ![](baroclinic_adjustment.mp4)
 
-fig = Figure(resolution = (900, 520))
+fig = Figure(size = (900, 520))
 
 ax = Axis3(fig[2, 1], 
            aspect=(1, 1, 1/5),
