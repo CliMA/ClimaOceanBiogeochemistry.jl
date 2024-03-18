@@ -177,7 +177,7 @@ total phosphate Pᵀ, total silicate Siᵀ, and the carbon chemistry coefficient
 Uses the SolveSAPHE package (Munhoven et al., 2013), a universal, robust, pH 
 solver that converges from any given initial value.
 """
-@inline function Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ=0, H₂Sᵀ=0, pH, Pᶜᵒᵉᶠᶠ, Δₕ₊=1e-8, Iᴴ⁺ₘₐₓ=100, pz_exp_threshold=1) 
+@inline function Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ, NH₄ᵀ=0, H₂Sᵀ=0, Δₕ₊=1e-8, eᴴ⁺ᵗʰʳᵉˢʰ=1, Iᴴ⁺ₘₐₓ=100) 
    
     Iᴴ⁺                = 0
     Aᵀᵃᵇˢₘᵢₙ           = Inf
@@ -192,24 +192,24 @@ solver that converges from any given initial value.
     end
 
     # Calculate initial bounds of H+ concentration
-    (; Aᵀₗₒ, Aᵀₕᵢ) = FboundsAᵀₙₕ₂ₒ( 
-                    Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ=0, H₂Sᵀ=0, Pᶜᵒᵉᶠᶠ
+    Aᵀₗₒ, Aᵀₕᵢ = FboundsAᵀₙₕ₂ₒ( 
+                    Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, Pᶜᵒᵉᶠᶠ
                   )
 
-    Δₗₒ = (Aᵀ - Aᵀₗₒ)^2 + 4 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᵒₖ₁/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
+    Δₗₒ = (Aᵀ - Aᵀₗₒ)^2 + 4 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
 
     if Aᵀ ≥ Aᵀₗₒ
-        H⁺ₘᵢₙ = 2 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᵒₖ₁/( Aᵀ - Aᵀₗₒ + sqrt(Δₗₒ) )
+        H⁺ₘᵢₙ = 2 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/( Aᵀ - Aᵀₗₒ + sqrt(Δₗₒ) )
     else
         H⁺ₘᵢₙ = Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃ *( -(Aᵀ - Aᵀₗₒ) + sqrt(Δₗₒ) )/2
     end
 
-    Δₕᵢ = (Aᵀ - Aᵀₕᵢ)^2 + 4 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᵒₖ₁/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
+    Δₕᵢ = (Aᵀ - Aᵀₕᵢ)^2 + 4 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
 
     if Aᵀ ≤ Aᵀₕᵢ
         H⁺ₘₐₓ = Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃ *( -(Aᵀ - Aᵀₕᵢ) + sqrt(Δₕᵢ) )/2
     else
-        H⁺ₘₐₓ = 2 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᵒₖ₁/( Aᵀ - Aᵀₕᵢ + sqrt(Δₕᵢ) )
+        H⁺ₘₐₓ = 2 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/( Aᵀ - Aᵀₕᵢ + sqrt(Δₕᵢ) )
     end
 
     # Initial guess for H⁺
@@ -238,14 +238,14 @@ solver that converges from any given initial value.
         # remember for next iteration current H⁺ concentration
         H⁺ₚᵣₑ = H⁺
 
-        (; Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ ) = FAᵀ(
+        Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = FAᵀ(
                               Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
                              )
 
         # Adapt bracketing interval
         if Aᵀᵣₐₜ > 0
            H⁺ₘᵢₙ = H⁺ₚᵣₑ
-        else if Aᵀᵣₐₜ < 0
+        elseif Aᵀᵣₐₜ < 0
            H⁺ₘₐₓ = H⁺ₚᵣₑ
         else
         # H⁺ is the root; unlikely but, one never knows
@@ -278,7 +278,7 @@ solver that converges from any given initial value.
 
             H⁺ᶠᵃᶜᵗᵒʳ = -Aᵀᵣₐₜ / ( ∂Aᵀᵣₐₜ∂H⁺ * H⁺ₚᵣₑ )
 
-            if abs(H⁺ᶠᵃᶜᵗᵒʳ) > pz_exp_threshold
+            if abs(H⁺ᶠᵃᶜᵗᵒʳ) > eᴴ⁺ᵗʰʳᵉˢʰ
                H⁺ = H⁺ₚᵣₑ * exp( H⁺ᶠᵃᶜᵗᵒʳ )
             else
                H⁺ = H⁺ₚᵣₑ + (H⁺ᶠᵃᶜᵗᵒʳ * H⁺ₚᵣₑ)
@@ -319,34 +319,13 @@ solver that converges from any given initial value.
     end # end while loop
 
     if H⁺ > 0
-        (; Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ ) = FAᵀ(
+        Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = FAᵀ(
             Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
         )
     else
         ∂Aᵀᵣₐₜ∂H⁺ = nothing
     end
-    return H⁺
-end
-
-"""
-     FboundsAᵀₙₕ₂ₒ(
-        Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ=0, H₂Sᵀ=0, Pᶜᵒᵉᶠᶠ
-     )
-Calculate the lower and upper bounds of the "non-water-selfionization"
- contributions to total alkalinity.
-"""
-@inline function FboundsAᵀₙₕ₂ₒ( 
-    Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ=0, H₂Sᵀ=0, Pᶜᵒᵉᶠᶠ
-)
-# greatest lower bound (infimum)
-    anw_lower =    -Pᵀ - Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴  - Pᶜᵒᵉᶠᶠ.Cᶠᵀ
-
-# least upper bound (supremum)
-    anw_upper =   Cᵀ + Cᵀ + Pᶜᵒᵉᶠᶠ.Cᴮᵀ +
-                  Pᵀ + Pᵀ + Siᵀ +
-                  NH₄ᵀ + H₂Sᵀ
-
-    return anw_lower, anw_upper
+    return -log10(H⁺)
 end
 
 """
@@ -397,12 +376,33 @@ Calculates the root for the 2nd order approximation of the
 end
 
 """
+     FboundsAᵀₙₕ₂ₒ(
+        Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ=0, H₂Sᵀ=0, Pᶜᵒᵉᶠᶠ
+     )
+Calculate the lower and upper bounds of the "non-water-selfionization"
+ contributions to total alkalinity.
+"""
+@inline function FboundsAᵀₙₕ₂ₒ( 
+    Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, Pᶜᵒᵉᶠᶠ
+)
+# greatest lower bound (infimum)
+    Aᵀₗₒ = -Pᵀ - Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴  - Pᶜᵒᵉᶠᶠ.Cᶠᵀ
+
+# least upper bound (supremum)
+    Aᵀₕᵢ = Cᵀ + Cᵀ + Pᶜᵒᵉᶠᶠ.Cᴮᵀ +
+                Pᵀ + Pᵀ + Siᵀ +
+              NH₄ᵀ + H₂Sᵀ
+
+    return Aᵀₗₒ, Aᵀₕᵢ
+end
+
+"""
     function FAᵀ(Cᵀ, Aᵀ, Bᵀ, Pᵀ, Siᵀ,  SO₄ᵀ, Fᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
     
 Evaluate the rational function form of the total alkalinity-pH equation
 """
 @inline function FAᵀ(
-    Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ=0, H₂Sᵀ=0, H⁺, Pᶜᵒᵉᶠᶠ
+    Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
     )
     
     return FACᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ) + 
@@ -574,7 +574,7 @@ end
 """
     function FAFᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FAFᵀ(Fᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function FAFᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
     # HF - F : n=1, m=1
     return Pᶜᵒᵉᶠᶠ.Cᶠᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁ + H⁺) - 1)
 end
@@ -582,7 +582,7 @@ end
 """
     function F∂A∂Fᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Fᵀ(Fᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function F∂A∂Fᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
     # HF - F : n=1, m=1
     return - Pᶜᵒᵉᶠᶠ.Cᶠᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁ + H⁺)^2)
 end
@@ -624,7 +624,7 @@ end
 """
 @inline function FAH₂O(H⁺, Pᶜᵒᵉᶠᶠ)
     # H2O - OH
-    return Pᶜᵒᵉᶠᶠ.Cᴴ²ᵒₖ₁/H⁺ -H⁺/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
+    return Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/H⁺ -H⁺/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
 end
 
 """
@@ -632,7 +632,7 @@ end
 """
 @inline function F∂A∂H₂O(H⁺, Pᶜᵒᵉᶠᶠ)
     # H2O - OH
-    return - Pᶜᵒᵉᶠᶠ.Cᴴ²ᵒₖ₁/H⁺^2 - 1/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
+    return - Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/H⁺^2 - 1/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
 end
 
 end # module
@@ -1091,11 +1091,12 @@ end # module DirectCubicCarbonSolver
 
 # ----------------------------------------------------------------------------------
 
-# using .CarbonSystemSolvers.DirectCubicCarbonSolver
-# using .CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver
-# 
-# include("carbon_chemistry_coefficients.jl")
-# 
+using .CarbonSystemSolvers.DirectCubicCarbonSolver
+using .CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver
+using .CarbonSystemSolvers.UniversalRobustCarbonSolver
+ 
+ include("carbon_chemistry_coefficients.jl")
+ 
 # ## This should go in the testing suite, eventually.
 # Θᶜ      = 25.0
 # Sᴬ      = 35.0
@@ -1178,6 +1179,20 @@ end # module DirectCubicCarbonSolver
 # println("Testing AlkalinityCorrectionCarbonSolver (Follows et al., 2006) for pCO2:")
 # (; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
 # AlkalinityCorrectionCarbonSystem(
+#         Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
+#         )
+# 
+# println("Cᵀ = ", Cᵀ * 1e6  )
+# println("Aᵀ = ", Aᵀ * 1e6  )
+# println("Pᵀ = ", Pᵀ * 1e6  )
+# println("Siᵀ = ", Siᵀ * 1e6  )
+# println("pH = " , pH       )
+# println("pCO₂ᵃᵗᵐ = ", pCO₂ᵃᵗᵐ * 1e6)
+# println("pCO₂ᵒᶜᵉ = ", pCO₂ᵒᶜᵉ * 1e6)
+# 
+# println("Testing UniversalRobustCarbonSolver (Munhoven 2013) for pCO2:")
+# (; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
+# UniversalRobustCarbonSystem(
 #         Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
 #         )
 # 
