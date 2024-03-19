@@ -1,7 +1,7 @@
 using
   Documenter,
   Literate,
-  ClimaOceanBiogeochemistry
+  ClimaOceanBiogeochemistry,
   ClimaOceanBiogeochemistry.CarbonSystemSolvers
 
 #####
