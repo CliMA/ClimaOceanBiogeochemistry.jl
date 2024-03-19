@@ -1,5 +1,3 @@
-pushfirst!(LOAD_PATH, joinpath(@__DIR__, "..")) # add ClimaOceanBiogeochemistry to environment stack
-
 using
   Documenter,
   Literate,
@@ -19,15 +17,19 @@ to_be_literated = [
   
 for file in to_be_literated
     filepath = joinpath(EXAMPLES_DIR, file)
-    Literate.markdown(filepath, OUTPUT_DIR; flavor = Literate.DocumenterFlavor())
+    Literate.markdown(filepath, OUTPUT_DIR;
+                      flavor = Literate.DocumenterFlavor())
 end
 
 #####
 ##### Build and deploy docs
 #####
 
+MiB = 2^20
+
 format = Documenter.HTML(collapselevel = 2,
                          prettyurls = get(ENV, "CI", nothing) == "true",
+                         size_threshold = 1MiB,
                          canonical = "https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/")
 
 pages = [
@@ -52,7 +54,7 @@ makedocs(sitename = "ClimaOceanBiogeochemistry.jl",
          format = format,
          pages = pages,
          doctest = true,
-         strict = true,
+         warnonly = [:cross_references],
          clean = true,
          checkdocs = :exports)
 
@@ -81,9 +83,8 @@ end
 
 withenv("GITHUB_REPOSITORY" => "CliMA/ClimaOceanBiogeochemistry.jl") do
     deploydocs(repo = "github.com/CliMA/ClimaOceanBiogeochemistry.jl.git",
-               versions = ["stable" => "v^", "v#.#.#", "dev" => "dev"],
+               versions = ["stable" => "v^", "dev" => "dev", "v#.#.#"],
                forcepush = true,
                devbranch = "main",
                push_preview = true)
 end
-

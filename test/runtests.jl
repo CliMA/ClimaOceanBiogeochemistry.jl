@@ -8,7 +8,8 @@ using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients, NutrientsPlanktonBac
 end
 
 @testset "NutrientsPlanktonBacteriaDetritus" begin
-    @test NutrientsPlanktonBacteriaDetritus() isa NutrientsPlanktonBacteriaDetritus
+    grid = RectilinearGrid(size=(4, 6, 8), extent=(1, 2, 3))
+    @test NutrientsPlanktonBacteriaDetritus(; grid) isa NutrientsPlanktonBacteriaDetritus
 end
 
 @testset "CarbonAlkalinityNutrients" begin
@@ -28,4 +29,3 @@ end
         false
     end
 end
-
