@@ -1,5 +1,5 @@
 using Oceananigans
-using Oceananigans.Architectures: arch_array
+using Oceananigans.Architectures: on_architecture
 using Oceananigans.Units: day
 using Oceananigans.Grids: znode, Center, AbstractTopology, Flat, Bounded
 using Oceananigans.BoundaryConditions: ImpenetrableBoundaryCondition, fill_halo_regions!
@@ -39,9 +39,9 @@ struct MultiNPZBD{P, B, Z, D, BDC, PNC, ZPC, FT, W} <: AbstractBiogeochemistry
     detritus_vertical_velocities :: W
 end
 
-arrayify(grid, n, t::Number) = arch_array(architecture(grid), [FT(t) for _ = 1:n])
-arrayify(grid, n, t::Array)  = arch_array(architecture(grid), t)
-arrayify(grid, n, t)         = arch_array(architecture(grid), [t for _ = 1:n])
+arrayify(grid, n, t::Number) = on_architecture(architecture(grid), [FT(t) for _ = 1:n])
+arrayify(grid, n, t::Array)  = on_architecture(architecture(grid), t)
+arrayify(grid, n, t)         = on_architecture(architecture(grid), [t for _ = 1:n])
 
 """
     MultiNPZDB(; grid, kw...)

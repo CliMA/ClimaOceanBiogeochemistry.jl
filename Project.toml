@@ -8,7 +8,7 @@ Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
 RootSolvers = "7181ea78-2dcb-4de3-ab41-2b8ab5a31e74"
 
 [compat]
-Oceananigans = "0.81"
+Oceananigans = "0.90.11"
 RootSolvers = "0.3"
 
 [extras]
