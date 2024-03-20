@@ -1090,14 +1090,13 @@ end # end function
 end # module DirectCubicCarbonSolver
 
 # ----------------------------------------------------------------------------------
-
-using .CarbonSystemSolvers.DirectCubicCarbonSolver
-using .CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver
-using .CarbonSystemSolvers.UniversalRobustCarbonSolver
- 
- include("carbon_chemistry_coefficients.jl")
- 
 # ## This should go in the testing suite, eventually.
+# using .CarbonSystemSolvers.DirectCubicCarbonSolver
+# using .CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver
+# using .CarbonSystemSolvers.UniversalRobustCarbonSolver
+#  
+#  include("carbon_chemistry_coefficients.jl")
+#  
 # Θᶜ      = 25.0
 # Sᴬ      = 35.0
 # Δpᵦₐᵣ   = 0.0
