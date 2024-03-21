@@ -26,7 +26,7 @@ grid = RectilinearGrid(size = Nz; z, topology = (Flat, Flat, Bounded))
 # We define a tracer diffusivity that mixes a lot near the surface
 # (in the top 50 m), and less down below.
 
-@inline κ(x, y, z, t) = 1e-4 + 1e-2 * exp(z / 25) + 1e-2 * exp(-(z + 1000) / 50)
+@inline κ(z, t) = 1e-4 + 1e-2 * exp(z / 25) + 1e-2 * exp(-(z + 1000) / 50)
 vertical_diffusion = VerticalScalarDiffusivity(; κ)
 
 # We put the pieces together.
