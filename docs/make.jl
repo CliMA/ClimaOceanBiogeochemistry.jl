@@ -13,6 +13,7 @@ const OUTPUT_DIR   = joinpath(@__DIR__, "src/literated")
 
 to_be_literated = [
     "single_column_nutrients_plankton_bacteria_detritus.jl",
+    "single_column_nutrients_plankton_bacteria_detritus.jl",
 ]
   
 for file in to_be_literated
