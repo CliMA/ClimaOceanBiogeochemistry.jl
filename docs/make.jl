@@ -1,7 +1,7 @@
 using
   Documenter,
   Literate,
-  ClimaOceanBiogeochemistry
+  ClimaOceanBiogeochemistry,
   ClimaOceanBiogeochemistry.CarbonSystemSolvers
 
 #####
@@ -48,6 +48,7 @@ pages = [
 makedocs(sitename = "ClimaOceanBiogeochemistry.jl",
          modules = [ClimaOceanBiogeochemistry, 
                     ClimaOceanBiogeochemistry.CarbonSystemSolvers,
+                    ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver,
                     ClimaOceanBiogeochemistry.CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver,
                     ClimaOceanBiogeochemistry.CarbonSystemSolvers.DirectCubicCarbonSolver],
          format = format,
