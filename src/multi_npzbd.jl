@@ -412,13 +412,13 @@ for n = 1:MAX_TYPES
             y = bgc.bacteria_yield
             γ = bgc.zooplankton_yield
 
-            D = @inbounds fields.D1[i, j, k] 
+            D = @inbounds fields.D1[i, j, k]
             B = @inbounds fields.B1[i, j, k]
             Z = @inbounds fields.Z1[i, j, k]
 
             return (bacteria_production(μᵇ, kᴰ, y, D, B)
                     - bacteria_mortality(mlinB, mqB, B)
-                    - zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) / γ) 
+                    - zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) / γ)
         end
 
         @inline function (bgc::MultiNPZBD)(i, j, k, grid, ::Val{:D$n}, clock, fields)
@@ -435,7 +435,7 @@ for n = 1:MAX_TYPES
 
             P = @inbounds fields.P1[i, j, k]
             Z = @inbounds fields.Z1[i, j, k]
-            D = @inbounds fields.D1[i, j, k] 
+            D = @inbounds fields.D1[i, j, k]
             B = @inbounds fields.B1[i, j, k]
 
             if sum(B) > 0
@@ -467,13 +467,18 @@ end
 
     P = @inbounds fields.P1[i, j, k]
     Z = @inbounds fields.Z1[i, j, k]
-    D = @inbounds fields.D2[i, j, k] 
+    D = @inbounds fields.D2[i, j, k]
     B = @inbounds fields.B1[i, j, k]
 
     if sum(B) > 0
-        return bacteria_mortality(mlinB, mqB, B) + phytoplankton_mortality(mlinP, mqP, P) + zooplankton_mortality(mlinZ, mqZ, Z) - bacteria_production(μᵇ, kᴰ, y, D, B) / y 
+        return (bacteria_mortality(mlinB, mqB, B)
+                + phytoplankton_mortality(mlinP, mqP, P)
+                + zooplankton_mortality(mlinZ, mqZ, Z)
+                -  bacteria_production(μᵇ, kᴰ, y, D, B) / y)
     elseif sum(B) == 0
-        return phytoplankton_mortality(mlinP, mqP, P) + zooplankton_mortality(mlinZ, mqZ, Z) - detritus_remineralization(r, D)
-    end 
+        return (phytoplankton_mortality(mlinP, mqP, P)
+                + zooplankton_mortality(mlinZ, mqZ, Z)
+                - detritus_remineralization(r, D))
+    end
 end
 =#
