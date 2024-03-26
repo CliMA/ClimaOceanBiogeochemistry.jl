@@ -30,7 +30,7 @@ grid = RectilinearGrid(size = Nz; z, topology = (Flat, Flat, Bounded))
 vertical_diffusion = VerticalScalarDiffusivity(; κ)
 
 # We put the pieces together.
-# The important line here is `biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid)`.
+# The important line here is `biogeochemistry = NutrientsPlanktonBacteriaDetritus(grid)`.
 # We use all default parameters.
 
 model = HydrostaticFreeSurfaceModel(; grid,
