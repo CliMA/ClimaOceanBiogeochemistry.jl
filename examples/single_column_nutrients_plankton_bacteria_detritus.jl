@@ -35,7 +35,7 @@ vertical_diffusion = VerticalScalarDiffusivity(; κ)
 
 model = HydrostaticFreeSurfaceModel(; grid,
                                     velocities = PrescribedVelocityFields(),
-                                    biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid),
+                                    biogeochemistry = NutrientsPlanktonBacteriaDetritus(grid),
                                     tracers = (:N, :P, :Z, :B, :D1, :D2),
                                     tracer_advection = WENO(),
                                     buoyancy = nothing,
