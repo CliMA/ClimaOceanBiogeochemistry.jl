@@ -21,7 +21,7 @@ N² = 1e-5 # buoyancy frequency
 g = 9.81 #Oceananigans.Buoyancy.g_Earth
 
 # Boundary fluxes
-heat_flux = Q = 200 # W m⁻² (positive => cooling)
+heat_flux              = Q = 200 # W m⁻² (positive => cooling)
 zonal_wind_stress      = τˣ = 0.0 # N m⁻²
 meridional_wind_stress = τʸ = 0.0 # N m⁻²
 
