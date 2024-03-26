@@ -6,6 +6,7 @@ include("../src/CarbonSystemSolvers.jl")
 using .CarbonSystemSolvers
 using .CarbonSystemSolvers.DirectCubicCarbonSolver: DirectCubicCarbonSystem
 using .CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver: AlkalinityCorrectionCarbonSystem
+using .CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
 
 # Test carbon chemistry coefficients
 Θᶜ      = 25.0
@@ -73,5 +74,16 @@ AlkalinityCorrectionCarbonSystem(
 @test pH            == 8.033988293659919
 @test pCO₂ᵃᵗᵐ * 1e6 == 280.0            
 @test pCO₂ᵒᶜᵉ * 1e6 == 417.9894057400246
+
+@test UniversalRobustCarbonSystem() isa CarbonSystem
+
+(; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
+UniversalRobustCarbonSystem(
+        Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
+        )
+
+@test pH            == 8.037606899889317
+@test pCO₂ᵃᵗᵐ * 1e6 == 280.0            
+@test pCO₂ᵒᶜᵉ * 1e6 == 414.18024641322165
 # NB, you wouldn't expect to get exactly the same results here 
 # because of the extra terms in the calcite alkalinity.

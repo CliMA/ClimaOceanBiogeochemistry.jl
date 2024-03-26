@@ -35,15 +35,13 @@ const c = Center()
    return (μ₀ * exp(z / λ) - m) * P
 end
 
-#####
-##### Set up the model
-#####
+# We set up the model
 
 grid = RectilinearGrid(size = 64,
-                       z = (-256, 0),
+                       z = (-256meters, 0),
                        topology = (Flat, Flat, Bounded))
 
-Qᵇ(x, y, t) = ifelse(t < 4days, 1e-7, 0.0)
+Qᵇ(t) = ifelse(t < 4days, 1e-7, 0.0)
 b_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(Qᵇ))
 
 model = HydrostaticFreeSurfaceModel(; grid,
@@ -54,7 +52,7 @@ model = HydrostaticFreeSurfaceModel(; grid,
                                     boundary_conditions = (; b=b_bcs))
 
 N² = 1e-5 # s⁻²
-bᵢ(x, y, z) = N² * z
+bᵢ(z) = N² * z
 set!(model, b=bᵢ, P=1e-2, e=1e-6)
 
 simulation = Simulation(model, Δt=10minutes, stop_time=8days)
@@ -74,7 +72,9 @@ simulation.output_writers[:fields] = JLD2OutputWriter(model, outputs;
 
 run!(simulation)
 
-using GLMakie
+# Now we load the saved output and plot
+
+using CairoMakie
 
 bt = FieldTimeSeries(filename, "b")
 et = FieldTimeSeries(filename, "e")
@@ -84,7 +84,7 @@ t = bt.times
 Nt = length(t)
 z = znodes(bt)
 
-fig = Figure(resolution=(1200, 600))
+fig = Figure(size=(800, 400))
 
 axb = Axis(fig[1, 1], ylabel="z (m)", xlabel="Buoyancy (m² s⁻³)")
 axe = Axis(fig[1, 2], ylabel="z (m)", xlabel="Turbulent kinetic energy (m² s²)")
@@ -93,10 +93,9 @@ axP = Axis(fig[1, 3], ylabel="z (m)", xlabel="Plankton concentration")
 xlims!(axe, -1e-5, 1e-3)
 xlims!(axP, 0, 0.1)
 
-slider = Slider(fig[2, 1:3], range=1:Nt, startvalue=1)
-n = slider.value
+n = Observable(1)
 
-title = @lift @sprintf("Convecting plankton at t = %d hours", t[$n] / hour)
+title = @lift @sprintf("Convecting plankton at t = %d days", t[$n] / day)
 Label(fig[0, 1:3], title)
 
 bn = @lift interior(bt[$n], 1, 1, :)
@@ -107,9 +106,10 @@ lines!(axb, bn, z)
 lines!(axe, en, z)
 lines!(axP, Pn, z)
 
-display(fig)
+fig
 
 record(fig, "simple_plankton_growth_death.mp4", 1:Nt, framerate=24) do nn
     n[] = nn
 end
 
+# ![](simple_plankton_growth_death.mp4)

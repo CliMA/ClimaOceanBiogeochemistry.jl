@@ -103,6 +103,540 @@ given the pCO₂, pH, and the carbon chemistry coefficients.
 end
 
 # ----------------------------------------------------------------------------------
+module UniversalRobustCarbonSolver
+export UniversalRobustCarbonSystem,
+        CarbonSystem
+
+using ..CarbonSystemSolvers: CarbonSystem, CarbonChemistryCoefficients, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, FCᵀHCO₃⁻
+#include("carbon_chemistry_coefficients.jl")
+
+"""
+    UniversalRobustCarbonSystem(
+            Θ       :: FT = 25.0,
+            Sᴬ      :: FT = 35.0,
+            Δpᵦₐᵣ   :: FT = 0.0,
+            Cᵀ      :: FT = 2050.0e-6,
+            Aᵀ      :: FT = 2350.0e-6,
+            Pᵀ      :: FT = 1.0e-6,
+            Siᵀ     :: FT = 15.0e-6,
+            pH      :: FT = 8.0,
+            pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
+            )
+
+Uses the Munhoven (2013) SolveSAPHE package to solve the distribution of carbon species
+"""
+@inline function UniversalRobustCarbonSystem(
+        Θᶜ      :: FT = 25.0,
+        Sᴬ      :: FT = 35.0,
+        Δpᵦₐᵣ   :: FT = 0.0,
+        Cᵀ      :: FT = 2050.0e-6,
+        Aᵀ      :: FT = 2350.0e-6,
+        Pᵀ      :: FT = 1.0e-6,
+        Siᵀ     :: FT = 15.0e-6,
+        pH      :: FT = 8.0,
+        pCO₂ᵃᵗᵐ :: FT = 280.0e-6) where {FT}
+
+    # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
+    Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+    
+    # Some logic here about choosing coefficient options, particularly Cᵈⁱᶜ 
+    Pᶜᵒᵉᶠᶠ = (Cᵈⁱᶜₖ₀ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
+              Cᵈⁱᶜₖ₁ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ₗ₀₀,
+              Cᵈⁱᶜₖ₂ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ₗ₀₀,
+              Cᵇₖ₁   = Cᶜᵒᵉᶠᶠ.Cᵇₖ₁,
+              Cᴾᴼ⁴ₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁,
+              Cᴾᴼ⁴ₖ₂ = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂,
+              Cᴾᴼ⁴ₖ₃ = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃,
+              Cˢⁱᵗₖ₁ = Cᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁,
+              Cᴴˢᴼ⁴ₖ₁= Cᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁,
+              Cᴴ²ˢₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁,
+              Cᴴᶠₖ₁  = Cᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁,
+              Cᴺᴴ⁴ₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁,
+              Cᴴ²ᴼₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁,
+              Cᴮᵀ    = Cᶜᵒᵉᶠᶠ.Cᴮᵀ,
+              Cᶠᵀ    = Cᶜᵒᵉᶠᶠ.Cᶠᵀ,
+              Cˢᴼ⁴   = Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴,
+              H⁺ₜoverH⁺₃ = Cᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃, # pH scale conversion factor
+    )
+
+    # Calculate pH from Aᵀ and Cᵀ and then calculate the rest of the carbon system
+    pH     = Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+    CO₂ˢᵒˡ = FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    HCO₃⁻  = FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    CO₃²⁻  = FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+    pCO₂ᵒᶜᵉ= CO₂ˢᵒˡ / Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ # correct for fugacity of CO₂ in seawater?
+
+    return CarbonSystem(pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ)
+end # end function
+
+"""
+    Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
+
+Calculate the pH of seawater given the total alkalinity Aᵀ, total carbon Cᵀ,
+total phosphate Pᵀ, total silicate Siᵀ, and the carbon chemistry coefficients.
+Uses the SolveSAPHE package (Munhoven et al., 2013), a universal, robust, pH 
+solver that converges from any given initial value.
+"""
+@inline function Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ, NH₄ᵀ=0, H₂Sᵀ=0, Δₕ₊=1e-8, eᴴ⁺ᵗʰʳᵉˢʰ=1, Iᴴ⁺ₘₐₓ=100) 
+   
+    Iᴴ⁺                = 0
+    Aᵀᵃᵇˢₘᵢₙ           = Inf
+    H⁺ᶠᵃᶜᵗᵒʳ           = 1
+
+    if pH == 8
+        # Get a better initial H+ guess
+        H⁺ᵢₙᵢ = FH⁺ᵢₙᵢ(Aᵀ, Cᵀ, Pᶜᵒᵉᶠᶠ)
+    else
+        # Calculate H⁺ from pH
+        H⁺ᵢₙᵢ = 10^-pH
+    end
+
+    # Calculate initial bounds of H+ concentration
+    Aᵀₗₒ, Aᵀₕᵢ = FboundsAᵀₙₕ₂ₒ( 
+                    Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, Pᶜᵒᵉᶠᶠ
+                  )
+
+    Δₗₒ = (Aᵀ - Aᵀₗₒ)^2 + 4 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
+
+    if Aᵀ ≥ Aᵀₗₒ
+        H⁺ₘᵢₙ = 2 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/( Aᵀ - Aᵀₗₒ + sqrt(Δₗₒ) )
+    else
+        H⁺ₘᵢₙ = Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃ *( -(Aᵀ - Aᵀₗₒ) + sqrt(Δₗₒ) )/2
+    end
+
+    Δₕᵢ = (Aᵀ - Aᵀₕᵢ)^2 + 4 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
+
+    if Aᵀ ≤ Aᵀₕᵢ
+        H⁺ₘₐₓ = Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃ *( -(Aᵀ - Aᵀₕᵢ) + sqrt(Δₕᵢ) )/2
+    else
+        H⁺ₘₐₓ = 2 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/( Aᵀ - Aᵀₕᵢ + sqrt(Δₕᵢ) )
+    end
+
+    # Initial guess for H⁺
+    H⁺ = max(min(H⁺ₘₐₓ, H⁺ᵢₙᵢ), H⁺ₘᵢₙ)             
+    #H⁺ = sqrt(H⁺ₘₐₓ * H⁺ₘᵢₙ) # Safer(?) than the above line
+
+    while abs(H⁺ᶠᵃᶜᵗᵒʳ) > Δₕ₊
+    # Stop iterations once |\delta{[H]}/[H]| < rdel
+    # <=> |(H⁺ - H⁺ₚᵣₑ)/H⁺ₚᵣₑ| = |EXP(-Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*H⁺ₚᵣₑ)) -1| < rdel
+    # |EXP(-Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*H⁺ₚᵣₑ)) -1| ~ |Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*H⁺ₚᵣₑ)|
+    # Alternatively:
+    # |\Delta pH| = |Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*H⁺ₚᵣₑ*LOG(10))|
+    #             ~ 1/LOG(10) * |\Delta [H]|/[H]
+    #             < 1/LOG(10) * rdel
+    # Hence |Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*H⁺)| < rdel
+    # rdel <-- Δₕ₊
+     
+        if Iᴴ⁺ ≥ Iᴴ⁺ₘₐₓ
+            H⁺ = nothing
+            break
+        end
+         
+        # Increase the iteration counter
+        Iᴴ⁺ += 1
+
+        # remember for next iteration current H⁺ concentration
+        H⁺ₚᵣₑ = H⁺
+
+        Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = FAᵀ(
+                              Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
+                             )
+
+        # Adapt bracketing interval
+        if Aᵀᵣₐₜ > 0
+           H⁺ₘᵢₙ = H⁺ₚᵣₑ
+        elseif Aᵀᵣₐₜ < 0
+           H⁺ₘₐₓ = H⁺ₚᵣₑ
+        else
+        # H⁺ is the root; unlikely but, one never knows
+           break
+        end
+
+        if abs(Aᵀᵣₐₜ) ≥ Aᵀᵃᵇˢₘᵢₙ/2
+        # if the function evaluation at the current point is
+        # not decreasing faster than with a bisection step (at least linearly)
+        # in absolute value take one bisection step on [ph_min, ph_max]
+        # ph_new = (ph_min + ph_max)/2d0
+        # In terms of [H]_new:
+        # [H]_new = 10**(-ph_new)
+        #         = 10**(-(ph_min + ph_max)/2d0)
+        #         = SQRT(10**(-(ph_min + phmax)))
+        #         = SQRT(H⁺ₘₐₓ * H⁺ₘᵢₙ)
+     
+            H⁺        = sqrt(H⁺ₘₐₓ * H⁺ₘᵢₙ)
+            H⁺ᶠᵃᶜᵗᵒʳ  = ( H⁺ - H⁺ₚᵣₑ ) / H⁺ₚᵣₑ 
+        else
+        # dAᵀᵣₐₜ/dpH = dAᵀᵣₐₜ/d[H] * d[H]/dpH
+        #           = -∂Aᵀᵣₐₜ∂H⁺ * LOG(10) * [H]
+        # \Delta pH = -Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*d[H]/dpH) = Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*[H]*LOG(10))
+        # pH_new = pH_old + \deltapH
+        # [H]_new = 10**(-pH_new)
+        #         = 10**(-pH_old - \Delta pH)
+        #         = [H]_old * 10**(-Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*[H]_old*LOG(10)))
+        #         = [H]_old * EXP(-LOG(10)*Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*[H]_old*LOG(10)))
+        #         = [H]_old * EXP(-Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*[H]_old))
+
+            H⁺ᶠᵃᶜᵗᵒʳ = -Aᵀᵣₐₜ / ( ∂Aᵀᵣₐₜ∂H⁺ * H⁺ₚᵣₑ )
+
+            if abs(H⁺ᶠᵃᶜᵗᵒʳ) > eᴴ⁺ᵗʰʳᵉˢʰ
+               H⁺ = H⁺ₚᵣₑ * exp( H⁺ᶠᵃᶜᵗᵒʳ )
+            else
+               H⁺ = H⁺ₚᵣₑ + (H⁺ᶠᵃᶜᵗᵒʳ * H⁺ₚᵣₑ)
+            end
+
+            if H⁺ < H⁺ₘᵢₙ
+            # if [H]_new < [H]_min
+            # i.e., if ph_new > ph_max then
+            # take one bisection step on [ph_prev, ph_max]
+            # ph_new = (ph_prev + ph_max)/2d0
+            # In terms of [H]_new:
+            # [H]_new = 10**(-ph_new)
+            #         = 10**(-(ph_prev + ph_max)/2d0)
+            #         = SQRT(10**(-(ph_prev + phmax)))
+            #         = SQRT([H]_old*10**(-ph_max))
+            #         = SQRT([H]_old * H⁺ₘᵢₙ)
+               H⁺        = sqrt( H⁺ₚᵣₑ * H⁺ₘᵢₙ )
+               H⁺ᶠᵃᶜᵗᵒʳ  = ( H⁺ - H⁺ₚᵣₑ ) / H⁺ₚᵣₑ 
+            end
+
+            if H⁺ > H⁺ₘₐₓ 
+            # if [H]_new > [H]_max
+            # i.e., if ph_new < ph_min, then
+            # take one bisection step on [ph_min, ph_prev]
+            # ph_new = (ph_prev + ph_min)/2d0
+            # In terms of [H]_new:
+            # [H]_new = 10**(-ph_new)
+            #         = 10**(-(ph_prev + ph_min)/2d0)
+            #         = SQRT(10**(-(ph_prev + ph_min)))
+            #         = SQRT([H]_old*10**(-ph_min))
+            #         = SQRT([H]_old * zhmax)
+               H⁺       = sqrt( H⁺ₚᵣₑ * H⁺ₘₐₓ )
+               H⁺ᶠᵃᶜᵗᵒʳ = ( H⁺ - H⁺ₚᵣₑ ) / H⁺ₚᵣₑ
+            end
+        end
+
+        Aᵀᵃᵇˢₘᵢₙ = min( abs(Aᵀᵣₐₜ), Aᵀᵃᵇˢₘᵢₙ)
+    end # end while loop
+
+    if H⁺ > 0
+        Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = FAᵀ(
+            Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
+        )
+    else
+        ∂Aᵀᵣₐₜ∂H⁺ = nothing
+    end
+    return -log10(H⁺)
+end
+
+"""
+    FH⁺ᵢₙᵢ(Aᵀ, Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+
+Calculates the root for the 2nd order approximation of the
+ Cᵀ-Bᵀ-Aᶜ equation for [H+] (reformulated as a cubic polynomial)
+ around the local minimum, if it exists.
+
+ Returns * 1e-03 if Aᶜ <= 0
+         * 1e-10 if Aᶜ >= 2*Cᵀ + Bᵀ
+         * 1e-07 if 0 < Aᶜ < 2*Cᵀ + Bᵀ
+            and the 2nd order approximation does not have a solution
+
+"""
+@inline function FH⁺ᵢₙᵢ(Aᶜ, Cᵀ, Pᶜᵒᵉᶠᶠ)
+
+    if Aᶜ <= 0
+        return 1e-3
+    elseif Aᶜ >= (2*Cᵀ + Pᶜᵒᵉᶠᶠ.Cᴮᵀ)
+        return 1e-10
+    else
+        Rᶜᴬ = Cᵀ/Aᶜ
+        Rᴮᴬ = Pᶜᵒᵉᶠᶠ.Cᴮᵀ/Aᶜ
+
+        # Coefficients of the cubic polynomial
+        za2 = Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ) + Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*(1-Rᶜᴬ)
+        za1 = Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ - Rᶜᴬ) + Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*(1 - (Rᶜᴬ+Rᶜᴬ))
+        za0 = Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ - (Rᶜᴬ+Rᶜᴬ))
+
+        # Taylor expansion around the minimum 
+        #discriminant of the quadratic equation 
+        #for the minimum close to the root
+        zd = za2*za2 - 3*za1 
+
+        if zd > 0
+            if za2 < 0
+                zhmin = (-za2 + sqrt(zd))/3
+            else
+                zhmin = -za1/(za2 + sqrt(zd))
+            end
+
+            return zhmin + sqrt(-(za0 + zhmin*(za1 + zhmin*(za2 + zhmin)))/sqrt(zd))
+        else
+            return 1e-7
+        end
+    end
+end
+
+"""
+     FboundsAᵀₙₕ₂ₒ(
+        Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ=0, H₂Sᵀ=0, Pᶜᵒᵉᶠᶠ
+     )
+Calculate the lower and upper bounds of the "non-water-selfionization"
+ contributions to total alkalinity.
+"""
+@inline function FboundsAᵀₙₕ₂ₒ( 
+    Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, Pᶜᵒᵉᶠᶠ
+)
+# greatest lower bound (infimum)
+    Aᵀₗₒ = -Pᵀ - Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴  - Pᶜᵒᵉᶠᶠ.Cᶠᵀ
+
+# least upper bound (supremum)
+    Aᵀₕᵢ = Cᵀ + Cᵀ + Pᶜᵒᵉᶠᶠ.Cᴮᵀ +
+                Pᵀ + Pᵀ + Siᵀ +
+              NH₄ᵀ + H₂Sᵀ
+
+    return Aᵀₗₒ, Aᵀₕᵢ
+end
+
+"""
+    function FAᵀ(Cᵀ, Aᵀ, Bᵀ, Pᵀ, Siᵀ,  SO₄ᵀ, Fᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+    
+Evaluate the rational function form of the total alkalinity-pH equation
+"""
+@inline function FAᵀ(
+    Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
+    )
+    
+    return FACᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ) + 
+           FAPᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ) + 
+           FASiᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ) +
+           FANH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ) + 
+           FAH₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ) +
+           FABᵀ(H⁺, Pᶜᵒᵉᶠᶠ) +  
+           FASO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ) + 
+           FAFᵀ(H⁺, Pᶜᵒᵉᶠᶠ) +
+           FAH₂O(H⁺, Pᶜᵒᵉᶠᶠ) - 
+           Aᵀ,
+           F∂A∂Cᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ) + 
+           F∂A∂Pᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ) + 
+           F∂A∂Siᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ) +
+           F∂A∂NH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ) + 
+           F∂A∂H₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ) + 
+           F∂A∂Bᵀ(H⁺, Pᶜᵒᵉᶠᶠ) + 
+           F∂A∂SO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ) + 
+           F∂A∂Fᵀ(H⁺, Pᶜᵒᵉᶠᶠ) +
+           F∂A∂H₂O(H⁺, Pᶜᵒᵉᶠᶠ)
+end
+
+"""
+    function FACᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function FACᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+    # H2CO3 - HCO3 - CO3 : n=2, m=0
+    return Cᵀ * (( 2 * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * 
+                       Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ + 
+                  H⁺ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁
+                 )/(
+                       Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ *
+                       Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ + 
+                  H⁺*( Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ + H⁺ )
+                 ))
+end
+    
+"""
+    F∂A∂Cᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function F∂A∂Cᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+    # H2CO3 - HCO3 - CO3 : n=2, m=0
+    return - Cᵀ * (
+                    ( Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * 
+                      Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ *
+                      Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ + 
+                      H⁺ * ( 4 * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ *
+                                 Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ +
+                            H⁺ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁)
+                    )/(
+                       Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ *
+                       Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ + 
+                       H⁺*( Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ + H⁺ )
+                      )^2
+                  ) 
+end
+    
+"""
+    function FABᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function FABᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+    # B(OH)3 - B(OH)4 : n=1, m=0
+    return Pᶜᵒᵉᶠᶠ.Cᴮᵀ * (Pᶜᵒᵉᶠᶠ.Cᵇₖ₁/(Pᶜᵒᵉᶠᶠ.Cᵇₖ₁ + H⁺))   
+end
+
+"""
+    function F∂A∂Bᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function F∂A∂Bᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+    # B(OH)3 - B(OH)4 : n=1, m=0
+    return - Pᶜᵒᵉᶠᶠ.Cᴮᵀ * ( 
+                            Pᶜᵒᵉᶠᶠ.Cᵇₖ₁
+                          )/(
+                            Pᶜᵒᵉᶠᶠ.Cᵇₖ₁ + H⁺
+                          )^2  
+end
+
+"""
+    function FAPᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function FAPᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+    # H3PO4 - H2PO4 - HPO4 - PO4 : n=3, m=1
+    return Pᵀ * 3 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
+                     Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * 
+                     Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃ + 
+               H⁺ * ( 2 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
+                          Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ + 
+                     H⁺ * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁
+                    )
+                )/(
+                 Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
+                 Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * 
+                 Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃ + 
+                 H⁺ * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
+                       Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ + 
+                       H⁺ * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ + H⁺)
+                      )
+                - 1 ) 
+end
+
+"""
+    function F∂A∂Pᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function F∂A∂Pᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+    # H3PO4 - H2PO4 - HPO4 - PO4 : n=3, m=1
+    return - Pᵀ * ((Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
+                    Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * 
+                    Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
+                    Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ *
+                    Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃ + 
+                    H⁺ * ( 4 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ *
+                               Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
+                               Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * 
+                               Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃ + 
+                      H⁺ * ( 9 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
+                                 Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * 
+                                 Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃ +
+                                 Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ *
+                                 Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
+                                 Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ +
+                        H⁺ * ( 4 * Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
+                                   Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ +
+                          H⁺ * ( Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ ))))         
+                   )/(
+                    Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
+                    Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * 
+                    Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃ + 
+                    H⁺ * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
+                          Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ + 
+                          H⁺ * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ + H⁺)
+                         )
+                   )^2
+                  ) 
+end
+
+"""
+    function FASiᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function FASiᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+    # H4SiO4 - H3SiO4 : n=1, m=0
+    return Siᵀ * (Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁/(Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁ + H⁺))
+end
+
+"""
+    function F∂A∂Siᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function F∂A∂Siᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+    # H4SiO4 - H3SiO4 : n=1, m=0
+    return - Siᵀ * (Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁/(Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁ + H⁺)^2)
+end
+
+"""
+    function FASO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function FASO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+    # HSO4 - SO4 : n=1, m=1
+    return Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * (Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ + H⁺) - 1)
+end
+
+"""
+    function F∂A∂SO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function F∂A∂SO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+    # HSO4 - SO4 : n=1, m=1
+    return - Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * (Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ + H⁺)^2)
+end
+
+"""
+    function FAFᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function FAFᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+    # HF - F : n=1, m=1
+    return Pᶜᵒᵉᶠᶠ.Cᶠᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁ + H⁺) - 1)
+end
+
+"""
+    function F∂A∂Fᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function F∂A∂Fᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+    # HF - F : n=1, m=1
+    return - Pᶜᵒᵉᶠᶠ.Cᶠᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁ + H⁺)^2)
+end
+
+"""
+    function FANH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function FANH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+    # NH4 - NH3 : n=1, m=0
+    return NH₄ᵀ * (Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁ + H⁺))
+end
+
+"""
+    function F∂A∂NH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function F∂A∂NH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+    # NH4 - NH3 : n=1, m=0
+    return - NH₄ᵀ * (Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁ + H⁺)^2)
+end
+
+"""
+    function FAH₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function FAH₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+    # H2S - HS : n=1, m=0
+    return H₂Sᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁ + H⁺))
+end
+
+"""
+    function F∂A∂H₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function F∂A∂H₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+    # H2S - HS : n=1, m=0
+    return - H₂Sᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁ + H⁺)^2)
+end
+
+"""
+    function FAH₂O(H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function FAH₂O(H⁺, Pᶜᵒᵉᶠᶠ)
+    # H2O - OH
+    return Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/H⁺ -H⁺/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
+end
+
+"""
+    function F∂A∂H₂O(H⁺, Pᶜᵒᵉᶠᶠ)
+"""
+@inline function F∂A∂H₂O(H⁺, Pᶜᵒᵉᶠᶠ)
+    # H2O - OH
+    return - Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/H⁺^2 - 1/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
+end
+
+end # module
+# ----------------------------------------------------------------------------------
 module AlkalinityCorrectionCarbonSolver
 export AlkalinityCorrectionCarbonSystem,
         CarbonSystem
@@ -555,104 +1089,4 @@ end # end function
 
 end # module DirectCubicCarbonSolver
 
-# ----------------------------------------------------------------------------------
-
-# using .CarbonSystemSolvers.DirectCubicCarbonSolver
-# using .CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver
-# 
-# include("carbon_chemistry_coefficients.jl")
-# 
-# ## This should go in the testing suite, eventually.
-# Θᶜ      = 25.0
-# Sᴬ      = 35.0
-# Δpᵦₐᵣ   = 0.0
-# Cᵀ      = 2050e-6 # umol/kg to mol/kg
-# Aᵀ      = 2350e-6 # umol/kg to mol/kg
-# pCO₂ᵃᵗᵐ = 280e-6  # uatm to atm
-# pH      = 8.0
-# FT = Float64
-# 
-# Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
-# """
-# #Check the values of calculated constants
-# println("Cᵈⁱᶜₖ₀ = ",       Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀     )
-# println("Cᵈⁱᶜₖ₁ᵣ₉₃ = ",    Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ᵣ₉₃  )
-# println("Cᵈⁱᶜₖ₂ᵣ₉₃ = ",    Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ᵣ₉₃  )
-# println("Cᵈⁱᶜₖ₁ₘ₉₅ = ",    Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ₘ₉₅  )
-# println("Cᵈⁱᶜₖ₂ₘ₉₅ = ",    Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ₘ₉₅  )
-# println("Cᵈⁱᶜₖ₁ₗ₀₀ = ",     Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ₗ₀₀  )
-# println("Cᵈⁱᶜₖ₂ₗ₀₀ = ",     Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ₗ₀₀  )
-# println("Cᵇₖ₁ = ",         Cᶜᵒᵉᶠᶠ.Cᵇₖ₁       )
-# println("Cᴴ²ᴼₖ₁ = ",       Cᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁     )
-# println("Cᴾᴼ⁴ₖ₁ = ",       Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁     )
-# println("Cᴾᴼ⁴ₖ₂ = ",       Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂     )
-# println("Cᴾᴼ⁴ₖ₃ = ",       Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃     )
-# println("Cˢⁱᵗₖ₁ = ",       Cᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁     )
-# println("Cᴴ²ˢₖ₁ = ",       Cᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁     )
-# println("Cᴺᴴ⁴ₖ₁ = ",       Cᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁     )
-# println("Cᴴᶠᵦ₁ = ",        Cᶜᵒᵉᶠᶠ.Cᴴᶠᵦ₁     )
-# println("Cᴴᶠₖ₁ = ",        Cᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁      )
-# println("Cᴴˢᴼ⁴ₖ₁ = ",      Cᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁    )
-# println("Cᶜᵃˡᶜⁱᵗᵉₛₚ = ",   Cᶜᵒᵉᶠᶠ.Cᶜᵃˡᶜⁱᵗᵉₛₚ  )
-# println("Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = ", Cᶜᵒᵉᶠᶠ.Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ)
-# println("Cᴮᵀ = " ,        Cᶜᵒᵉᶠᶠ.Cᴮᵀ         )
-# println("Cᶠᵀ = " ,        Cᶜᵒᵉᶠᶠ.Cᶠᵀ         )
-# println("Cᶜᵃ = ",         Cᶜᵒᵉᶠᶠ.Cᶜᵃ         )
-# println("Cˢᴼ⁴ = ",        Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴        )
-# """
-# 
-# @assert round(log(Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀), digits = 4)     == -3.5617 # Handbook (2007)
-# @assert round(log(Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ᵣ₉₃), digits = 4)  == -13.4847 # Handbook (1994)
-# @assert round(log(Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ᵣ₉₃), digits = 4)  == -20.5504 # Handbook (1994)
-# #@assert Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ₘ₉₅  ==
-# #@assert Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ₘ₉₅  ==
-# @assert round(log10(Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ₗ₀₀), digits = 4)   == -5.8472 # Handbook (2007)
-# @assert round(log10(Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ₗ₀₀), digits = 4)   == -8.9660 # Handbook (2007)
-# @assert round(log(Cᶜᵒᵉᶠᶠ.Cᵇₖ₁), digits = 4)       == -19.7964 # Handbook (2007)
-# @assert round(log(Cᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁*Cᶜᵒᵉᶠᶠ.H⁺ₛoverH⁺ₜ)-0.015, digits = 3)     == -30.434 # Handbook (2007)
-# @assert round(log(Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁*Cᶜᵒᵉᶠᶠ.H⁺ₛoverH⁺ₜ)-0.015, digits = 2)     == -3.71 # Handbook (2007)
-# @assert round(log(Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂*Cᶜᵒᵉᶠᶠ.H⁺ₛoverH⁺ₜ)-0.015, digits = 3)     == -13.727 # Handbook (2007)
-# @assert round(log(Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃*Cᶜᵒᵉᶠᶠ.H⁺ₛoverH⁺ₜ)-0.015, digits = 2)     == -20.24 # Handbook (2007)
-# @assert round(log(Cᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁*Cᶜᵒᵉᶠᶠ.H⁺ₛoverH⁺ₜ)-0.015, digits = 2)     == -21.61 # Handbook (2007)
-# @assert round(-log10(Cᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁*Cᶜᵒᵉᶠᶠ.H⁺ₛoverH⁺ₜ), digits = 2)     == 6.51 # Lewis and Wallace (1998)
-# @assert round(-log10(Cᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁*Cᶜᵒᵉᶠᶠ.H⁺ₛoverH⁺ₜ), digits = 2)     == 9.26 # Lewis and Wallace (1998)
-# #@assert Cᶜᵒᵉᶠᶠ.Cᴴᶠᵦ₁      ==
-# @assert round(log(Cᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁), digits = 2)       == -6.09 # Handbook (2007)
-# @assert round(log(Cᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁), digits = 2)     == -2.30 # Handbook (2007)
-# #@assert Cᶜᵒᵉᶠᶠ.Cᶜᵃˡᶜⁱᵗᵉₛₚ  ==
-# #@assert Cᶜᵒᵉᶠᶠ.Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ==
-# #@assert Cᶜᵒᵉᶠᶠ.Cᴮᵀ        ==
-# #@assert Cᶜᵒᵉᶠᶠ.Cᶠᵀ        ==
-# #@assert Cᶜᵒᵉᶠᶠ.Cᶜᵃ        ==
-# #@assert Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴       ==
-# println("Testing DirectCubicCarbonSolver for pCO2:")
-# (; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
-# DirectCubicCarbonSystem(
-#         Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, pH, pCO₂ᵃᵗᵐ,
-#         )
-# 
-# println("Cᵀ = ", Cᵀ * 1e6  )
-# println("Aᵀ = ", Aᵀ * 1e6  )
-# println("pH = " , pH       )
-# println("pCO₂ᵃᵗᵐ = ", pCO₂ᵃᵗᵐ * 1e6)
-# println("pCO₂ᵒᶜᵉ = ", pCO₂ᵒᶜᵉ * 1e6)
-# println("")
-# 
-# Pᵀ = 0.5e-6  # umol/kg to mol/kg
-# Siᵀ = 7.5e-6 # umol/kg to mol/kg
-# 
-# println("Testing AlkalinityCorrectionCarbonSolver (Follows et al., 2006) for pCO2:")
-# (; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
-# AlkalinityCorrectionCarbonSystem(
-#         Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
-#         )
-# 
-# println("Cᵀ = ", Cᵀ * 1e6  )
-# println("Aᵀ = ", Aᵀ * 1e6  )
-# println("Pᵀ = ", Pᵀ * 1e6  )
-# println("Siᵀ = ", Siᵀ * 1e6  )
-# println("pH = " , pH       )
-# println("pCO₂ᵃᵗᵐ = ", pCO₂ᵃᵗᵐ * 1e6)
-# println("pCO₂ᵒᶜᵉ = ", pCO₂ᵒᶜᵉ * 1e6)
-# println("NB, you wouldn't expect to get exactly the same results here \nbecause of the extra terms in the calcite alkalinity.")
 end
