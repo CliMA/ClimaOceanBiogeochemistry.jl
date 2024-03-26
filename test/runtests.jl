@@ -9,7 +9,7 @@ end
 
 @testset "NutrientsPlanktonBacteriaDetritus" begin
     grid = RectilinearGrid(size=(4, 6, 8), extent=(1, 2, 3))
-    @test NutrientsPlanktonBacteriaDetritus(; grid) isa NutrientsPlanktonBacteriaDetritus
+    @test NutrientsPlanktonBacteriaDetritus(grid) isa NutrientsPlanktonBacteriaDetritus
 end
 
 @testset "CarbonAlkalinityNutrients" begin
