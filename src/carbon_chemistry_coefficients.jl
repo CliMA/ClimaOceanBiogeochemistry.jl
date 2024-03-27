@@ -44,8 +44,8 @@ Return dissociation coefficients necessary to solve for the distribution of carb
 # Also need to convert from Absolute Pressure, Pᴬ, to Applied Pressure in bars, the pressure relative to (1x) atm
 
     return CarbonChemistryCoefficients(
-            Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀),
-            Fᵈⁱᶜₖₛₒₗₒ(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀),
+            Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, Pᵈⁱᶜₖₛₒₗₐ),
+            Fᵈⁱᶜₖₛₒₗₒ(Θᴷ, Sᵖ, Pᵈⁱᶜₖₛₒₗₒ),
             Fᵈⁱᶜₖ₀(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀),
             Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₁ᵣ₉₃),
             Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₂ᵣ₉₃),
@@ -289,7 +289,7 @@ end
     Note      : currently no pressure correction
 """
 @inline function Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, params = Pᵈⁱᶜₖₛₒₗₐ)
-    (; a₀, a₁, a₂, b₀, b₁, b₂) = params()
+    (; a₀, a₁, a₂, a₃, b₀, b₁, b₂) = params()
     return exp(
                a₀ + 
                a₁/Θᴷ₁₀₀(Θᴷ) +
@@ -306,10 +306,10 @@ end
 Base.@kwdef struct Pᵈⁱᶜₖₛₒₗₒ{FT}
     a₀ :: FT = -1636.75
     a₁ :: FT = -  12.0408
-    a₂ :: FT =     3.16528e-5
+    a₂ :: FT = -   0.0327957 
+    a₃ :: FT =     3.16528e-5
     b₀ :: FT =    57.7
     b₁ :: FT = -   0.118
-    b₂ :: FT =     0.0047036
     p₁ :: FT =     1.01325 # p_bar_oneatmosphere, Handbook (2007)
 end
 
@@ -325,7 +325,7 @@ pH scale  : N/A
 Note      : currently no pressure correction
 """
 @inline function Fᵈⁱᶜₖₛₒₗₒ(Θᴷ, Sᵖ, params = Pᵈⁱᶜₖₛₒₗₒ)
-    (; a₀, a₁, a₂, b₀, b₁, b₂, p₁) = params()
+    (; a₀, a₁, a₂, a₃, b₀, b₁, p₁) = params()
 
 #  "x2" term often neglected (assumed=1) in applications of Weiss (1974) eq.9
 #   x2 = 1 - x1 = 1 - xCO2 (it is very close to 1, but not quite)

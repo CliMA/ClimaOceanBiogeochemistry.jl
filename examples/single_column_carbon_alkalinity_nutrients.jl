@@ -2,9 +2,11 @@
 #
 # This example illustrates how to use ClimaOceanBiogeochemistry's
 # `CarbonAlkalinityNutrients` model in a single column context.
+using KernelAbstractions.Extras.LoopInfo: @unroll
 
 using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
+include("../src/carbon_chemistry_coefficients.jl")
 
 using Oceananigans
 using Oceananigans.Units
@@ -134,7 +136,7 @@ solubility/activity of CO₂ in seawater.
 """
 @inline function compute_co₂_flux!(simulation)
 # applied pressure in atm (i.e. Pˢᵘʳᶠ-Pᵃᵗᵐ)
-    Δpᵦₐᵣ           = 0
+    Δpᵦₐᵣ           = 0.0
 
 # conversion factor from cm/hr to m/s
     cmhr⁻¹_per_ms⁻¹ = 1 / 3.6e5
@@ -156,36 +158,42 @@ solubility/activity of CO₂ in seawater.
     Siᵀ     = silicate_conc       
     pH      = initial_pH_guess 
 
-# access model fields
-    Θᶜ       = model.tracers.T
-    Sᴬ       = model.tracers.S
-    Cᵀ       = model.tracers.DIC
-    Aᵀ       = model.tracers.ALK
-    Pᵀ       = model.tracers.PO₄
     co₂_flux = model.tracers.DIC.boundary_conditions.top.condition
+    flux = co₂_flux.data
 
-# compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
-    (; pCO₂ᵒᶜᵉ) = 
-    UniversalRobustCarbonSystem(
-            Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
-            )
+    @inbounds @unroll for i in 1:co₂_flux.grid.Nx
+        @inbounds @unroll for j in 1:co₂_flux.grid.Ny
+        # access model fields
+            Θᶜ       = model.tracers.T[i,j,model.grid.Nz+1]
+            Sᴬ       = model.tracers.S[i,j,model.grid.Nz+1]
+            Cᵀ       = model.tracers.DIC[i,j,model.grid.Nz+1]
+            Aᵀ       = model.tracers.ALK[i,j,model.grid.Nz+1]
+            Pᵀ       = model.tracers.PO₄[i,j,model.grid.Nz+1]
 
-# compute schmidt number for DIC
-    Sᶜᵈⁱᶜ =  2116.8 - 
-              136.25 * Θᶜ + 
-                4.7353 * Θᶜ^2 - 
-                0.092307 * Θᶜ^3 + 
-                7.555e-4 * Θᶜ^4
+        # compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
+            (; pCO₂ᵒᶜᵉ) = 
+            UniversalRobustCarbonSystem(
+                    Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
+                    )
 
-# compute gas exchange coefficient/piston velocity
-    Kʷ =  (Kʷₐᵥₑ * U₁₀^2 * fopen ) / sqrt(Sᶜᵈⁱᶜ/660)    
-    
-    Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+        # compute schmidt number for DIC
+            Sᶜᵈⁱᶜ =  2116.8 - 
+                      136.25 * Θᶜ + 
+                        4.7353 * Θᶜ^2 - 
+                        0.092307 * Θᶜ^3 + 
+                        7.555e-4 * Θᶜ^4
 
-# compute co₂ flux
-    flux = Kʷ * 
-        (pCO₂ᵃᵗᵐ * Cᶜᵒᵉᶠᶠ.Fᵈⁱᶜₖₛₒₗₐ * - 
-         pCO₂ᵒᶜᵉ * Cᶜᵒᵉᶠᶠ.Fᵈⁱᶜₖ₀ * Cᶜᵒᵉᶠᶠ.Fᵈⁱᶜₖₛₒₗₒ)
+        # compute gas exchange coefficient/piston velocity
+            Kʷ =  (Kʷₐᵥₑ * U₁₀^2 * fopen ) / sqrt(Sᶜᵈⁱᶜ/660)    
+            
+            Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+
+        # compute co₂ flux
+            flux[i,j] = Kʷ * 
+                (pCO₂ᵃᵗᵐ * Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₐ * - 
+                 pCO₂ᵒᶜᵉ * Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₒ)
+        end
+    end
 
     set!(co₂_flux, flux)
     return nothing
@@ -207,23 +215,24 @@ run!(simulation)
 #
 # All that's left is to visualize the results.
 
-bt   = FieldTimeSeries(filename, "b")
+Tt   = FieldTimeSeries(filename, "T")
+St   = FieldTimeSeries(filename, "S")
 et   = FieldTimeSeries(filename, "e")
 DICt = FieldTimeSeries(filename, "DIC")
-Alkt = FieldTimeSeries(filename, "Alk")
+Alkt = FieldTimeSeries(filename, "ALK")
 PO₄t = FieldTimeSeries(filename, "PO₄")
 NO₃t = FieldTimeSeries(filename, "NO₃")
 DOPt = FieldTimeSeries(filename, "DOP")
 POPt = FieldTimeSeries(filename, "POP")
 Fet  = FieldTimeSeries(filename, "Fe")
 
-t = bt.times
+t  = Tt.times
 nt = length(t)
-z = znodes(bt)
+z  = znodes(Tt)
 
 fig = Figure(size=(1200, 600))
 
-axb = Axis(fig[1, 1], xlabel="Buoyancy (m² s⁻³)", ylabel="z (m)")
+axb = Axis(fig[1, 1], xlabel="Temperature (K)", ylabel="z (m)")
 axe = Axis(fig[1, 2], xlabel="Turbulent kinetic energy (m² s²)")
 axP = Axis(fig[1, 3], xlabel="Concentration (mmol)")
 axN = Axis(fig[1, 4], xlabel="Nutrient concentration (mmol)")
@@ -237,7 +246,7 @@ n = slider.value
 title = @lift @sprintf("Convecting plankton at t = %d hours", t[$n] / hour)
 Label(fig[0, 1:4], title)
 
-bn = @lift interior(bt[$n], 1, 1, :)
+Tn = @lift interior(Tt[$n], 1, 1, :)
 en = @lift interior(et[$n], 1, 1, :)
 DICn = @lift interior(DICt[$n], 1, 1, :) 
 Alkn = @lift interior(Alkt[$n], 1, 1, :) 
@@ -246,7 +255,7 @@ NO₃n = @lift interior(NO₃t[$n], 1, 1, :)
 DOPn = @lift interior(DOPt[$n], 1, 1, :) 
 Fen  = @lift interior(Fet[$n], 1, 1, :)  
 
-lines!(axb, bn, z)
+lines!(axb, Tn, z)
 lines!(axe, en, z)
 
 lines!(axP, DICn, z, label="DIC")
