@@ -1,17 +1,24 @@
 using Oceananigans
+using Oceananigans.Units
 using ClimaOceanBiogeochemistry: MultiNPZBD
 using SeawaterPolynomials
 using SeawaterPolynomials.TEOS10: TEOS10EquationOfState
 using GLMakie
 
 # Resolution
-Nx = Ny = 10
-Nz = 10
+Nx = Ny = 64
+Nz = 64
 
-Lx = Ly = 100 # meters 
+# Domain
+Lx = 100
+Ly = 200 # meters
 Lz = 100 # meters
 
-grid = RectilinearGrid(size = (Nx, Ny, Nz),
+# Output
+simulation_name = "multinpzbd_les"
+output_interval = 2minutes
+
+grid = RectilinearGrid(GPU(),size = (Nx, Ny, Nz),
                        x = (0, Lx),
                        y = (0, Ly),
                        z = (-Lz, 0),
@@ -66,13 +73,21 @@ set!(model, u=ϵ, v=ϵ, w=ϵ, T=20,
     B1=1.5.*Bᵢ,B2=Bᵢ, 
     D1=Dᵢ, D2=Dᵢ, D3=Dᵢ, D4=Dᵢ, D5=Dᵢ)
 
-simulation = Simulation(model, Δt=1.0, stop_iteration=100)
+simulation = Simulation(model, Δt=1.0, stop_time=2hour) #stop_iteration=100)
 
 wizard = TimeStepWizard(cfl=0.5, max_change=1.1)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(5))
 
 progress(sim) = @info string("Iter: ", iteration(sim), ", time: ", prettytime(sim))
 simulation.callbacks[:progress] = Callback(progress, IterationInterval(10))
+
+xz_filename = simulation_name * "_xz.jld2"
+outputs = merge(model.tracers, model.velocities)
+simulation.output_writers[:xz] = JLD2OutputWriter(model, outputs,
+                                                  schedule = TimeInterval(output_interval),
+                                                  indices = (:, 1, :),
+                                                  filename = xz_filename,
+                                                  overwrite_existing = true)
 
 run!(simulation)
 

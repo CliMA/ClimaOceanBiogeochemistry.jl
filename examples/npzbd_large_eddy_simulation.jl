@@ -1,5 +1,6 @@
 using Oceananigans
 using Oceananigans.Units
+#using Oceananigans.Architectures: on_architecture
 using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus
 using SeawaterPolynomials
 using SeawaterPolynomials.TEOS10: TEOS10EquationOfState
@@ -36,13 +37,15 @@ grid = RectilinearGrid(size = (Nx, Ny, Nz),
                        x = (0, Lx),
                        y = (0, Ly),
                        z = (-Lz, 0),
-                       #topology = (Periodic, Periodic, Bounded))
-                       topology = (Periodic, Bounded, Bounded))
+                       topology = (Periodic, Periodic, Bounded))
+                       #topology = (Periodic, Bounded, Bounded))
 
+#=
 shelf_width = 50 # meters
 step(y, y₀, d) = (1 + tanh((y - y₀) / d)) / 2
 shelf(x, y) = -Ly/2 + step(y, Ly/2, shelf_width)
 grid = ImmersedBoundaryGrid(grid, GridFittedBottom(shelf))
+=#
 
 T_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(Q / (ρₒ * cₚ)))
 u_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(τˣ / ρₒ))
@@ -50,7 +53,7 @@ v_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(τʸ / ρₒ))
 
 equation_of_state = TEOS10EquationOfState(reference_density=ρₒ)
 buoyancy = SeawaterBuoyancy(; equation_of_state, gravitational_acceleration=g)
-biogeochemistry = NutrientsPlanktonBacteriaDetritus(grid)
+biogeochemistry = NutrientsPlanktonBacteriaDetritus(grid=grid)
 
 model = NonhydrostaticModel(; grid, buoyancy, biogeochemistry,
                             tracers = (:T, :S),
