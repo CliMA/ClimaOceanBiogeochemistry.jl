@@ -41,7 +41,7 @@ u_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(τˣ / ρₒ))
 
 buoyancy = SeawaterBuoyancy(; equation_of_state)
 
-biogeochemistry = NutrientsPlanktonBacteriaDetritus(grid;)
+biogeochemistry = NutrientsPlanktonBacteriaDetritus(grid;detritus_vertical_velocity=0.0)
 
 model = NonhydrostaticModel(; grid, buoyancy, biogeochemistry,
                             tracers = (:T, :S),
@@ -55,7 +55,7 @@ g = 9.81 #Oceananigans.Buoyancy.g_Earth
 
 P₀ = 0.1 # μM
 Z₀ = 0.1 # μM
-Bᵢ = 0.1 # μM
+Bᵢ = 0.0 #0.1 # μM
 Dᵢ = 0.1 # μM
 N₀ = 0.001  # μM, surface nutrient concentration
 hN = 10     # nutrient decay scale
@@ -74,6 +74,14 @@ simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(5))
 
 progress(sim) = @info string("Iter: ", iteration(sim), ", time: ", prettytime(sim))
 simulation.callbacks[:progress] = Callback(progress, IterationInterval(10))
+
+xz_filename = simulation_name * "_xz.jld2"
+outputs = merge(model.tracers, model.velocities)
+simulation.output_writers[:xz] = JLD2OutputWriter(model, outputs,
+                                                  schedule = TimeInterval(output_interval),
+                                                  indices = (:, 1, :),
+                                                  filename = xz_filename,
+                                                  overwrite_existing = true)
 
 run!(simulation)
 
@@ -95,13 +103,13 @@ Dn = interior(D, :, 1, :)
 
 fig = Figure()
 
-axT = Axis(fig[1, 1])
-axw = Axis(fig[1, 2])
-axN = Axis(fig[1, 3])
-axP = Axis(fig[2, 1])
-axZ = Axis(fig[2, 2])
-axB = Axis(fig[2, 3])
-axD = Axis(fig[2, 4])
+axT = Axis(fig[1, 1], title="Temperature")
+axw = Axis(fig[1, 2], title="Vertical velocity")
+axN = Axis(fig[1, 3], title="Nutrients")
+axP = Axis(fig[2, 1], title="Phytoplankton")
+axZ = Axis(fig[2, 2], title="Zooplankton")
+axB = Axis(fig[2, 3], title="Bacteria")
+axD = Axis(fig[2, 4], title="Detritus")
 
 heatmap!(axT, Tn)
 heatmap!(axw, wn)

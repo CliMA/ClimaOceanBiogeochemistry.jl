@@ -32,7 +32,7 @@ meridional_wind_stress = τʸ = 0.0 # N m⁻²
 simulation_name = "npzbd_large_eddy_simulation"
 output_interval = 2minutes
 
-grid = RectilinearGrid(size = (Nx, Ny, Nz),
+grid = RectilinearGrid(GPU(), size = (Nx, Ny, Nz),
                        halo = (4, 4, 4),
                        x = (0, Lx),
                        y = (0, Ly),

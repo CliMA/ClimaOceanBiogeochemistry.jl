@@ -15,10 +15,10 @@ Ly = 200 # meters
 Lz = 100 # meters
 
 # Output
-simulation_name = "multinpzbd_les"
+simulation_name = "LES_multinpzbd"
 output_interval = 2minutes
 
-grid = RectilinearGrid(GPU(),size = (Nx, Ny, Nz),
+grid = RectilinearGrid(size = (Nx, Ny, Nz),
                        x = (0, Lx),
                        y = (0, Ly),
                        z = (-Lz, 0),
@@ -124,20 +124,20 @@ D5n = interior(D5, :, 1, :)
 
 fig = Figure()
 
-axT = Axis(fig[1, 1])
-axw = Axis(fig[1, 2])
-axN1 = Axis(fig[1, 3])
-axP1 = Axis(fig[1, 4])
-axP2 = Axis(fig[1, 5])
-axZ1 = Axis(fig[1, 6])
-axZ2 = Axis(fig[1, 7])
-axB1 = Axis(fig[2, 1])
-axB2 = Axis(fig[2, 2])
-axD1 = Axis(fig[2, 3])
-axD2 = Axis(fig[2, 4])
-axD3 = Axis(fig[2, 5])
-axD4 = Axis(fig[2, 6])
-axD5 = Axis(fig[2, 7])
+axT = Axis(fig[1, 1], title="Temperature")
+axw = Axis(fig[1, 2], title="Vertical velocity")
+axN1 = Axis(fig[1, 3], title="Nutrients")
+axP1 = Axis(fig[1, 4], title="P_slow")
+axP2 = Axis(fig[1, 5], title="P_fast")
+axZ1 = Axis(fig[1, 6], title="Z_P")
+axZ2 = Axis(fig[1, 7], title="Z_B")
+axB1 = Axis(fig[2, 1], title="B_slow")
+axB2 = Axis(fig[2, 2], title="B_fast")
+axD1 = Axis(fig[2, 3], title="LDOM")
+axD2 = Axis(fig[2, 4], title="SLDOM")
+axD3 = Axis(fig[2, 5], title="RDOM")
+axD4 = Axis(fig[2, 6], title="POM_slow")
+axD5 = Axis(fig[2, 7], title="POM_fast")
 
 heatmap!(axT, Tn)
 heatmap!(axw, wn)
