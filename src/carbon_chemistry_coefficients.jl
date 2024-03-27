@@ -1,4 +1,6 @@
 struct CarbonChemistryCoefficients{FT}
+    Cᵈⁱᶜₖₛₒₗₐ     :: FT
+    Cᵈⁱᶜₖₛₒₗₒ     :: FT
     Cᵈⁱᶜₖ₀       :: FT
     Cᵈⁱᶜₖ₁ᵣ₉₃    :: FT
     Cᵈⁱᶜₖ₂ᵣ₉₃    :: FT
@@ -42,6 +44,8 @@ Return dissociation coefficients necessary to solve for the distribution of carb
 # Also need to convert from Absolute Pressure, Pᴬ, to Applied Pressure in bars, the pressure relative to (1x) atm
 
     return CarbonChemistryCoefficients(
+            Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀),
+            Fᵈⁱᶜₖₛₒₗₒ(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀),
             Fᵈⁱᶜₖ₀(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀),
             Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₁ᵣ₉₃),
             Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₂ᵣ₉₃),
@@ -263,6 +267,76 @@ end
 #    (; a₀, a₁, a₂) = params()
 #    return (a₀ / a₁) * (Sᵖ / a₂)
 #end
+
+Base.@kwdef struct Pᵈⁱᶜₖₛₒₗₐ{FT}
+    a₀ :: FT = -162.8301
+    a₁ :: FT =  218.2968
+    a₂ :: FT =   90.9241
+    a₃ :: FT = -  1.47696
+    b₀ :: FT =   0.025695
+    b₁ :: FT = - 0.025225
+    b₂ :: FT =   0.0049867
+end
+
+"""
+    Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀)
+
+    Calculate f = k0(1-pH2O)*correction term for non-ideality in (mol/kg-SW)/atm given temperature 
+    in K, `Θᴷ`, practical salinity, `Sᵖ`, and coefficients, `Pᵈⁱᶜₖ₀`. Currently no pressure correction
+
+    References: Weiss & Price (1980, Mar. Chem., 8, 347-359 Eq 13 with table 6 values)
+    pH scale  : N/A
+    Note      : currently no pressure correction
+"""
+@inline function Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, params = Pᵈⁱᶜₖₛₒₗₐ)
+    (; a₀, a₁, a₂, b₀, b₁, b₂) = params()
+    return exp(
+               a₀ + 
+               a₁/Θᴷ₁₀₀(Θᴷ) +
+               a₂*log(Θᴷ₁₀₀(Θᴷ)) +
+               a₃*Θᴷ₁₀₀(Θᴷ)*Θᴷ₁₀₀(Θᴷ) +    
+               (
+                b₀ + 
+                b₁*(Θᴷ₁₀₀(Θᴷ)) +
+                b₂*Θᴷ₁₀₀(Θᴷ)*Θᴷ₁₀₀(Θᴷ)
+              )*Sᵖ
+             )
+end
+
+Base.@kwdef struct Pᵈⁱᶜₖₛₒₗₒ{FT}
+    a₀ :: FT = -1636.75
+    a₁ :: FT = -  12.0408
+    a₂ :: FT =     3.16528e-5
+    b₀ :: FT =    57.7
+    b₁ :: FT = -   0.118
+    b₂ :: FT =     0.0047036
+    p₁ :: FT =     1.01325 # p_bar_oneatmosphere, Handbook (2007)
+end
+
+"""
+    Fᵈⁱᶜₖₛₒₗₒ(Θᴷ, Sᵖ, Pᵈⁱᶜₖₛₒₗₒ)
+
+Return fugacity factor needed for non-ideality of CO₂ in the  ocean 
+    in (mol/kg-SW)/atm given temperature in K, `Θᴷ`, practical salinity, 
+    `Sᵖ`, and coefficients, `Pᵈⁱᶜₖₛₒₗₒ`.
+
+References: Weiss (1974) Marine Chemistry
+pH scale  : N/A
+Note      : currently no pressure correction
+"""
+@inline function Fᵈⁱᶜₖₛₒₗₒ(Θᴷ, Sᵖ, params = Pᵈⁱᶜₖₛₒₗₒ)
+    (; a₀, a₁, a₂, b₀, b₁, b₂, p₁) = params()
+
+#  "x2" term often neglected (assumed=1) in applications of Weiss (1974) eq.9
+#   x2 = 1 - x1 = 1 - xCO2 (it is very close to 1, but not quite)
+    return exp( 
+        (a₀ + 
+         a₁*Θᴷ + 
+         a₂*Θᴷ*Θᴷ + 
+         a₃*Θᴷ*Θᴷ*Θᴷ+
+        2*(b₀ + b₁*Θᴷ)) * 
+        (p₁ / Rₜ(Θᴷ)))
+end
 
 Base.@kwdef struct Pᵈⁱᶜₖ₀{FT}
     a₀ :: FT = -60.2409

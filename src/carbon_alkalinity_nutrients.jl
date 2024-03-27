@@ -8,6 +8,7 @@ import Oceananigans.Biogeochemistry: required_biogeochemical_tracers, biogeochem
 const c = Center()
 
 struct CarbonAlkalinityNutrients{FT, W} <: AbstractBiogeochemistry
+    reference_density                             :: FT
     maximum_net_community_production_rate         :: FT # mol PO₄ m⁻³ s⁻¹
     phosphate_half_saturation                     :: FT # mol PO₄ m⁻³
     nitrate_half_saturation                       :: FT # mol NO₃ m⁻³
@@ -33,7 +34,7 @@ struct CarbonAlkalinityNutrients{FT, W} <: AbstractBiogeochemistry
 end
 
 """
-    CarbonAlkalinityNutrients(; reference_density                             = 1024,
+    CarbonAlkalinityNutrients(  reference_density                             = 1024.5,
                                 maximum_net_community_production_rate         = 1 / day,
                                 phosphate_half_saturation                     = 1e-7 * reference_density,
                                 nitrate_half_saturation                       = 1.6e-6 * reference_density,
@@ -78,13 +79,13 @@ Tracer names
 
 Biogeochemical functions
 ========================
-* transitions for `DIC`, `ALK`, `PO₄`, `NO₃`, `POP`, `DOP`, and `Fe`
+* transitions for `DIC`, `ALK`, `PO₄`, `NO₃`, `POP`, `DOP`, `POP` and `Fe`
 
 * `biogeochemical_drift_velocity` for `DOP`, modeling the sinking of detritus at
   a constant `detritus_sinking_speed`.
 """
-function CarbonAlkalinityNutrients(grid;
-                                   reference_density = 1024,
+function CarbonAlkalinityNutrients(; grid,
+                                   reference_density                            = 1024.5,
                                    maximum_net_community_production_rate        = 1 / day, # mol PO₄ m⁻³ s⁻¹
                                    phosphate_half_saturation                    = 1e-7 * reference_density, # mol PO₄ m⁻³
                                    nitrate_half_saturation                      = 1.6e-6 * reference_density, # mol NO₃ m⁻³
@@ -124,7 +125,8 @@ function CarbonAlkalinityNutrients(grid;
                             
     FT = eltype(grid)
 
-    return CarbonAlkalinityNutrients(convert(FT, maximum_net_community_production_rate),
+    return CarbonAlkalinityNutrients(convert(FT, reference_density),
+                                     convert(FT, maximum_net_community_production_rate),
                                      convert(FT, phosphate_half_saturation),
                                      convert(FT, nitrate_half_saturation),
                                      convert(FT, iron_half_saturation),
@@ -150,7 +152,7 @@ end
 
 const CAN = CarbonAlkalinityNutrients
 
-@inline required_biogeochemical_tracers(::CAN) = (:DIC, :ALK, :PO₄, :NO₃, :POP, :DOP, :Fe)
+@inline required_biogeochemical_tracers(::CAN) = (:DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe)
 
 @inline function biogeochemical_drift_velocity(bgc::CAN, ::Val{:POP})
     u = ZeroField()
@@ -170,9 +172,9 @@ end
 # exponential remineralization or below the lysocline
 @inline particulate_inorganic_carbon_remin() = 0.0
 
-@inline air_sea_flux_co2() = 0.0
+#@inline air_sea_flux_co2() = 0.0
 
-@inline freshwater_virtual_flux() = 0.0
+#@inline freshwater_virtual_flux() = 0.0
 
 """
 Iron scavenging should depend on free iron, involves solving a quadratic equation in terms
@@ -180,7 +182,7 @@ of ligand concentration and stability coefficient, but this is a simple first or
 """
 @inline iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lₜ, β) = kˢᶜᵃᵛ * ( Feₜ - Lₜ )
 
-@inline iron_sources() = 0.0
+@inline iron_sources() = 1e-6
 
 """
 Tracer sources and sinks for DIC
@@ -219,9 +221,9 @@ Tracer sources and sinks for DIC
                     particulate_organic_phosphate_remin(r, POP) -
                     (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
                 ) +
-           particulate_inorganic_carbon_remin() -
-           air_sea_flux_co2() -
-           freshwater_virtual_flux()
+           particulate_inorganic_carbon_remin()
+#           air_sea_flux_co2() -
+#           freshwater_virtual_flux()
 end
 
 """
@@ -350,15 +352,10 @@ Tracer sources and sinks for FeT
     λ = bgc.PAR_attenuation_scale
     γ = bgc.dissolved_organic_phosphate_remin_timescale
     r = bgc.particulate_organic_phosphate_remin_timescale
-    α = bgc.fraction_of_particulate_export
-    Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
-    Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
-    Rᴾᴼ = bgc.stoichoimetric_ratio_phosphate_to_oxygen   
-    Rᶜᴺ = bgc.stoichoimetric_ratio_carbon_to_nitrate     
-    Rᶜᴼ = bgc.stoichoimetric_ratio_carbon_to_oxygen      
-    Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron        
     Rᶠᴾ = bgc.stoichoimetric_ratio_phosphate_to_iron
-    Rᶜᵃᶜᵒ³ = bgc.rain_ratio_inorganic_to_organic_carbon     
+    kˢᶜᵃᵛ  = bgc.iron_scavenging_rate                                      
+    Lₜ     = bgc.ligand_concentration                                      
+    β      = bgc.ligand_stability_coefficient
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -374,9 +371,10 @@ Tracer sources and sinks for FeT
     return Rᶠᴾ * (
                 - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
                   dissolved_organic_phosphate_remin(γ, DOP) +
-                  particulate_organic_phosphate_remin(r, POP))
-           #    + iron_sources()
-           #    - iron_scavenging())
+                  particulate_organic_phosphate_remin(r, POP) +
+                  iron_sources() -
+                  iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lₜ, β)
+                  )
     end
 
 """
