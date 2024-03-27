@@ -2,7 +2,6 @@
 #
 # This example illustrates how to use ClimaOceanBiogeochemistry's
 # `CarbonAlkalinityNutrients` model in a single column context.
-using KernelAbstractions.Extras.LoopInfo: @unroll
 
 using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
@@ -161,8 +160,8 @@ solubility/activity of CO₂ in seawater.
     co₂_flux = model.tracers.DIC.boundary_conditions.top.condition
     flux = co₂_flux.data
 
-    @inbounds @unroll for i in 1:co₂_flux.grid.Nx
-        @inbounds @unroll for j in 1:co₂_flux.grid.Ny
+    @inbounds for i in 1:co₂_flux.grid.Nx
+        @inbounds for j in 1:co₂_flux.grid.Ny
         # access model fields
             Θᶜ       = model.tracers.T[i,j,model.grid.Nz+1]
             Sᴬ       = model.tracers.S[i,j,model.grid.Nz+1]
