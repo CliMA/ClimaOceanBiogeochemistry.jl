@@ -73,7 +73,7 @@ set!(model, u=ϵ, v=ϵ, w=ϵ, T=20,
     B1=1.5.*Bᵢ,B2=Bᵢ, 
     D1=Dᵢ, D2=Dᵢ, D3=Dᵢ, D4=Dᵢ, D5=Dᵢ)
 
-simulation = Simulation(model, Δt=1.0, stop_time=2hour) #stop_iteration=100)
+simulation = Simulation(model, Δt=1.0, stop_time=1hour) #stop_iteration=100)
 
 wizard = TimeStepWizard(cfl=0.5, max_change=1.1)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(5))

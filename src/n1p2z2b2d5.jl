@@ -1,5 +1,5 @@
 using Oceananigans
-using Oceananigans.Architectures: arch_array, architecture
+#using Oceananigans.Architectures: arch_array, architecture, on_architecture
 using Oceananigans.Units: day
 using Oceananigans.Grids: znode, Center, AbstractTopology, Flat, Bounded
 using Oceananigans.BoundaryConditions: ImpenetrableBoundaryCondition, fill_halo_regions!
@@ -186,6 +186,7 @@ function MultiNPZBD(grid;
 end
 
 # Add tracer names if there are multiple groups in each tracer (e.g. D1, D2)
+#=
 @inline function required_biogeochemical_tracers(bgc::MultiNPZBD)
     NN = bgc.nutrient_types
     NP = bgc.plankton_populations
@@ -205,6 +206,7 @@ end
                  bacteria_names...,   
                  detritus_names...)   
 end
+=#
 @inline required_biogeochemical_tracers(::MultiNPZBD) = (:N1,:P1,:P2,:Z1,:Z2,:B1,:B2,:D1,:D2,:D3,:D4,:D5)
 
 # Set sinking velocities of POM
