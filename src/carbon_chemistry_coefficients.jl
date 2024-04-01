@@ -1,30 +1,30 @@
 struct CarbonChemistryCoefficients{FT}
     Cᵈⁱᶜₖₛₒₗₐ     :: FT
     Cᵈⁱᶜₖₛₒₗₒ     :: FT
-    Cᵈⁱᶜₖ₀       :: FT
-    Cᵈⁱᶜₖ₁ᵣ₉₃    :: FT
-    Cᵈⁱᶜₖ₂ᵣ₉₃    :: FT
-    Cᵈⁱᶜₖ₁ₘ₉₅    :: FT
-    Cᵈⁱᶜₖ₂ₘ₉₅    :: FT
+    Cᵈⁱᶜₖ₀       :: FT 
+    Cᵈⁱᶜₖ₁ᵣ₉₃    :: FT 
+    Cᵈⁱᶜₖ₂ᵣ₉₃    :: FT 
+    Cᵈⁱᶜₖ₁ₘ₉₅    :: FT 
+    Cᵈⁱᶜₖ₂ₘ₉₅    :: FT 
     Cᵈⁱᶜₖ₁ₗ₀₀     :: FT
     Cᵈⁱᶜₖ₂ₗ₀₀     :: FT
-    Cᵇₖ₁         :: FT
-    Cᴴ²ᴼₖ₁       :: FT
-    Cᴾᴼ⁴ₖ₁       :: FT
-    Cᴾᴼ⁴ₖ₂       :: FT
-    Cᴾᴼ⁴ₖ₃       :: FT
-    Cˢⁱᵗₖ₁       :: FT
-    Cᴴ²ˢₖ₁       :: FT
+    Cᵇₖ₁         :: FT 
+    Cᴴ²ᴼₖ₁       :: FT 
+    Cᴾᴼ⁴ₖ₁       :: FT 
+    Cᴾᴼ⁴ₖ₂       :: FT 
+    Cᴾᴼ⁴ₖ₃       :: FT 
+    Cˢⁱᵗₖ₁       :: FT 
+    Cᴴ²ˢₖ₁       :: FT 
     Cᴺᴴ⁴ₖ₁       :: FT
     Cᴴᶠᵦ₁        :: FT
     Cᴴᶠₖ₁        :: FT
     Cᴴˢᴼ⁴ₖ₁      :: FT
     Cᶜᵃˡᶜⁱᵗᵉₛₚ   :: FT
     Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ :: FT
-    Cᴮᵀ         :: FT
-    Cᶠᵀ         :: FT
-    Cᶜᵃ         :: FT
-    Cˢᴼ⁴        :: FT
+    Cᴮᵀ         :: FT 
+    Cᶠᵀ         :: FT 
+    Cᶜᵃ         :: FT 
+    Cˢᴼ⁴        :: FT 
     H⁺ₛoverH⁺ₜ   :: FT
     H⁺ₜoverH⁺₃   :: FT
     H⁺ₛoverH⁺₃   :: FT
@@ -35,7 +35,9 @@ end
 
 Return dissociation coefficients necessary to solve for the distribution of carbonate species.
 """
-@inline function CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+@inline function CarbonChemistryCoefficients(
+    Θᶜ = 25, Sᴬ = 35, Δpᵦₐᵣ = 0,
+    )
 # Need a conversion from Absolute Salinity, Sᴬ, to Practical Salinity, Sᴾ
     Sᵖ = Sᴬ
 # Sᴾ = Sᴬ / (1.0 - 0.35 * Sᴬ / 35.0) ??

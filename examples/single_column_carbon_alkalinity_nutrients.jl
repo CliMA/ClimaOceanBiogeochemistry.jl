@@ -5,7 +5,7 @@
 
 using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
-include("../src/carbon_chemistry_coefficients.jl")
+using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonChemistryCoefficients
 
 using Oceananigans
 using Oceananigans.Units
@@ -89,7 +89,7 @@ PO₄ᵢ(z) = 2.5e-3 # mol/m³
 NO₃ᵢ(z) = 36e-3 # mol/m³ 
 DOPᵢ(z) = 0.0 # mol/m³ 
 POPᵢ(z) = 0.0 # mol/m³ 
-Feᵢ(z)  = 0.6e-6 # mol/m³
+Feᵢ(z)  = 1.e-6 # mol/m³
 
 set!(
     model, 
@@ -163,14 +163,14 @@ solubility/activity of CO₂ in seawater.
     @inbounds for i in 1:co₂_flux.grid.Nx
         @inbounds for j in 1:co₂_flux.grid.Ny
         # access model fields
-            Θᶜ       = model.tracers.T[i,j,model.grid.Nz+1]
-            Sᴬ       = model.tracers.S[i,j,model.grid.Nz+1]
-            Cᵀ       = model.tracers.DIC[i,j,model.grid.Nz+1]
-            Aᵀ       = model.tracers.ALK[i,j,model.grid.Nz+1]
-            Pᵀ       = model.tracers.PO₄[i,j,model.grid.Nz+1]
+            Θᶜ       = model.tracers.T[i,j,model.grid.Nz]
+            Sᴬ       = model.tracers.S[i,j,model.grid.Nz]
+            Cᵀ       = model.tracers.DIC[i,j,model.grid.Nz]
+            Aᵀ       = model.tracers.ALK[i,j,model.grid.Nz]
+            Pᵀ       = model.tracers.PO₄[i,j,model.grid.Nz]
 
         # compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
-            (; pCO₂ᵒᶜᵉ) = 
+        (; pCO₂ᵒᶜᵉ, Pᵈⁱᶜₖₛₒₗₐ, Pᵈⁱᶜₖₛₒₗₒ, Pᵈⁱᶜₖ₀) = 
             UniversalRobustCarbonSystem(
                     Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
                     )
@@ -184,13 +184,11 @@ solubility/activity of CO₂ in seawater.
 
         # compute gas exchange coefficient/piston velocity
             Kʷ =  (Kʷₐᵥₑ * U₁₀^2 * fopen ) / sqrt(Sᶜᵈⁱᶜ/660)    
-            
-            Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
 
         # compute co₂ flux
             flux[i,j] = Kʷ * 
-                (pCO₂ᵃᵗᵐ * Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₐ * - 
-                 pCO₂ᵒᶜᵉ * Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₒ)
+                (pCO₂ᵃᵗᵐ * Pᵈⁱᶜₖₛₒₗₐ * - 
+                 pCO₂ᵒᶜᵉ * Pᵈⁱᶜₖ₀ * Pᵈⁱᶜₖₛₒₗₒ)
         end
     end
 
@@ -198,7 +196,7 @@ solubility/activity of CO₂ in seawater.
     return nothing
 end
 
-add_callback!(simulation, compute_co₂_flux!)
+#add_callback!(simulation, compute_co₂_flux!)
 
 # Output writer
 filename = "single_column_carbon_alkalinity_nutrients.jld2"
@@ -208,6 +206,13 @@ simulation.output_writers[:fields] = JLD2OutputWriter(model, model.tracers;
                                                       schedule = TimeInterval(20minutes),
                                                       overwrite_existing = true)
 
+filename_diags = "single_column_carbon_alkalinity_nutrients_co2flux.jld2"
+
+outputs = (; co₂_flux)
+simulation.output_writers[:jld2] = JLD2OutputWriter(model, outputs;
+                                                    filename = filename_diags,
+                                                    schedule = TimeInterval(20minutes),
+                                                    overwrite_existing = true)
 run!(simulation)
 
 # ## Visualization
@@ -224,6 +229,7 @@ NO₃t = FieldTimeSeries(filename, "NO₃")
 DOPt = FieldTimeSeries(filename, "DOP")
 POPt = FieldTimeSeries(filename, "POP")
 Fet  = FieldTimeSeries(filename, "Fe")
+CO₂t = FieldTimeSeries(filename_diags, "co₂_flux")
 
 t  = Tt.times
 nt = length(t)
@@ -233,16 +239,17 @@ fig = Figure(size=(1200, 600))
 
 axb = Axis(fig[1, 1], xlabel="Temperature (K)", ylabel="z (m)")
 axe = Axis(fig[1, 2], xlabel="Turbulent kinetic energy (m² s²)")
-axP = Axis(fig[1, 3], xlabel="Concentration (mmol)")
-axN = Axis(fig[1, 4], xlabel="Nutrient concentration (mmol)")
+axC = Axis(fig[1, 3], xlabel="DIC/ALK Concentration (mol m⁻³)")
+axN = Axis(fig[1, 4], xlabel="Nutrient concentration (mol m⁻³)")
 
 xlims!(axe, -1e-5, 1e-3)
-xlims!(axP, 0, 0.2)
+xlims!(axC, 1.8, 2.6)
+xlims!(axN, 0, 2.6)
 
 slider = Slider(fig[2, 1:4], range=1:nt, startvalue=1)
 n = slider.value
 
-title = @lift @sprintf("Convecting plankton at t = %d hours", t[$n] / hour)
+title = @lift @sprintf("Convecting nutrients at t = %d hours", t[$n] / hour)
 Label(fig[0, 1:4], title)
 
 Tn = @lift interior(Tt[$n], 1, 1, :)
@@ -252,17 +259,22 @@ Alkn = @lift interior(Alkt[$n], 1, 1, :)
 PO₄n = @lift interior(PO₄t[$n], 1, 1, :) 
 NO₃n = @lift interior(NO₃t[$n], 1, 1, :) 
 DOPn = @lift interior(DOPt[$n], 1, 1, :) 
+POPn = @lift interior(POPt[$n], 1, 1, :) 
 Fen  = @lift interior(Fet[$n], 1, 1, :)  
 
 lines!(axb, Tn, z)
 lines!(axe, en, z)
 
-lines!(axP, DICn, z, label="DIC")
-lines!(axP, PO₄n, z, label="Phosphate")
-lines!(axP, Fen, z, label="Iron")
-axislegend(axP)
+lines!(axC, DICn, z, label="DIC")
+lines!(axC, Alkn, z, label="ALK")
+lines!(axN, PO₄n, z, label="Phosphate")
+lines!(axN, NO₃n, z, label="Nitrate")
+lines!(axN, Fen, z, label="Iron")
+lines!(axN, DOPn, z, label="DOP")
+lines!(axN, POPn, z, label="POP")
 
-lines!(axN, DOPn, z)
+axislegend(axC)
+axislegend(axN)
 
 record(fig, "carbon_alkalinity_nutrients.mp4", 1:nt, framerate=24) do nn
     n[] = nn

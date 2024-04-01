@@ -1,4 +1,4 @@
-using Oceananigans.Units: day
+using Oceananigans.Units: days
 using Oceananigans.Grids: znode, Center
 using Oceananigans.Fields: ZeroField, ConstantField
 using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
@@ -86,25 +86,25 @@ Biogeochemical functions
 """
 function CarbonAlkalinityNutrients(; grid,
                                    reference_density                            = 1024.5,
-                                   maximum_net_community_production_rate        = 1 / day, # mol PO₄ m⁻³ s⁻¹
-                                   phosphate_half_saturation                    = 1e-7 * reference_density, # mol PO₄ m⁻³
-                                   nitrate_half_saturation                      = 1.6e-6 * reference_density, # mol NO₃ m⁻³
-                                   iron_half_saturation                         = 1e-10 * reference_density, # mol Fe m⁻³
-                                   PAR_half_saturation                          = 10.0,  # W m⁻²
+                                   maximum_net_community_production_rate        = 2.e-3 / 365.25days, # mol PO₄ m⁻³ s⁻¹
+                                   phosphate_half_saturation                    = 5.e-7 * reference_density, # mol PO₄ m⁻³
+                                   nitrate_half_saturation                      = 7.e-6 * reference_density, # mol NO₃ m⁻³
+                                   iron_half_saturation                         = 1.e-10 * reference_density, # mol Fe m⁻³
+                                   PAR_half_saturation                          = 30.0,  # W m⁻²
                                    PAR_attenuation_scale                        = 25.0,  # m
                                    fraction_of_particulate_export               = 0.33,
-                                   dissolved_organic_phosphate_remin_timescale  = 1 / 30day, # s⁻¹
-                                   stoichoimetric_ratio_carbon_to_phosphate     = 106.0,
+                                   dissolved_organic_phosphate_remin_timescale  = 2. / 365.25days, # s⁻¹
+                                   stoichoimetric_ratio_carbon_to_phosphate     = 117.0,
                                    stoichoimetric_ratio_nitrate_to_phosphate    = 16.0,
                                    stoichoimetric_ratio_phosphate_to_oxygen     = 170.0, 
                                    stoichoimetric_ratio_phosphate_to_iron       = 4.68e-4,
-                                   stoichoimetric_ratio_carbon_to_nitrate       = 106 / 16,
-                                   stoichoimetric_ratio_carbon_to_oxygen        = 106 / 170, 
-                                   stoichoimetric_ratio_carbon_to_iron          = 106 / 1.e-3,
+                                   stoichoimetric_ratio_carbon_to_nitrate       = 117. / 16.,
+                                   stoichoimetric_ratio_carbon_to_oxygen        = 117. / 170., 
+                                   stoichoimetric_ratio_carbon_to_iron          = 117. / 4.68e-4,
                                    stoichoimetric_ratio_silicate_to_phosphate   = 15.0,
-                                   rain_ratio_inorganic_to_organic_carbon       = 1e-1,
+                                   rain_ratio_inorganic_to_organic_carbon       = 1.e-2,
                                    particulate_organic_phosphate_remin_timescale= 0.03 / day, 
-                                   iron_scavenging_rate                         = 5e-4 / day, # s⁻¹
+                                   iron_scavenging_rate                         = 0.2 / 365.25days, # s⁻¹
                                    ligand_concentration                         = 1e-9 * reference_density, # mol L m⁻³
                                    ligand_stability_coefficient                 = 1e8,
                                    particulate_organic_phosphate_sinking_speed  = -10.0 / day)
@@ -182,7 +182,7 @@ of ligand concentration and stability coefficient, but this is a simple first or
 """
 @inline iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lₜ, β) = kˢᶜᵃᵛ * ( Feₜ - Lₜ )
 
-@inline iron_sources() = 1e-6
+@inline iron_sources() = 1e-7
 
 """
 Tracer sources and sinks for DIC
@@ -222,8 +222,6 @@ Tracer sources and sinks for DIC
                     (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
                 ) +
            particulate_inorganic_carbon_remin()
-#           air_sea_flux_co2() -
-#           freshwater_virtual_flux()
 end
 
 """
@@ -427,7 +425,6 @@ Tracer sources and sinks for POP
     Feₜ = @inbounds fields.Fe[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
 
-    return - particulate_organic_phosphate_remin(r, POP) +
-             α * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
-
+    return α * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
+           particulate_organic_phosphate_remin(r, POP)
 end
