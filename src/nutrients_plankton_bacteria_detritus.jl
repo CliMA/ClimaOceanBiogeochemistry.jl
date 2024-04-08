@@ -114,9 +114,9 @@ function NutrientsPlanktonBacteriaDetritus(grid;
                                            maximum_grazing_rate         = 3/day,
                                            bacteria_yield               = 0.2,
                                            zooplankton_yield            = 0.3,
-                                           linear_remineralization_rate = 0.03/day, 
-                                           linear_mortality_rate        = 0.01/day, # m³/mmol/day
-                                           quadratic_mortality_rate     = 0.1/day,  # m³/mmol/day
+                                           linear_remineralization_rate = 0.05/day, 
+                                           linear_mortality_rate        = 0.1/day, # m³/mmol/day
+                                           quadratic_mortality_rate     = 0.5/day,  # m³/mmol/day
                                            quadratic_mortality_rate_Z   = 1/day,    # m³/mmol/day (zooplankton quadratic mortality)
                                            nutrient_half_saturation     = 0.1,      # mmol m⁻³
                                            detritus_half_saturation     = 0.1,      # mmol m⁻³
@@ -222,7 +222,7 @@ end
         return (- phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) +
                 bacteria_production(μᵇ, kᴰ, y, D, B) * (1 / y - 1) +
                 zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1 / γ - 1) +
-                ooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1 / γ - 1))
+                zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1 / γ - 1))
     elseif sum(B) == 0
         return (- phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) +
                 detritus_remineralization(r, D) +
