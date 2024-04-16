@@ -15,7 +15,7 @@ Ly = 200 # meters
 Lz = 100 # meters
 
 # Output
-simulation_name = "npzbd_large_eddy_simulation"
+simulation_name = "LES_test"
 output_interval = 2minutes
 
 grid = RectilinearGrid(size = (Nx, Ny, Nz),
@@ -23,7 +23,6 @@ grid = RectilinearGrid(size = (Nx, Ny, Nz),
                        y = (0, Ly),
                        z = (-Lz, 0),
                        topology = (Periodic, Periodic, Bounded))
-
 
 ρₒ = 1024
 cₚ = 3991
@@ -33,7 +32,7 @@ S₀ = 35 # psu, surface salinity
 equation_of_state = TEOS10EquationOfState(reference_density=ρₒ)
 
 # Boundary fluxes
-heat_flux = Q = 200 # W m⁻²
+heat_flux = Q = 400 # W m⁻²
 wind_stress = τˣ = 0.0 # N m⁻²
 
 T_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(Q / (ρₒ * cₚ)))
@@ -41,7 +40,7 @@ u_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(τˣ / ρₒ))
 
 buoyancy = SeawaterBuoyancy(; equation_of_state)
 
-biogeochemistry = NutrientsPlanktonBacteriaDetritus(grid;detritus_vertical_velocity=0.0)
+biogeochemistry = NutrientsPlanktonBacteriaDetritus(grid;)
 
 model = NonhydrostaticModel(; grid, buoyancy, biogeochemistry,
                             tracers = (:T, :S),
@@ -54,20 +53,20 @@ g = 9.81 #Oceananigans.Buoyancy.g_Earth
 α = SeawaterPolynomials.thermal_expansion(T₀, S₀, 0, equation_of_state)
 
 P₀ = 0.1 # μM
-Z₀ = 0.1 # μM
-Bᵢ = 0.0 #0.1 # μM
+Z₀ = 0 # μM
+Bᵢ = 0.1 # μM
 Dᵢ = 0.1 # μM
-N₀ = 0.001  # μM, surface nutrient concentration
+N₀ = 0.01  # μM, surface nutrient concentration
 hN = 10     # nutrient decay scale
 
 Nᵢ(x, y, z) = N₀ * (1 - exp(z / hN))
-Pᵢ(x, y, z) = P₀ *  exp(z / hN)
-Zᵢ(x, y, z) = Z₀ *  exp(z / hN)
+#Pᵢ(x, y, z) = P₀ *  exp(z / hN)
+#Zᵢ(x, y, z) = Z₀ *  exp(z / hN)
 
 ϵ(x, y, z) = 1e-3 * randn()
 set!(model, u=ϵ, v=ϵ, w=ϵ, T=T₀, N=Nᵢ, P=Pᵢ,Z=Zᵢ, B=Bᵢ, D=Dᵢ)
 
-simulation = Simulation(model, Δt=1.0, stop_time=2hour) #, stop_iteration=100)
+simulation = Simulation(model, Δt=1.0, stop_time=3hour) #, stop_iteration=100)
 
 wizard = TimeStepWizard(cfl=0.5, max_change=1.1)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(5))
@@ -97,7 +96,7 @@ Tn = interior(T, :, 1, :)
 wn = interior(w, :, 1, :)
 Nn = interior(N, :, 1, :)
 Pn = interior(P, :, 1, :)
-Zn = interior(Z, :, 1, :)
+#Zn = interior(Z, :, 1, :)
 Bn = interior(B, :, 1, :)
 Dn = interior(D, :, 1, :)
 
@@ -107,17 +106,17 @@ axT = Axis(fig[1, 1], title="Temperature")
 axw = Axis(fig[1, 2], title="Vertical velocity")
 axN = Axis(fig[1, 3], title="Nutrients")
 axP = Axis(fig[2, 1], title="Phytoplankton")
-axZ = Axis(fig[2, 2], title="Zooplankton")
-axB = Axis(fig[2, 3], title="Bacteria")
-axD = Axis(fig[2, 4], title="Detritus")
+#axZ = Axis(fig[2, 2], title="Zooplankton")
+axB = Axis(fig[2, 2], title="Bacteria")
+axD = Axis(fig[2, 3], title="Detritus")
 
 heatmap!(axT, Tn)
 heatmap!(axw, wn)
 heatmap!(axN, Nn)
 heatmap!(axP, Pn)
-heatmap!(axZ, Zn)
+#heatmap!(axZ, Zn)
 heatmap!(axB, Bn)
 heatmap!(axD, Dn)
 
 display(fig)
-
+save("NPZDB_test1.png", fig)
