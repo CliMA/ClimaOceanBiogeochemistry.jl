@@ -108,7 +108,7 @@ Biogeochemical functions
 * `biogeochemical_drift_velocity` for `D`, modeling the sinking of detritus at
   a constant `detritus_sinking_speed`.
 """
-function NutrientsPlanktonBacteriaDetritus(grid;
+function NutrientsPlanktonBacteriaDetritus(; grid,
                                            maximum_plankton_growth_rate = 1/day, # Add reference for each parameter
                                            maximum_bacteria_growth_rate = 1/day,
                                            maximum_grazing_rate         = 3/day,

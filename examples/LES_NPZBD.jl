@@ -4,7 +4,7 @@ using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus
 using SeawaterPolynomials
 using SeawaterPolynomials.TEOS10: TEOS10EquationOfState
 using Statistics
-using GLMakie
+#using GLMakie
 
 # Resolution
 Nx = Ny = 64
@@ -41,7 +41,7 @@ u_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(τˣ / ρₒ))
 
 buoyancy = SeawaterBuoyancy(; equation_of_state)
 
-biogeochemistry = NutrientsPlanktonBacteriaDetritus(grid;)
+biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid)
 
 model = NonhydrostaticModel(; grid, buoyancy, biogeochemistry,
                             tracers = (:T, :S),
@@ -76,8 +76,12 @@ progress(sim) = @info string("Iter: ", iteration(sim), ", time: ", prettytime(si
 simulation.callbacks[:progress] = Callback(progress, IterationInterval(10))
 
 xz_filename = simulation_name * "_xz.jld2"
-outputs = merge(model.tracers, model.velocities)
-simulation.output_writers[:xz] = JLD2OutputWriter(model, outputs,
+#outputs = merge(model.tracers, model.velocities)
+saved_data = Dict(
+    "model" => model,  # Include the model object in the saved data
+    "outputs" => merge(model.tracers, model.velocities)
+    )
+simulation.output_writers[:xz] = JLD2OutputWriter(model, saved_data, #outputs,
                                                   schedule = TimeInterval(output_interval),
                                                   indices = (:, 1, :),
                                                   filename = xz_filename,
@@ -85,6 +89,7 @@ simulation.output_writers[:xz] = JLD2OutputWriter(model, outputs,
 
 run!(simulation)
 
+#=
 T = model.tracers.T
 N = model.tracers.N
 P = model.tracers.P
@@ -136,5 +141,6 @@ lines!(axPcol, P_col, z)
 lines!(axBcol, B_col, z)
 lines!(axDcol, D_col, z)
 
-display(fig1)
+#display(fig1)
 save("NPZDB_5.png", fig1)
+=#
