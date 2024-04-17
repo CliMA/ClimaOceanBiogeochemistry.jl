@@ -45,8 +45,8 @@ end
                                         PAR_attenuation_scale        = 25.0,
                                         detritus_vertical_velocity   = -10/day)
 
-Return a six-tracer biogeochemistry model for the interaction of nutrients (N), phytoplankton (P), 
-zooplankton(Z), bacteria (B), dissolved detritus (D1), and particulate detritus (D2).
+Return a five-tracer biogeochemistry model for the interaction of nutrients (N), phytoplankton (P), 
+zooplankton(Z), bacteria (B), detritus (D).
 
 Keyword Arguments
 =================
@@ -87,7 +87,7 @@ Keyword Arguments
 * `PAR_attenuation_scale`: (m) Depth scale over which photosynthetically available radiation (PAR)
                             attenuates exponentially.
 
-* `detritus_sinking_speed`: (m s⁻¹) Sinking velocity of particulate detritus.
+* `detritus_vertical_velocity`: (m s⁻¹) Sinking velocity of detritus.
 
 Tracer names
 ============
@@ -106,9 +106,9 @@ Biogeochemical functions
 * transitions for `N`, `P`, `Z`, `B`, `D`
 
 * `biogeochemical_drift_velocity` for `D`, modeling the sinking of detritus at
-  a constant `detritus_sinking_speed`.
+  a constant `detritus_vertical_velocity`.
 """
-function NutrientsPlanktonBacteriaDetritus(grid;
+function NutrientsPlanktonBacteriaDetritus(; grid,
                                            maximum_plankton_growth_rate = 1/day, # Add reference for each parameter
                                            maximum_bacteria_growth_rate = 1/day,
                                            maximum_grazing_rate         = 3/day,

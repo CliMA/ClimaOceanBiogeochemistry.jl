@@ -36,10 +36,11 @@ vertical_diffusion = VerticalScalarDiffusivity(; κ)
 
 model = HydrostaticFreeSurfaceModel(; grid,
                                     velocities = PrescribedVelocityFields(),
-                                    biogeochemistry = NutrientsPlanktonBacteriaDetritus(grid;
-                                                                                        maximum_bacteria_growth_rate = 2/day,
-                                                                                        detritus_half_saturation = 1.0),
-                                                                                        #detritus_vertical_velocity = 0/day),
+                                    biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid,
+                                                                                        #maximum_bacteria_growth_rate = 0/day,
+                                                                                        #detritus_half_saturation = 0.5,
+                                                                                        linear_remineralization_rate = 0.01/day,
+                                                                                        detritus_vertical_velocity = -10/day),
                                     tracers = (:N, :P, :Z, :B, :D),
                                     tracer_advection = WENO(),
                                     buoyancy = nothing,
@@ -55,12 +56,12 @@ model = HydrostaticFreeSurfaceModel(; grid,
 # mixed layer.
 
 #set!(model, N1=3, P1=1e-1, P2=5e-2,Z1=1e-1,Z2=1e-2, B1=1e-1,B2=2e-2, D1=1e-1, D2=1e-2,D3=2e-1, D4=1e-1,D5=2e-1)
-set!(model, N=20, P=1e-1, Z=0,B=1e-1, D=1e-1)
+set!(model, N=20, P=1e-1, Z=0,B=0, D=5e-1)
 
-simulation = Simulation(model, Δt=30minutes, stop_time=3650days)
+simulation = Simulation(model, Δt=30minutes, stop_time=365days)
 
 function progress(sim)
-    @printf("Iteration: %d, time: %s, total(N): %.3e \n",
+    @printf("Iteration: %d, time: %s, total(N): %.2e \n",
             iteration(sim), prettytime(sim),
             sum(model.tracers.N)+sum(model.tracers.P)+sum(model.tracers.Z)+sum(model.tracers.B)+sum(model.tracers.D))
             #=
@@ -73,7 +74,7 @@ function progress(sim)
     return nothing
 end
 
-simulation.callbacks[:progress] = Callback(progress, IterationInterval(50))
+simulation.callbacks[:progress] = Callback(progress, IterationInterval(100))
 
 N = model.tracers.N
 P = model.tracers.P
@@ -103,8 +104,8 @@ fig = Figure()
 axN = Axis(fig[1, 1], xlabel="Nutrient concentration (N)", ylabel="z (m)")
 axP = Axis(fig[1, 2], xlabel="Phytoplankton concentration (P)", ylabel="z (m)")
 #axZ = Axis(fig[1, 3], xlabel="Zooplankton concentration (Z)", ylabel="z (m)")
-axB = Axis(fig[1, 3], xlabel="Bacteria concentration (B)", ylabel="z (m)")
-axD = Axis(fig[1, 4], xlabel="Detritus concentration (D)", ylabel="z (m)")
+#axB = Axis(fig[1, 3], xlabel="Bacteria concentration (B)", ylabel="z (m)")
+axD = Axis(fig[1, 3], xlabel="Detritus concentration (D)", ylabel="z (m)")
 
 #=
 lines!(axN, interior(N1, 1, 1, :), z)
@@ -122,7 +123,7 @@ lines!(axD, interior(D5, 1, 1, :), z)
 =#
 lines!(axN, interior(N, 1, 1, :), z)
 lines!(axP, interior(P, 1, 1, :), z)
-lines!(axB, interior(B, 1, 1, :), z)
+#lines!(axB, interior(B, 1, 1, :), z)
 lines!(axD, interior(D, 1, 1, :), z)
 
 display(fig)
@@ -141,7 +142,7 @@ run!(simulation)
 # All that's left is to visualize the results.
 Nt = FieldTimeSeries(filename, "N")
 Pt = FieldTimeSeries(filename, "P")
-Bt = FieldTimeSeries(filename, "B")
+#Bt = FieldTimeSeries(filename, "B")
 Dt = FieldTimeSeries(filename, "D")
 
 #=
@@ -169,19 +170,19 @@ fig = Figure(;size=(1200, 600))#resolution=(1200, 600))
 axN = Axis(fig[1, 1], ylabel="z (m)", xlabel="[Nutrient] (mmol m⁻³)")
 axP = Axis(fig[1, 2], ylabel="z (m)", xlabel="[Phytoplankton] (mmol m⁻³)")
 #axZ = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Zooplankton] (mmol m⁻³)")
-axB = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Bacteria] (mmol m⁻³)")
-axD = Axis(fig[1, 4], ylabel="z (m)", xlabel="[Detritus] (mmol m⁻³)")
+#axB = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Bacteria] (mmol m⁻³)")
+axD = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Detritus] (mmol m⁻³)")
 
 xlims!(axN, -0.1, 30)
 xlims!(axP, -0.1, 1.5)
-xlims!(axB, -0.1, 1.5)
-xlims!(axD, -0.1, 20)
+#xlims!(axB, -0.1, 1.0)
+xlims!(axD, -0.1, 30)
 
-slider = Slider(fig[2, 1:4], range=1:nt, startvalue=1)
+slider = Slider(fig[2, 1:3], range=1:nt, startvalue=1)
 n = slider.value
 
 title = @lift @sprintf("Equilibrium biogeochemistry at t = %d days", t[$n] / day)
-Label(fig[0, 1:4], title)
+Label(fig[0, 1:3], title)
 
 #=
 N1n = @lift interior(N1t[$n], 1, 1, :)
@@ -210,12 +211,12 @@ lines!(axD, D2n, z)
 
 Nn = @lift interior(Nt[$n], 1, 1, :)
 Pn = @lift interior(Pt[$n], 1, 1, :)
-Bn = @lift interior(Bt[$n], 1, 1, :)
+#Bn = @lift interior(Bt[$n], 1, 1, :)
 Dn = @lift interior(Dt[$n], 1, 1, :)
 
 lines!(axN, Nn, z)
 lines!(axP, Pn, z)
-lines!(axB, Bn, z)
+#lines!(axB, Bn, z)
 lines!(axD, Dn, z)
 
 record(fig, "nutrients_plankton_bacteria_detritus.mp4", 1:nt, framerate=24) do nn
