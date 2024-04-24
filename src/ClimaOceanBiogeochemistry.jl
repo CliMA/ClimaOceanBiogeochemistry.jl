@@ -5,6 +5,7 @@ include("CarbonSystemSolvers.jl")
 
 # diffferent kinds of BGC model
 include("nutrients_plankton_bacteria_detritus.jl")
+#include("multi_npzbd.jl")
 include("carbon_alkalinity_nutrients.jl")
 
 end # module ClimaOceanBiogeochemistry
