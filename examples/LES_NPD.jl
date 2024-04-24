@@ -41,7 +41,7 @@ u_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(τˣ / ρₒ))
 
 buoyancy = SeawaterBuoyancy(; equation_of_state)
 
-biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid, detritus_vertical_velocity = 0)
+biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid)
 
 model = NonhydrostaticModel(; grid, buoyancy, biogeochemistry,
                             tracers = (:T, :S),
@@ -55,7 +55,7 @@ g = 9.81 #Oceananigans.Buoyancy.g_Earth
 
 Pᵢ = 0.1 # μM
 #Z₀ = 0 # μM
-Bᵢ = 0.1 # μM
+#Bᵢ = 0.1 # μM
 Dᵢ = 0.5 # μM
 N₀ = 0.1  # μM, surface nutrient concentration
 hN = 10     # nutrient decay scale
@@ -65,9 +65,9 @@ Nᵢ(x, y, z) = N₀ * (1 - exp(z / hN))
 #Zᵢ(x, y, z) = Z₀ *  exp(z / hN)
 
 ϵ(x, y, z) = 1e-3 * randn()
-set!(model, u=ϵ, v=ϵ, w=ϵ, T=T₀, N=Nᵢ, P=Pᵢ,Z=0, B=Bᵢ, D=Dᵢ)
+set!(model, u=ϵ, v=ϵ, w=ϵ, T=T₀, N=Nᵢ, P=Pᵢ,Z=0, B=0, D=Dᵢ)
 
-simulation = Simulation(model, Δt=1.0, stop_time=3hour) #, stop_iteration=100)
+simulation = Simulation(model, Δt=1.0, stop_time=6hour) #, stop_iteration=100)
 
 wizard = TimeStepWizard(cfl=0.5, max_change=1.1)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(5))
@@ -91,20 +91,20 @@ simulation.output_writers[:xz] = JLD2OutputWriter(model, outputs,
 
 run!(simulation)
 
-T = model.tracers.T
+#T = model.tracers.T
 N = model.tracers.N
 P = model.tracers.P
-Z = model.tracers.Z
-B = model.tracers.B
+#Z = model.tracers.Z
+#B = model.tracers.B
 D = model.tracers.D
-w = model.velocities.w
+#w = model.velocities.w
 
 #Tn = interior(T, :, 1, :)
 #wn = interior(w, :, 1, :)
 Nn = interior(N, :, 1, :)
 Pn = interior(P, :, 1, :)
 #Zn = interior(Z, :, 1, :)
-Bn = interior(B, :, 1, :)
+#Bn = interior(B, :, 1, :)
 Dn = interior(D, :, 1, :)
 
 fig1 = Figure()
@@ -114,33 +114,33 @@ fig1 = Figure()
 axN = Axis(fig1[1, 1], title="Nutrients")
 axP = Axis(fig1[1, 2], title="Phytoplankton")
 #axZ = Axis(fig[2, 2], title="Zooplankton")
-axB = Axis(fig1[1, 3], title="Bacteria")
-axD = Axis(fig1[1, 4], title="Detritus")
+#axB = Axis(fig1[1, 3], title="Bacteria")
+axD = Axis(fig1[1, 3], title="Detritus")
 
 #heatmap!(axT, Tn)
 #heatmap!(axw, wn)
 heatmap!(axN, Nn)
 heatmap!(axP, Pn)
 #heatmap!(axZ, Zn)
-heatmap!(axB, Bn)
+#heatmap!(axB, Bn)
 heatmap!(axD, Dn)
 
 # Plot average profiles
 N_col = vec(mean(Nn, dims=1))
 P_col = vec(mean(Pn, dims=1))
-B_col = vec(mean(Bn, dims=1))
+#B_col = vec(mean(Bn, dims=1))
 D_col = vec(mean(Dn, dims=1))
 
 axNcol = Axis(fig1[2, 1], title="Nutrients")
 axPcol = Axis(fig1[2, 2], title="Phytoplankton")
-axBcol = Axis(fig1[2, 3], title="Bacteria")
-axDcol = Axis(fig1[2, 4], title="Detritus")
+#axBcol = Axis(fig1[2, 3], title="Bacteria")
+axDcol = Axis(fig1[2, 3], title="Detritus")
 
 z = vec(reshape(collect(1.0:64.0), 1, 64))
 lines!(axNcol, N_col, z)
 lines!(axPcol, P_col, z)
-lines!(axBcol, B_col, z)
+#lines!(axBcol, B_col, z)
 lines!(axDcol, D_col, z)
 
 #display(fig1)
-save("NPZDB_5.png", fig1)
+save("NPZDB_13.png", fig1)

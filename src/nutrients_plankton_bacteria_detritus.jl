@@ -124,7 +124,7 @@ function NutrientsPlanktonBacteriaDetritus(; grid,
                                            PAR_half_saturation          = 10.0,     # W m⁻²
                                            PAR_attenuation_scale        = 25.0,     # m
                                            detritus_vertical_velocity   = -10/day)  # m s⁻¹
-
+#=
     if detritus_vertical_velocity isa Number
         w₀ = detritus_vertical_velocity
         no_penetration = ImpenetrableBoundaryCondition()
@@ -138,7 +138,7 @@ function NutrientsPlanktonBacteriaDetritus(; grid,
 
         fill_halo_regions!(detritus_vertical_velocity)
     end
-
+=#
     FT = eltype(grid)
 
     return NutrientsPlanktonBacteriaDetritus(convert(FT, maximum_plankton_growth_rate),   
