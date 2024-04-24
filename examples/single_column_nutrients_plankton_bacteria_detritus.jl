@@ -33,22 +33,23 @@ vertical_diffusion = VerticalScalarDiffusivity(; κ)
 # We put the pieces together.
 # The important line here is `biogeochemistry = NutrientsPlanktonBacteriaDetritus()`.
 # We use all default parameters.
-
+ 
 model = HydrostaticFreeSurfaceModel(; grid,
                                     velocities = PrescribedVelocityFields(),
                                     biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid,
-                                                                                        #maximum_bacteria_growth_rate = 0/day,
-                                                                                        #detritus_half_saturation = 0.5,
-                                                                                        linear_remineralization_rate = 0.01/day,
-                                                                                        detritus_vertical_velocity = -10/day),
+                                                                                        detritus_vertical_velocity = -100/day),
                                     tracers = (:N, :P, :Z, :B, :D),
-                                    tracer_advection = WENO(),
                                     buoyancy = nothing,
                                     closure = vertical_diffusion) 
-                                    #closure = CATKEVerticalDiffusivity(),
-                                    #tracers = (:b, :e),
-                                    #buoyancy = BuoyancyTracer(),
-                                    #boundary_conditions = (; b=b_bcs))
+#=
+model = NonhydrostaticModel(; grid, buoyancy = nothing, 
+                            biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid,
+                                                        detritus_vertical_velocity = -100/day),
+                            tracers = (:N, :P, :Z, :B, :D),
+                            #timestepper = :RungeKutta3,
+                            advection = WENO(order=5),
+                            closure = vertical_diffusion)
+=#
 
 # ## Initial conditions
 #
@@ -58,7 +59,7 @@ model = HydrostaticFreeSurfaceModel(; grid,
 #set!(model, N1=3, P1=1e-1, P2=5e-2,Z1=1e-1,Z2=1e-2, B1=1e-1,B2=2e-2, D1=1e-1, D2=1e-2,D3=2e-1, D4=1e-1,D5=2e-1)
 set!(model, N=20, P=1e-1, Z=0,B=0, D=5e-1)
 
-simulation = Simulation(model, Δt=30minutes, stop_time=365days)
+simulation = Simulation(model, Δt=30minutes, stop_time=730days)
 
 function progress(sim)
     @printf("Iteration: %d, time: %s, total(N): %.2e \n",
@@ -173,10 +174,10 @@ axP = Axis(fig[1, 2], ylabel="z (m)", xlabel="[Phytoplankton] (mmol m⁻³)")
 #axB = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Bacteria] (mmol m⁻³)")
 axD = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Detritus] (mmol m⁻³)")
 
-xlims!(axN, -0.1, 30)
+xlims!(axN, -0.1, 35)
 xlims!(axP, -0.1, 1.5)
 #xlims!(axB, -0.1, 1.0)
-xlims!(axD, -0.1, 30)
+xlims!(axD, -0.1, 20)
 
 slider = Slider(fig[2, 1:3], range=1:nt, startvalue=1)
 n = slider.value
