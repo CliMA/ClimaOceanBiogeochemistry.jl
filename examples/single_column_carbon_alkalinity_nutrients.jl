@@ -27,7 +27,8 @@ grid = RectilinearGrid(size = 64,
 # for 4 days, and then abruptly shuts off. Once the convective turbulence dies
 # down, plankton start to grow.
 
-Qᵇ(x, y, t) = ifelse(t < 4days, 1e-7, 0.0)
+#x, y, t
+Qᵇ(t) = ifelse(t < 4days, 1e-7, 0.0)
 b_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(Qᵇ))
 
 # We put the pieces together.
@@ -51,12 +52,12 @@ D₀ = 1e-1 # Surface detritus concentration
 dᴺ = 50.0 # Nutrient mixed layer depth
 N² = 1e-5 # Buoyancy gradient, s⁻²
 
-bᵢ(x, y, z) = N² * z
+bᵢ(z) = N² * z
 Nᵢ(x, y, z) = N₀ * max(1, exp(-(z + dᴺ) / 100))
 Dᵢ(x, y, z) = D₀ * exp(z / 10)
 
 #set!(model, b=bᵢ, P=1e-1, B=1e-1, D=Dᵢ, N=Nᵢ, e=1e-6)
-set!(model, b=bᵢ, e=1e-6)
+set!(model, b=bᵢ, e=1e-6,D=D₀, N=N₀)
 
 # ## A simulation of physical-biological interaction
 # 

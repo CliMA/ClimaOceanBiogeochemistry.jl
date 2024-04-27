@@ -30,6 +30,10 @@ grid = RectilinearGrid(size = Nz; z, topology = (Flat, Flat, Bounded))
 @inline κ(z, t) = 1e-4 + 1e-2 * exp(z / 25) + 1e-2 * exp(-(z + 1000) / 50)
 vertical_diffusion = VerticalScalarDiffusivity(; κ)
 
+# The following two lines should be later debugged in Oceananigans
+import Oceananigans.Models.HydrostaticFreeSurfaceModels: validate_tracer_advection, AbstractAdvectionScheme, SingleColumnGrid
+validate_tracer_advection(tracer_advection::AbstractAdvectionScheme, ::SingleColumnGrid) = tracer_advection, NamedTuple()
+
 # We put the pieces together.
 # The important line here is `biogeochemistry = NutrientsPlanktonBacteriaDetritus()`.
 # We use all default parameters.
@@ -37,19 +41,14 @@ vertical_diffusion = VerticalScalarDiffusivity(; κ)
 model = HydrostaticFreeSurfaceModel(; grid,
                                     velocities = PrescribedVelocityFields(),
                                     biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid,
-                                                                                        detritus_vertical_velocity = -100/day),
+                                                                                        #linear_remineralization_rate = 0.1/day,                                                    
+                                                                                        maximum_bacteria_growth_rate = 0.9/day,
+                                                                                        detritus_half_saturation = 0.05, 
+                                                                                        detritus_vertical_velocity = -5/day),
                                     tracers = (:N, :P, :Z, :B, :D),
+                                    tracer_advection = WENO(),
                                     buoyancy = nothing,
                                     closure = vertical_diffusion) 
-#=
-model = NonhydrostaticModel(; grid, buoyancy = nothing, 
-                            biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid,
-                                                        detritus_vertical_velocity = -100/day),
-                            tracers = (:N, :P, :Z, :B, :D),
-                            #timestepper = :RungeKutta3,
-                            advection = WENO(order=5),
-                            closure = vertical_diffusion)
-=#
 
 # ## Initial conditions
 #
@@ -57,9 +56,9 @@ model = NonhydrostaticModel(; grid, buoyancy = nothing,
 # mixed layer.
 
 #set!(model, N1=3, P1=1e-1, P2=5e-2,Z1=1e-1,Z2=1e-2, B1=1e-1,B2=2e-2, D1=1e-1, D2=1e-2,D3=2e-1, D4=1e-1,D5=2e-1)
-set!(model, N=20, P=1e-1, Z=0,B=0, D=5e-1)
+set!(model, N=20, P=1e-1, Z=0,B=1e-1, D=5e-1)
 
-simulation = Simulation(model, Δt=30minutes, stop_time=730days)
+simulation = Simulation(model, Δt=30minutes, stop_time=18262days)
 
 function progress(sim)
     @printf("Iteration: %d, time: %s, total(N): %.2e \n",
@@ -105,8 +104,8 @@ fig = Figure()
 axN = Axis(fig[1, 1], xlabel="Nutrient concentration (N)", ylabel="z (m)")
 axP = Axis(fig[1, 2], xlabel="Phytoplankton concentration (P)", ylabel="z (m)")
 #axZ = Axis(fig[1, 3], xlabel="Zooplankton concentration (Z)", ylabel="z (m)")
-#axB = Axis(fig[1, 3], xlabel="Bacteria concentration (B)", ylabel="z (m)")
-axD = Axis(fig[1, 3], xlabel="Detritus concentration (D)", ylabel="z (m)")
+axB = Axis(fig[1, 3], xlabel="Bacteria concentration (B)", ylabel="z (m)")
+axD = Axis(fig[1, 4], xlabel="Detritus concentration (D)", ylabel="z (m)")
 
 #=
 lines!(axN, interior(N1, 1, 1, :), z)
@@ -124,7 +123,7 @@ lines!(axD, interior(D5, 1, 1, :), z)
 =#
 lines!(axN, interior(N, 1, 1, :), z)
 lines!(axP, interior(P, 1, 1, :), z)
-#lines!(axB, interior(B, 1, 1, :), z)
+lines!(axB, interior(B, 1, 1, :), z)
 lines!(axD, interior(D, 1, 1, :), z)
 
 display(fig)
@@ -143,24 +142,8 @@ run!(simulation)
 # All that's left is to visualize the results.
 Nt = FieldTimeSeries(filename, "N")
 Pt = FieldTimeSeries(filename, "P")
-#Bt = FieldTimeSeries(filename, "B")
+Bt = FieldTimeSeries(filename, "B")
 Dt = FieldTimeSeries(filename, "D")
-
-#=
-P1t = FieldTimeSeries(filename, "P1")
-Z1t = FieldTimeSeries(filename, "Z1")
-B1t = FieldTimeSeries(filename, "B1")
-P2t = FieldTimeSeries(filename, "P2")
-Z2t = FieldTimeSeries(filename, "Z2")
-B2t = FieldTimeSeries(filename, "B2")
-
-D1t = FieldTimeSeries(filename, "D1")
-D2t = FieldTimeSeries(filename, "D2")
-D3t = FieldTimeSeries(filename, "D3")
-D4t = FieldTimeSeries(filename, "D4")
-D5t = FieldTimeSeries(filename, "D5")
-N1t = FieldTimeSeries(filename, "N1")
-=#
 
 t = Pt.times
 nt = length(t)
@@ -171,53 +154,28 @@ fig = Figure(;size=(1200, 600))#resolution=(1200, 600))
 axN = Axis(fig[1, 1], ylabel="z (m)", xlabel="[Nutrient] (mmol m⁻³)")
 axP = Axis(fig[1, 2], ylabel="z (m)", xlabel="[Phytoplankton] (mmol m⁻³)")
 #axZ = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Zooplankton] (mmol m⁻³)")
-#axB = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Bacteria] (mmol m⁻³)")
-axD = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Detritus] (mmol m⁻³)")
+axB = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Bacteria] (mmol m⁻³)")
+axD = Axis(fig[1, 4], ylabel="z (m)", xlabel="[Detritus] (mmol m⁻³)")
 
-xlims!(axN, -0.1, 35)
-xlims!(axP, -0.1, 1.5)
-#xlims!(axB, -0.1, 1.0)
-xlims!(axD, -0.1, 20)
+xlims!(axN, -0.1, 50)
+xlims!(axP, -0.1, 1.0)
+xlims!(axB, -0.1, 0.5)
+xlims!(axD, -0.1, 1.0)
 
-slider = Slider(fig[2, 1:3], range=1:nt, startvalue=1)
+slider = Slider(fig[2, 1:4], range=1:nt, startvalue=1)
 n = slider.value
 
 title = @lift @sprintf("Equilibrium biogeochemistry at t = %d days", t[$n] / day)
-Label(fig[0, 1:3], title)
-
-#=
-N1n = @lift interior(N1t[$n], 1, 1, :)
-P1n = @lift interior(P1t[$n], 1, 1, :)
-P2n = @lift interior(P2t[$n], 1, 1, :)
-Z1n = @lift interior(Z1t[$n], 1, 1, :)
-Z2n = @lift interior(Z2t[$n], 1, 1, :)
-B1n = @lift interior(B1t[$n], 1, 1, :)
-B2n = @lift interior(B2t[$n], 1, 1, :)
-D1n = @lift interior(D1t[$n], 1, 1, :)
-D2n = @lift interior(D2t[$n], 1, 1, :)
-D3n = @lift interior(D3t[$n], 1, 1, :)
-D4n = @lift interior(D4t[$n], 1, 1, :)
-D5n = @lift interior(D5t[$n], 1, 1, :)
-
-lines!(axN, N1n, z)
-lines!(axP, P1n, z)
-lines!(axZ, Z1n, z)
-lines!(axP, P2n, z)
-lines!(axZ, Z2n, z)
-lines!(axB, B1n, z)
-lines!(axB, B2n, z)
-lines!(axD, D1n, z)
-lines!(axD, D2n, z)
-=#
+Label(fig[0, 1:4], title)
 
 Nn = @lift interior(Nt[$n], 1, 1, :)
 Pn = @lift interior(Pt[$n], 1, 1, :)
-#Bn = @lift interior(Bt[$n], 1, 1, :)
+Bn = @lift interior(Bt[$n], 1, 1, :)
 Dn = @lift interior(Dt[$n], 1, 1, :)
 
 lines!(axN, Nn, z)
 lines!(axP, Pn, z)
-#lines!(axB, Bn, z)
+lines!(axB, Bn, z)
 lines!(axD, Dn, z)
 
 record(fig, "nutrients_plankton_bacteria_detritus.mp4", 1:nt, framerate=24) do nn
