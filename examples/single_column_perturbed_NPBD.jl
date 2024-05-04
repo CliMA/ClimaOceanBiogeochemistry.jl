@@ -41,9 +41,9 @@ validate_tracer_advection(tracer_advection::AbstractAdvectionScheme, ::SingleCol
 model = HydrostaticFreeSurfaceModel(; grid,
                                     velocities = PrescribedVelocityFields(),
                                     biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid,
-                                                                                        linear_remineralization_rate = 0.1/day,                                                    
-                                                                                        #maximum_bacteria_growth_rate = 0.9/day,
-                                                                                        #detritus_half_saturation = 0.05, 
+                                                                                        #linear_remineralization_rate = 0.1/day,                                                    
+                                                                                        maximum_bacteria_growth_rate = 0.9/day,
+                                                                                        detritus_half_saturation = 0.05, 
                                                                                         detritus_vertical_velocity = -5/day),
                                     tracers = (:N, :P, :Z, :B, :D),
                                     tracer_advection = WENO(),
@@ -55,7 +55,7 @@ model = HydrostaticFreeSurfaceModel(; grid,
 # We initialize the model with reasonable nutrients, detritus, and a nutrient
 # mixed layer.
 
-set!(model, N=20, P=1e-1, Z=0,B=0, D=5e-1)
+set!(model, N=20, P=1e-1, Z=0,B=1e-1, D=5e-1)
 
 simulation = Simulation(model, Δt=30minutes, stop_time=3650days)
 
@@ -67,10 +67,15 @@ simulation = Simulation(model, Δt=30minutes, stop_time=3650days)
 # Define a callback function to apply the perturbation
 function perturbation_callback(sim)
     if time(sim) >= 1810days && time(sim) < 1840days 
-        # Apply the perturbation
+        #= Apply N perturbation
         Nₘ = model.tracers.N # N mid
-        Nₘ[:,:,95:100] .+=5.0
+        Nₘ[:,:,80] .+=5.0 
         set!(model, N=Nₘ)
+        =#
+        # Apply D perturbation
+        Dₘ = model.tracers.D # D mid
+        Dₘ[:,:,87] .-=0.5
+        set!(model, D=Dₘ)
         println("Applied perturbation at t = 5 years")
     end
 end
@@ -128,7 +133,7 @@ display(fig)
 
 Nt = FieldTimeSeries(filename, "N")
 Pt = FieldTimeSeries(filename, "P")
-#Bt = FieldTimeSeries(filename, "B")
+Bt = FieldTimeSeries(filename, "B")
 Dt = FieldTimeSeries(filename, "D")
 
 t = Pt.times
@@ -139,28 +144,28 @@ fig = Figure(;size=(1200, 600))#resolution=(1200, 600))
 
 axN = Axis(fig[1, 1], ylabel="z (m)", xlabel="[Nutrient] (mmol m⁻³)")
 axP = Axis(fig[1, 2], ylabel="z (m)", xlabel="[Phytoplankton] (mmol m⁻³)")
-#axB = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Bacteria] (mmol m⁻³)")
-axD = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Detritus] (mmol m⁻³)")
+axB = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Bacteria] (mmol m⁻³)")
+axD = Axis(fig[1, 4], ylabel="z (m)", xlabel="[Detritus] (mmol m⁻³)")
 
 xlims!(axN, -0.1, 50)
 xlims!(axP, -0.1, 1.0)
-#xlims!(axB, -0.1, 0.5)
+xlims!(axB, -0.1, 0.5)
 xlims!(axD, -0.1, 1.5)
 
-slider = Slider(fig[2, 1:3], range=1:nt, startvalue=1)
+slider = Slider(fig[2, 1:4], range=1:nt, startvalue=1)
 n = slider.value
 
 title = @lift @sprintf("Equilibrium biogeochemistry at t = %d days", t[$n] / day)
-Label(fig[0, 1:3], title)
+Label(fig[0, 1:4], title)
 
 Nn = @lift interior(Nt[$n], 1, 1, :)
 Pn = @lift interior(Pt[$n], 1, 1, :)
-#Bn = @lift interior(Bt[$n], 1, 1, :)
+Bn = @lift interior(Bt[$n], 1, 1, :)
 Dn = @lift interior(Dt[$n], 1, 1, :)
 
 lines!(axN, Nn, z)
 lines!(axP, Pn, z)
-#lines!(axB, Bn, z)
+lines!(axB, Bn, z)
 lines!(axD, Dn, z)
 
 record(fig, "nutrients_plankton_bacteria_detritus.mp4", 1:nt, framerate=24) do nn

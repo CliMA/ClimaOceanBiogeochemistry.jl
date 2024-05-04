@@ -5,10 +5,10 @@
 using Oceananigans
 using GLMakie
 
-# filename1 = "plot/pert_NPBD_10y.jld2"
-# filename2 = "plot/pert_NPD_10y.jld2"
-filename1 = "plot/NPBD_3.jld2"
-filename2 = "plot/NPD_2.jld2"
+filename1 = "plot/pert_NPBD_130m_P05.jld2"
+filename2 = "plot/pert_NPD_130m_P05.jld2"
+# filename1 = "plot/NPBD_3.jld2"
+# filename2 = "plot/NPD_2.jld2"
 
 Nt = FieldTimeSeries(filename1, "N")
 Pt = FieldTimeSeries(filename1, "P")
