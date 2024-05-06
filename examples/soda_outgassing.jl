@@ -95,18 +95,18 @@ CO₂ that depends on temperature, etc.
                 Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
                 )
 
-    # store the soda and atmospheric pCO₂ into Fields
-    soda_pco₂[
+    # store the soda and atmospheric CO₂ concentrations into Fields
+    soda_co₂[
         simulation.model.grid.Nx,
         simulation.model.grid.Ny,
-        simulation.model.grid.Nz
-        ] = pCO₂ᵒᶜᵉ
-    atmos_pco₂[
+        simulation.model.grid.Nz,
+        ] = (pCO₂ᵒᶜᵉ * Pᵈⁱᶜₖₛₒₗₒ ) * ρʳᵉᶠ # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
+    atmos_co₂[
         simulation.model.grid.Nx,
         simulation.model.grid.Ny,
-        simulation.model.grid.Nz
-        ] = pCO₂ᵃᵗᵐ
-    
+        simulation.model.grid.Nz,
+        ] = (pCO₂ᵃᵗᵐ * Pᵈⁱᶜₖₛₒₗₐ) * ρʳᵉᶠ # Convert mol kg⁻¹ to mol m⁻³ 
+
     # compute schmidt number for DIC
     Sᶜᵈⁱᶜ =  2116.8 - 
               136.25 * Θᶜ + 
@@ -157,18 +157,23 @@ DICᵢ = 2.4   # mol/m³
 set!(model_open_in_the_fridge, T = Tᵢ, DIC = DICᵢ)
 
 # ## A simulation of a soda outgassing CO₂
-simulation = Simulation(model_open_in_the_fridge, Δt=10minutes, stop_time=12hours)
+simulation = Simulation(model_open_in_the_fridge, Δt=10minutes, stop_time=24hours)
 
 # ## A callback to compute the CO₂ flux
 add_callback!(simulation, compute_co₂_flux!)
 
 # These are filled in compute_co₂_flux!
-soda_pco₂ = Field{Center, Center, Nothing}(grid)
-atmos_pco₂ = Field{Center, Center, Nothing}(grid)
+soda_co₂ = Field{Center, Center, Nothing}(grid)
+atmos_co₂ = Field{Center, Center, Nothing}(grid)
 
 # ## An output writer
 fnm_fridge = "soda_in_the_fridge.jld2"
-outputs = (; co₂_flux, soda_pco₂, atmos_pco₂, model_open_in_the_fridge.tracers.T)
+outputs = (; co₂_flux, 
+             soda_co₂, 
+             atmos_co₂, 
+             model_open_in_the_fridge.tracers.T, 
+             model_open_in_the_fridge.tracers.DIC,
+             )
 simulation.output_writers[:jld2] = JLD2OutputWriter(
     model_open_in_the_fridge, outputs;
     filename = fnm_fridge,
@@ -180,8 +185,8 @@ run!(simulation)
 
 ### We put the pieces together for the second model ###
 ## Warming of soda temperature
-# K s⁻¹ linear increase from 4°C to 30°C over 12 hours
-temperature_increase(z, t, p) = p.∂T∂t * p.Δt 
+# K s⁻¹ linear increase from 4°C to 30°C over 12 hours then stops warming
+temperature_increase(z, t, p) = ifelse(t <= 12hours, p.∂T∂t * p.Δt , 0.0)
 
 warming = Forcing(
      temperature_increase, 
@@ -201,18 +206,23 @@ model_open_on_the_counter = NonhydrostaticModel(;
 set!(model_open_on_the_counter, T = Tᵢ, DIC = DICᵢ)
 
 # ## A simulation of a soda outgassing CO₂
-simulation = Simulation(model_open_on_the_counter, Δt=10minutes, stop_time=12hours)
+simulation = Simulation(model_open_on_the_counter, Δt=10minutes, stop_time=24hours)
 
 # ## A callback to compute the CO₂ flux
 add_callback!(simulation, compute_co₂_flux!)
 
 # These are filled in compute_co₂_flux!
-soda_pco₂ = Field{Center, Center, Nothing}(grid)
-atmos_pco₂ = Field{Center, Center, Nothing}(grid)
+soda_co₂ = Field{Center, Center, Nothing}(grid)
+atmos_co₂ = Field{Center, Center, Nothing}(grid)
 
 # ## An output writer
 fnm_counter = "soda_on_the_counter.jld2"
-outputs  = (; co₂_flux, soda_pco₂, atmos_pco₂, model_open_on_the_counter.tracers.T)
+outputs  = (; co₂_flux, 
+              soda_co₂, 
+              atmos_co₂, 
+              model_open_on_the_counter.tracers.T, 
+              model_open_on_the_counter.tracers.DIC,
+              )
 simulation.output_writers[:jld2] = JLD2OutputWriter(
     model_open_on_the_counter, outputs;
     filename = fnm_counter,
@@ -224,34 +234,38 @@ run!(simulation)
 # ## Visualization
 #
 # All that's left is to visualize the results.
-fridge_soda_pco₂ = FieldTimeSeries(fnm_fridge, "soda_pco₂")
-fridge_atmo_pco₂ = FieldTimeSeries(fnm_fridge, "atmos_pco₂")
+fridge_soda_co₂ = FieldTimeSeries(fnm_fridge, "soda_co₂")
+fridge_atmo_co₂ = FieldTimeSeries(fnm_fridge, "atmos_co₂")
 fridge_temp      = FieldTimeSeries(fnm_fridge, "T")
 
-counter_soda_pco₂ = FieldTimeSeries(fnm_counter, "soda_pco₂")
-counter_atmo_pco₂ = FieldTimeSeries(fnm_counter, "atmos_pco₂")
+counter_soda_co₂ = FieldTimeSeries(fnm_counter, "soda_co₂")
+counter_atmo_co₂ = FieldTimeSeries(fnm_counter, "atmos_co₂")
 counter_temp      = FieldTimeSeries(fnm_counter, "T")
 
-t  = fridge_soda_pco₂.times
+t  = fridge_soda_co₂.times
 nt = length(t)
 
 fig = Figure(size=(1200, 900))
 
-ax = Axis(fig[1,1], xlabel="Time", ylabel="pCO₂ (μatm)")
+ax = Axis(fig[1,1], xlabel="Time", ylabel="CO₂ conc [mmol m⁻³]")
 lines!(t/(3600), 
-       interior(fridge_soda_pco₂, 1, 1, 1, :)*1e6; 
+       interior(fridge_soda_co₂, 1, 1, 1, :)*1e3; 
        linestyle = :dash, 
-       label = "fridge soda pCO₂",
+       label = "fridge soda",
        )
 lines!(t/(3600), 
-       interior(counter_soda_pco₂, 1, 1, 1, :)*1e6; 
+       interior(counter_soda_co₂, 1, 1, 1, :)*1e3; 
        linestyle = :solid, 
-       label = "counter soda pCO₂",
+       label = "counter soda",
        )
 lines!(t/(3600), 
-       interior(fridge_atmo_pco₂, 1, 1, 1, :)*1e6; 
+       interior(fridge_atmo_co₂, 1, 1, 1, :)*1e3;
+       linestyle = :dash, 
+       label = "fridge saturated")
+lines!(t/(3600), 
+       interior(counter_atmo_co₂, 1, 1, 1, :)*1e3;
        linestyle = :solid, 
-       label = "atmos pCO₂")
+       label = "counter saturated")
 axislegend()
 
 ax = Axis(fig[2,1], xlabel="Time", ylabel="Temp (°C)")
@@ -267,6 +281,6 @@ lines!(t/(3600),
        )
 axislegend()
 
-## The cool soda's pCO₂ approaches equilibrium with the atmosphere quickly.
-## The the warming soda continues to outgas, since the solubility of CO₂ decreases with temperature.
+## The cool soda's CO₂ concentration approaches equilibrium with the atmosphere (the saturated CO₂ concentration) quickly.
+## The warming soda continues to outgas, since the solubility of CO₂ decreases with temperature. It'll taste flatter because of the lower CO₂ concentration.
 fig

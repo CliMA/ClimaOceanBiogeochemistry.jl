@@ -47,7 +47,7 @@ Return dissociation coefficients necessary to solve for the distribution of carb
 
     return CarbonChemistryCoefficients(
             Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, Pᵈⁱᶜₖₛₒₗₐ),
-            Fᵈⁱᶜₖₛₒₗₒ(Θᴷ, Sᵖ, Pᵈⁱᶜₖₛₒₗₒ),
+            Fᵈⁱᶜₖₚᵣₑ(Θᴷ, Sᵖ, Pᵈⁱᶜₖₚᵣₑ) * Fᵈⁱᶜₖ₀(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀), # Fᵈⁱᶜₖₛₒₗₒ
             Fᵈⁱᶜₖ₀(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀),
             Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₁ᵣ₉₃),
             Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₂ᵣ₉₃),
@@ -281,10 +281,10 @@ Base.@kwdef struct Pᵈⁱᶜₖₛₒₗₐ{FT}
 end
 
 """
-    Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀)
+    Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, Pᵈⁱᶜₖₛₒₗₐ)
 
     Calculate f = k0(1-pH2O)*correction term for non-ideality in (mol/kg-SW)/atm given temperature 
-    in K, `Θᴷ`, practical salinity, `Sᵖ`, and coefficients, `Pᵈⁱᶜₖ₀`. Currently no pressure correction
+    in K, `Θᴷ`, practical salinity, `Sᵖ`, and coefficients, `Pᵈⁱᶜₖₛₒₗₐ`. Currently no pressure correction
 
     References: Weiss & Price (1980, Mar. Chem., 8, 347-359 Eq 13 with table 6 values)
     pH scale  : N/A
@@ -305,7 +305,7 @@ end
              )
 end
 
-Base.@kwdef struct Pᵈⁱᶜₖₛₒₗₒ{FT}
+Base.@kwdef struct Pᵈⁱᶜₖₚᵣₑ{FT}
     a₀ :: FT = -1636.75
     a₁ :: FT = -  12.0408
     a₂ :: FT = -   0.0327957 
@@ -316,17 +316,17 @@ Base.@kwdef struct Pᵈⁱᶜₖₛₒₗₒ{FT}
 end
 
 """
-    Fᵈⁱᶜₖₛₒₗₒ(Θᴷ, Sᵖ, Pᵈⁱᶜₖₛₒₗₒ)
+    Fᵈⁱᶜₖₚᵣₑ(Θᴷ, Sᵖ, Pᵈⁱᶜₖₚᵣₑ)
 
-Return fugacity factor needed for non-ideality of CO₂ in the  ocean 
+Return fugacity prefactor needed for non-ideality of CO₂ in the  ocean 
     in (mol/kg-SW)/atm given temperature in K, `Θᴷ`, practical salinity, 
-    `Sᵖ`, and coefficients, `Pᵈⁱᶜₖₛₒₗₒ`.
+    `Sᵖ`, and coefficients, `Pᵈⁱᶜₖₚᵣₑ`.
 
 References: Weiss (1974) Marine Chemistry
 pH scale  : N/A
 Note      : currently no pressure correction
 """
-@inline function Fᵈⁱᶜₖₛₒₗₒ(Θᴷ, Sᵖ, params = Pᵈⁱᶜₖₛₒₗₒ)
+@inline function Fᵈⁱᶜₖₚᵣₑ(Θᴷ, Sᵖ, params = Pᵈⁱᶜₖₚᵣₑ)
     (; a₀, a₁, a₂, a₃, b₀, b₁, p₁) = params()
 
 #  "x2" term often neglected (assumed=1) in applications of Weiss (1974) eq.9
