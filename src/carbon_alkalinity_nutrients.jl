@@ -353,7 +353,7 @@ Tracer sources and sinks for FeT
                 + dissolved_organic_phosphate_remin(γ, D)) 
            #    + particulate_organic_phosphate_remin()) +
            #    + iron_sources()
-               - iron_scavenging(kˢᶜᵃᵛ, Fₜ, Lₜ, β))
+               - iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β))
     end
 
 """
