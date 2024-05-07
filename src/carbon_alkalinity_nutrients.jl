@@ -7,30 +7,6 @@ import Oceananigans.Biogeochemistry: required_biogeochemical_tracers, biogeochem
 
 const c = Center()
 
-"""
-    CarbonAlkalinityNutrients(; kw...)
-
-Return a six-tracer biogeochemistry model for the interaction of carbon, alkalinity, and nutrients.
-
-Parameters
-==========
-
-Tracer names
-============
-  * `DIC`: Dissolved Inorganic Carbon
-  * `Alk`: Alkalinity
-  * `PO₄`: Phosphate (macronutrient)
-  * `NO₃`: Nitrate (macronutrient)
-  * `DOP`: Dissolved Organic Phosphate (macronutrient)
-  * `Fe`: Dissolved Iron (micronutrient)
-
-Biogeochemical functions
-========================
-  * transitions for `DIC`, `Alk`, `PO₄`, `NO₃`, `DOP`, and `Fe`
-
-  * `biogeochemical_drift_velocity` for `D`, modeling the sinking of detritus at
-    a constant `detritus_sinking_speed`.
-"""
 struct CarbonAlkalinityNutrients{FT} <: AbstractBiogeochemistry
     maximum_net_community_production_rate      :: FT # mol P m⁻³ s⁻¹
     phosphate_half_saturation                  :: FT # mol P m⁻³
@@ -55,6 +31,56 @@ struct CarbonAlkalinityNutrients{FT} <: AbstractBiogeochemistry
     ligand_stability_coefficient               :: FT
 end
 
+"""
+    CarbonAlkalinityNutrients(; reference_density                           = 1024,
+                                maximum_net_community_production_rate       = 1 / day,
+                                phosphate_half_saturation                   = 1e-7 * reference_density,
+                                nitrate_half_saturation                     = 1.6e-6 * reference_density,
+                                iron_half_saturation                        = 1e-10 * reference_density,
+                                PAR_half_saturation                         = 10.0,
+                                PAR_attenuation_scale                       = 25.0,
+                                fraction_of_particulate_export              = 0.33
+                                dissolved_organic_phosphate_remin_timescale = 1 / 30day,
+                                stoichoimetric_ratio_carbon_to_phosphate    = 106.0
+                                stoichoimetric_ratio_nitrate_to_phosphate   = 16.0
+                                stoichoimetric_ratio_phosphate_to_oxygen    = 170.0,
+                                stoichoimetric_ratio_phosphate_to_iron      = 4.68e-4
+                                stoichoimetric_ratio_carbon_to_nitrate      = 106 / 16
+                                stoichoimetric_ratio_carbon_to_oxygen       = 106 / 170,
+                                stoichoimetric_ratio_carbon_to_iron         = 106 / 1.e-3
+                                stoichoimetric_ratio_silicate_to_phosphate  = 15.0
+                                rain_ratio_inorganic_to_organic_carbon      = 1e-1
+                                martin_curve_exponent                       = 0.84,
+                                iron_scavenging_rate                        = 5e-4 / day,
+                                ligand_concentration                        = 1e-9 * reference_density,
+                                ligand_stability_coefficient                = 1e8)
+
+Return a six-tracer biogeochemistry model for the interaction of carbon, alkalinity, and nutrients.
+
+Keyword Arguments
+=================
+
+Tracer names
+============
+* `DIC`: Dissolved Inorganic Carbon
+
+* `Alk`: Alkalinity
+
+* `PO₄`: Phosphate (macronutrient)
+
+* `NO₃`: Nitrate (macronutrient)
+
+* `DOP`: Dissolved Organic Phosphate (macronutrient)
+
+* `Fe`: Dissolved Iron (micronutrient)
+
+Biogeochemical functions
+========================
+* transitions for `DIC`, `Alk`, `PO₄`, `NO₃`, `DOP`, and `Fe`
+
+* `biogeochemical_drift_velocity` for `D`, modeling the sinking of detritus at
+  a constant `detritus_sinking_speed`.
+"""
 function CarbonAlkalinityNutrients(; reference_density = 1024,
                                    maximum_net_community_production_rate      = 1 / day, # mol P m⁻³ s⁻¹
                                    phosphate_half_saturation                  = 1e-7 * reference_density, # mol P m⁻³
@@ -122,8 +148,8 @@ end
 @inline freshwater_virtual_flux() = 0.0
 
 """
-    iron_scavenging(kˢᶜᵃᵛ, Fₜ, Lₜ, β)
-Linear loss of free iron by scavenging onto sinking particles or precipitation.
+Iron scavenging should depend on free iron, involves solving a quadratic equation in terms
+of ligand concentration and stability coefficient, but this is a simple first order approximation.
 """
 @inline function iron_scavenging(kˢᶜᵃᵛ, Fₜ, Lₜ, β)
     # solve for the equilibrium free iron concentration
@@ -326,8 +352,8 @@ Tracer sources and sinks for FeT
                 - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
                 + dissolved_organic_phosphate_remin(γ, D)) 
            #    + particulate_organic_phosphate_remin()) +
-                + iron_sources()
-                - iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β))
+           #    + iron_sources()
+           #    - iron_scavenging())
     end
 
 """

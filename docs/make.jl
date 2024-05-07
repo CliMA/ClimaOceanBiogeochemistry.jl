@@ -1,9 +1,7 @@
-pushfirst!(LOAD_PATH, joinpath(@__DIR__, "..")) # add ClimaOceanBiogeochemistry to environment stack
-
 using
   Documenter,
   Literate,
-  ClimaOceanBiogeochemistry
+  ClimaOceanBiogeochemistry,
   ClimaOceanBiogeochemistry.CarbonSystemSolvers
 
 #####
@@ -15,25 +13,33 @@ const OUTPUT_DIR   = joinpath(@__DIR__, "src/literated")
 
 to_be_literated = [
     "single_column_nutrients_plankton_bacteria_detritus.jl",
+    "single_column_carbon_alkalinity_nutrients.jl",
+    "simple_plankton_growth_death.jl"
 ]
   
 for file in to_be_literated
     filepath = joinpath(EXAMPLES_DIR, file)
-    Literate.markdown(filepath, OUTPUT_DIR; flavor = Literate.DocumenterFlavor())
+    Literate.markdown(filepath, OUTPUT_DIR;
+                      flavor = Literate.DocumenterFlavor())
 end
 
 #####
 ##### Build and deploy docs
 #####
 
+MiB = 2^20
+
 format = Documenter.HTML(collapselevel = 2,
                          prettyurls = get(ENV, "CI", nothing) == "true",
+                         size_threshold = 1MiB,
                          canonical = "https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/")
 
 pages = [
     "Home" => "index.md",
     "Examples" => [
         "Single column nutrients, plankton, bacteria, detritus" => "literated/single_column_nutrients_plankton_bacteria_detritus.md",
+        "Single column carbon, alkalinity, nutrients" => "literated/single_column_carbon_alkalinity_nutrients.md",
+        "Simple plankton growth and death" => "literated/simple_plankton_growth_death.md"
     ],
     "Library" => [ 
         "Contents" => "library/outline.md",
@@ -46,12 +52,13 @@ pages = [
 makedocs(sitename = "ClimaOceanBiogeochemistry.jl",
          modules = [ClimaOceanBiogeochemistry, 
                     ClimaOceanBiogeochemistry.CarbonSystemSolvers,
+                    ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver,
                     ClimaOceanBiogeochemistry.CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver,
                     ClimaOceanBiogeochemistry.CarbonSystemSolvers.DirectCubicCarbonSolver],
          format = format,
          pages = pages,
          doctest = true,
-         strict = true,
+         warnonly = [:cross_references],
          clean = true,
          checkdocs = :exports)
 
@@ -80,9 +87,8 @@ end
 
 withenv("GITHUB_REPOSITORY" => "CliMA/ClimaOceanBiogeochemistry.jl") do
     deploydocs(repo = "github.com/CliMA/ClimaOceanBiogeochemistry.jl.git",
-               versions = ["stable" => "v^", "v#.#.#", "dev" => "dev"],
+               versions = ["stable" => "v^", "dev" => "dev", "v#.#.#"],
                forcepush = true,
                devbranch = "main",
                push_preview = true)
 end
-
