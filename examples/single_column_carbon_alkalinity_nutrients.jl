@@ -68,10 +68,10 @@ model = HydrostaticFreeSurfaceModel(;
     grid,
     biogeochemistry     = CarbonAlkalinityNutrients(; 
         grid,
-        fraction_of_particulate_export = 0.,
         ),
-    closure             = ScalarDiffusivity(ν=1e-4, κ=1e-4),    
+    closure             = ScalarDiffusivity(; κ=1e-5),    
     tracers             = (:T, :S, :DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
+    tracer_advection    = WENO(),
     buoyancy            = SeawaterBuoyancy(
         equation_of_state  = LinearEquationOfState(
             thermal_expansion  = αᵀ,
@@ -80,6 +80,7 @@ model = HydrostaticFreeSurfaceModel(;
         ),
     boundary_conditions = (; T=T_bcs, DIC=dic_bcs),
     )
+
 # ## Initial conditions
 #
 ## Temperature initial condition: a stable density gradient with random noise superposed.
@@ -115,10 +116,10 @@ set!(
 # We construct a simple simulation that emits a message every 10 iterations
 # and outputs tracer fields.
 
-simulation = Simulation(model, Δt=10minutes, stop_time=1days)
+simulation = Simulation(model, Δt=10minutes, stop_time=30days)
 
 # We add a `TimeStepWizard` callback to adapt the simulation's time-step,
-wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=30minutes)
+wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=60minutes)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(10))
 
 DIC₀ = Field{Center, Center, Nothing}(grid)
@@ -315,7 +316,7 @@ axP = Axis(fig[5:6, 1:4], ylabel="pCO₂ (μatm)",yticklabelcolor = :red, yaxisp
 xlims!(axb, 15, 20)
 xlims!(axC, 1.8, 2.8)
 xlims!(axN, 0, 40)
-xlims!(axD, 0, 2)
+xlims!(axD, 0, 25)
 xlims!(axF, -1, 31)
 xlims!(axP, -1, 31)
 ylims!(axF, -2, 2)
