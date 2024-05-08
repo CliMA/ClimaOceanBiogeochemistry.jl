@@ -398,7 +398,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     Rᶜᴺ = bgc.stoichoimetric_ratio_carbon_to_nitrate     
     Rᶜᴼ = bgc.stoichoimetric_ratio_carbon_to_oxygen      
     Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron        
-    Rᶠᴾ = bgc.stoichoimetric_ratio_iron_to_phosphate
+    Rᶠᴾ = bgc.stoichoimetric_ratio_phosphate_to_iron
     Lₜ     = bgc.ligand_concentration
     β     = bgc.ligand_stability_coefficient
     kˢᶜᵃᵛ = bgc.iron_scavenging_rate
