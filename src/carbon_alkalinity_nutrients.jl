@@ -417,9 +417,9 @@ Tracer sources and sinks for dissolved iron (FeT).
     return Rᶠᴾ * (
                 -   net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) 
                 +   dissolved_organic_phosphate_remin(γ, DOP) 
-                +   particulate_organic_phosphate_remin(r, POP)) 
-                + iron_sources() 
-                - iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lₜ, β)
+                +   particulate_organic_phosphate_remin(r, POP))
+            + iron_sources() 
+            - iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lₜ, β)
     end
 
 """
