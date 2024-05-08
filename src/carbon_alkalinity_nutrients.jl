@@ -27,8 +27,8 @@ struct CarbonAlkalinityNutrients{FT,W} <: AbstractBiogeochemistry
     stoichoimetric_ratio_carbon_to_oxygen         :: FT 
     stoichoimetric_ratio_carbon_to_iron           :: FT 
     stoichoimetric_ratio_silicate_to_phosphate    :: FT
-    particulate_organic_phosphate_remin_timescale :: FT 
-    rain_ratio_inorganic_to_organic_carbon        :: FT  
+    rain_ratio_inorganic_to_organic_carbon        :: FT 
+    particulate_organic_phosphate_remin_timescale :: FT  
     iron_scavenging_rate                          :: FT # s⁻¹
     ligand_concentration                          :: FT # mol L m⁻³
     ligand_stability_coefficient                  :: FT
