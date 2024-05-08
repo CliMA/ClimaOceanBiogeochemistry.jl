@@ -180,7 +180,26 @@ end
 Iron scavenging should depend on free iron, involves solving a quadratic equation in terms
 of ligand concentration and stability coefficient, but this is a simple first order approximation.
 """
-@inline iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lₜ, β) = kˢᶜᵃᵛ * ( Feₜ - Lₜ )
+@inline function iron_scavenging(kˢᶜᵃᵛ, Fₜ, Lₜ, β)
+    # solve for the equilibrium free iron concentration
+       # β = FeL / (Feᶠʳᵉᵉ * Lᶠʳᵉᵉ)
+       # Lₜ = FeL + Lᶠʳᵉᵉ
+       # Fₜ = FeL + Feᶠʳᵉᵉ
+       # --> R₁(Feᶠʳᵉᵉ)² + R₂ Feᶠʳᵉᵉ + R₃ = 0
+       β⁻¹ = 1/β
+       R₁  = 1
+       R₂  = (Lₜ + β⁻¹ - Fₜ) 
+       R₃  = -(Fₜ * β⁻¹) 
+
+       # simple quadratic solution for roots
+       discriminant = ( R₂*R₂ - ( 4*R₁*R₃ ))^(1/2)
+
+       # directly solve for the free iron concentration
+       Feᶠʳᵉᵉ = (-R₂ + discriminant) / (2*R₁) 
+
+       # return the linear scavenging rate (net scavenging)
+       return (kˢᶜᵃᵛ * Feᶠʳᵉᵉ)
+end
 
 @inline iron_sources() = 1e-7
 
@@ -350,10 +369,17 @@ Tracer sources and sinks for FeT
     λ = bgc.PAR_attenuation_scale
     γ = bgc.dissolved_organic_phosphate_remin_timescale
     r = bgc.particulate_organic_phosphate_remin_timescale
-    Rᶠᴾ = bgc.stoichoimetric_ratio_phosphate_to_iron
-    kˢᶜᵃᵛ  = bgc.iron_scavenging_rate                                      
-    Lₜ     = bgc.ligand_concentration                                      
-    β      = bgc.ligand_stability_coefficient
+    α = bgc.fraction_of_particulate_export
+    Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
+    Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
+    Rᴾᴼ = bgc.stoichoimetric_ratio_phosphate_to_oxygen   
+    Rᶜᴺ = bgc.stoichoimetric_ratio_carbon_to_nitrate     
+    Rᶜᴼ = bgc.stoichoimetric_ratio_carbon_to_oxygen      
+    Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron        
+    Rᶠᴾ = bgc.stoichoimetric_ratio_iron_to_phosphate
+    Lₜ     = bgc.ligand_concentration
+    β     = bgc.ligand_stability_coefficient
+    kˢᶜᵃᵛ = bgc.iron_scavenging_rate
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -367,12 +393,11 @@ Tracer sources and sinks for FeT
     POP = @inbounds fields.POP[i, j, k]
 
     return Rᶠᴾ * (
-                - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
-                  dissolved_organic_phosphate_remin(γ, DOP) +
-                  particulate_organic_phosphate_remin(r, POP) +
-                  iron_sources() -
-                  iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lₜ, β)
-                  )
+                -   net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) 
+                +   dissolved_organic_phosphate_remin(γ, DOP) 
+                +   particulate_organic_phosphate_remin(r, POP)) 
+                - iron_sources() 
+                - iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lₜ, β)
     end
 
 """
