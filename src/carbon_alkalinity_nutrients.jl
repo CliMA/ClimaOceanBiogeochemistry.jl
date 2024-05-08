@@ -1,13 +1,15 @@
-using Oceananigans.Units: days
-using Oceananigans.Grids: znode, Center
-using Oceananigans.Fields: ZeroField, ConstantField
-using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
+import Oceananigans.Biogeochemistry:
+    biogeochemical_drift_velocity, required_biogeochemical_tracers
 
-import Oceananigans.Biogeochemistry: required_biogeochemical_tracers, biogeochemical_drift_velocity
+using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
+using Oceananigans.BoundaryConditions: ImpenetrableBoundaryCondition, fill_halo_regions!
+using Oceananigans.Fields: ConstantField, ZeroField
+using Oceananigans.Grids: Center, znode
+using Oceananigans.Units: days
 
 const c = Center()
 
-struct CarbonAlkalinityNutrients{FT, W} <: AbstractBiogeochemistry
+struct CarbonAlkalinityNutrients{FT,W} <: AbstractBiogeochemistry
     reference_density                             :: FT
     maximum_net_community_production_rate         :: FT # mol PO₄ m⁻³ s⁻¹
     phosphate_half_saturation                     :: FT # mol PO₄ m⁻³
@@ -93,7 +95,7 @@ function CarbonAlkalinityNutrients(; grid,
                                    PAR_half_saturation                          = 30.0,  # W m⁻²
                                    PAR_attenuation_scale                        = 25.0,  # m
                                    fraction_of_particulate_export               = 0.33,
-                                   dissolved_organic_phosphate_remin_timescale  = 2. / 365.25days, # s⁻¹
+                                   dissolved_organic_phosphate_remin_timescale  = 6. / 365.25days, # s⁻¹
                                    stoichoimetric_ratio_carbon_to_phosphate     = 117.0,
                                    stoichoimetric_ratio_nitrate_to_phosphate    = 16.0,
                                    stoichoimetric_ratio_phosphate_to_oxygen     = 170.0, 
@@ -112,7 +114,6 @@ function CarbonAlkalinityNutrients(; grid,
     if particulate_organic_phosphate_sinking_speed isa Number
         w₀ = particulate_organic_phosphate_sinking_speed
         no_penetration = ImpenetrableBoundaryCondition()
-
         bcs = FieldBoundaryConditions(grid, (Center, Center, Face),
                                       top=no_penetration, bottom=no_penetration)
 
@@ -147,13 +148,17 @@ function CarbonAlkalinityNutrients(; grid,
                                      convert(FT, iron_scavenging_rate),
                                      convert(FT, ligand_concentration),
                                      convert(FT, ligand_stability_coefficient),
-                                     particulate_organic_phosphate_sinking_speed)
+                                     particulate_organic_phosphate_sinking_speed,
+                                     )
 end
 
 const CAN = CarbonAlkalinityNutrients
 
 @inline required_biogeochemical_tracers(::CAN) = (:DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe)
 
+"""
+Add a vertical sinking "drift velocity" for the particulate organic phosphate (POP) tracer.
+"""
 @inline function biogeochemical_drift_velocity(bgc::CAN, ::Val{:POP})
     u = ZeroField()
     v = ZeroField()
@@ -161,15 +166,29 @@ const CAN = CarbonAlkalinityNutrients
     return (; u, v, w)
 end
 
+"""
+Calculate net community production depending on a maximum growth rate scaled by light availability, and
+the minimum of the three potentially limiting nutrients: phosphate, nitrate, and iron.
+"""
 @inline function net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
-    return μᵖ * I / (I + kᴵ) * min(PO₄ / (PO₄ + kᴾ), NO₃ / (NO₃ + kᴺ), Feₜ / (Feₜ + kᶠ))
+    return μᵖ * (I / (I + kᴵ)) * min(
+        (PO₄ / (PO₄ + kᴾ)), (NO₃ / (NO₃ + kᴺ)), (Feₜ / (Feₜ + kᶠ))
+        )
 end
 
+"""
+Calculate remineralization of dissolved organic phosphate according to a first-order rate constant.
+"""
 @inline dissolved_organic_phosphate_remin(γ, DOP) = γ * DOP
 
+"""
+Calculate remineralization of particulate organic phosphate according to a first-order rate constant.
+"""
 @inline particulate_organic_phosphate_remin(r, POP) = r * POP
 
-# exponential remineralization or below the lysocline
+"""
+Calculate remineralization of particulate organic carbon.
+"""
 @inline particulate_inorganic_carbon_remin() = 0.0
 
 #@inline air_sea_flux_co2() = 0.0
@@ -201,10 +220,13 @@ of ligand concentration and stability coefficient, but this is a simple first or
        return (kˢᶜᵃᵛ * Feᶠʳᵉᵉ)
 end
 
+"""
+Add surface input of iron. This sould be a boundary condition, but for now we just add a constant source.
+"""
 @inline iron_sources() = 1e-7
 
 """
-Tracer sources and sinks for DIC
+Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:DIC}, clock, fields)
     μᵖ = bgc.maximum_net_community_production_rate
@@ -244,7 +266,7 @@ Tracer sources and sinks for DIC
 end
 
 """
-Tracer sources and sinks for ALK
+Tracer sources and sinks for Alkalinity (ALK)
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:ALK}, clock, fields)
     μᵖ = bgc.maximum_net_community_production_rate
@@ -283,7 +305,7 @@ Tracer sources and sinks for ALK
 end
 
 """
-Tracer sources and sinks for PO₄
+Tracer sources and sinks for inorganic/dissolved phosphate (PO₄).
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:PO₄}, clock, fields)
     μᵖ = bgc.maximum_net_community_production_rate
@@ -320,7 +342,7 @@ Tracer sources and sinks for PO₄
 end
 
 """
-Tracer sources and sinks for NO₃
+Tracer sources and sinks for inorganic/dissolved Nitrate (NO₃).
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:NO₃}, clock, fields)
     μᵖ = bgc.maximum_net_community_production_rate
@@ -358,7 +380,7 @@ Tracer sources and sinks for NO₃
 end
 
 """
-Tracer sources and sinks for FeT
+Tracer sources and sinks for dissolved iron (FeT).
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:Fe}, clock, fields)
     μᵖ = bgc.maximum_net_community_production_rate
@@ -396,12 +418,12 @@ Tracer sources and sinks for FeT
                 -   net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) 
                 +   dissolved_organic_phosphate_remin(γ, DOP) 
                 +   particulate_organic_phosphate_remin(r, POP)) 
-                - iron_sources() 
+                + iron_sources() 
                 - iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lₜ, β)
     end
 
 """
-Tracer sources and sinks for DOP
+Tracer sources and sinks for dissolved organic phosphorus (DOP).
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:DOP}, clock, fields)
     μᵖ = bgc.maximum_net_community_production_rate
@@ -428,7 +450,7 @@ Tracer sources and sinks for DOP
 end
 
 """
-Tracer sources and sinks for POP
+Tracer sources and sinks for Particulate Organic Phosphorus (POP).
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:POP}, clock, fields)
     μᵖ = bgc.maximum_net_community_production_rate
