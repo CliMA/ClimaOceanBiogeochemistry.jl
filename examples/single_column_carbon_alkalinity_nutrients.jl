@@ -122,21 +122,44 @@ simulation = Simulation(model, Δt=10minutes, stop_time=30days)
 wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=60minutes)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(10))
 
+
 DIC₀ = Field{Center, Center, Nothing}(grid)
 ALK₀ = Field{Center, Center, Nothing}(grid)
-DIC₀[1,1,1] = 2.1
-ALK₀[1,1,1] = 2.35
+"""
+Function to print DIC, ALK, and CO₂ flux tendency during the simulation
+"""
+function progress(simulation) 
+    @printf("Iteration: %d, time: %s\n", 
+        iteration(simulation), 
+        prettytime(simulation),
+        )
 
-function progress(sim) 
-    @printf("Iteration: %d, time: %s\n", iteration(sim), prettytime(sim))
-    if iteration(sim) > 1
-        # Compare tracer tendencies to the air-sea CO₂ flux
-        @printf("Surface DIC (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", ((sim.model.tracers.DIC[1,1,grid.Nz]-DIC₀[1,1,1])/sim.model.timestepper.previous_Δt) * 1e7)
-        @printf("Surface ALK (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", ((sim.model.tracers.ALK[1,1,grid.Nz]-ALK₀[1,1,1])/sim.model.timestepper.previous_Δt) * 1e7)
-        @printf("Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", sim.model.tracers.DIC.boundary_conditions.top.condition[1,1] * 1e7)
+    if (iteration(simulation) == 1)
+        # Establish and set initial values for the anomaly fields
+        DIC₀[1,1,1] = simulation.model.tracers.DIC[
+            1,1,simulation.model.grid.Nz,
+            ]
+        ALK₀[1,1,1] = simulation.model.tracers.ALK[
+            1,1,simulation.model.grid.Nz,
+            ] 
+    else
+        @printf("Surface DIC (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
+            ((simulation.model.tracers.DIC[1,1,grid.Nz]-
+                DIC₀[1,1,1])/simulation.model.timestepper.previous_Δt) * 1e7)
+        @printf("Surface ALK (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
+            ((simulation.model.tracers.ALK[1,1,grid.Nz]-
+                ALK₀[1,1,1])/simulation.model.timestepper.previous_Δt) * 1e7)
+        @printf("Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
+            simulation.model.tracers.DIC.boundary_conditions.top.condition[1,1] * 1e7)
+
+        # update the anomaly fields
+        DIC₀[1,1,1] = simulation.model.tracers.DIC[
+                1,1,simulation.model.grid.Nz,
+                ]
+        ALK₀[1,1,1] = simulation.model.tracers.ALK[
+                1,1,simulation.model.grid.Nz,
+                ]    
     end
-    DIC₀[1,1,1] = sim.model.tracers.DIC[1,1,grid.Nz]
-    ALK₀[1,1,1] = sim.model.tracers.ALK[1,1,grid.Nz]
 end
 
 simulation.callbacks[:progress] = Callback(progress, IterationInterval(10))
