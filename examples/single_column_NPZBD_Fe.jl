@@ -41,10 +41,9 @@ validate_tracer_advection(tracer_advection::AbstractAdvectionScheme, ::SingleCol
 model = HydrostaticFreeSurfaceModel(; grid,
                                     velocities = PrescribedVelocityFields(),
                                     biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid,
-                                                                                        linear_remineralization_rate = 0.15/day,                                                    
-                                                                                        # maximum_bacteria_growth_rate = 1.2/day,
-                                                                                        # detritus_half_saturation = 0.5,
-                                                                                        # bacteria_yield = 0.5,
+                                                                                        #linear_remineralization_rate = 0.1/day,                                                    
+                                                                                        maximum_bacteria_growth_rate = 0.9/day,
+                                                                                        detritus_half_saturation = 0.05, 
                                                                                         detritus_vertical_velocity = -5/day),
                                     tracers = (:N, :P, :Z, :B, :D),
                                     tracer_advection = WENO(),
@@ -57,9 +56,9 @@ model = HydrostaticFreeSurfaceModel(; grid,
 # mixed layer.
 
 #set!(model, N1=3, P1=1e-1, P2=5e-2,Z1=1e-1,Z2=1e-2, B1=1e-1,B2=2e-2, D1=1e-1, D2=1e-2,D3=2e-1, D4=1e-1,D5=2e-1)
-set!(model, N=20, P=1e-1, Z=0,B=0, D=5e-1)
+set!(model, N=20, P=1e-1, Z=0,B=1e-1, D=5e-1)
 
-simulation = Simulation(model, Δt=30minutes, stop_time=3650days)
+simulation = Simulation(model, Δt=30minutes, stop_time=2000days)
 
 function progress(sim)
     @printf("Iteration: %d, time: %s, total(N): %.2e \n",
@@ -83,52 +82,6 @@ Z = model.tracers.Z
 B = model.tracers.B
 D = model.tracers.D
 
-#=
-N1 = model.tracers.N1
-P1 = model.tracers.P1
-P2 = model.tracers.P2
-Z1 = model.tracers.Z1
-Z2 = model.tracers.Z2
-B1 = model.tracers.B1
-B2 = model.tracers.B2
-D1 = model.tracers.D1 
-D2 = model.tracers.D2
-D3 = model.tracers.D3
-D4 = model.tracers.D4
-D5 = model.tracers.D5
-=#
-
-#=
-z = znodes(N)
-
-fig = Figure()
-
-axN = Axis(fig[1, 1], xlabel="Nutrient concentration (N)", ylabel="z (m)")
-axP = Axis(fig[1, 2], xlabel="Phytoplankton concentration (P)", ylabel="z (m)")
-#axZ = Axis(fig[1, 3], xlabel="Zooplankton concentration (Z)", ylabel="z (m)")
-axB = Axis(fig[1, 3], xlabel="Bacteria concentration (B)", ylabel="z (m)")
-axD = Axis(fig[1, 4], xlabel="Detritus concentration (D)", ylabel="z (m)")
-
-lines!(axN, interior(N1, 1, 1, :), z)
-lines!(axP, interior(P1, 1, 1, :), z)
-lines!(axP, interior(P2, 1, 1, :), z)
-lines!(axZ, interior(Z1, 1, 1, :), z)
-lines!(axZ, interior(Z2, 1, 1, :), z)
-lines!(axB, interior(B1, 1, 1, :), z)
-lines!(axB, interior(B2, 1, 1, :), z)
-lines!(axD, interior(D1, 1, 1, :), z)
-lines!(axD, interior(D2, 1, 1, :), z)
-lines!(axD, interior(D3, 1, 1, :), z)
-lines!(axD, interior(D4, 1, 1, :), z)
-lines!(axD, interior(D5, 1, 1, :), z)
-
-lines!(axN, interior(N, 1, 1, :), z)
-lines!(axP, interior(P, 1, 1, :), z)
-lines!(axB, interior(B, 1, 1, :), z)
-lines!(axD, interior(D, 1, 1, :), z)
-
-display(fig)
-=#
 filename = "nutrients_plankton_bacteria_detritus.jld2"
 
 simulation.output_writers[:fields] = JLD2OutputWriter(model, model.tracers;
@@ -143,7 +96,7 @@ run!(simulation)
 # All that's left is to visualize the results.
 Nt = FieldTimeSeries(filename, "N")
 Pt = FieldTimeSeries(filename, "P")
-# Bt = FieldTimeSeries(filename, "B")
+Bt = FieldTimeSeries(filename, "B")
 Dt = FieldTimeSeries(filename, "D")
 
 t = Pt.times
@@ -156,9 +109,9 @@ axN = Axis(fig[1, 1], ylabel="z (m)", xlabel="[Nutrient] (mmol m⁻³)")
 axB = Axis(fig[1, 2], ylabel="z (m)", xlabel="[Biomass] (mmol m⁻³)")
 axD = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Detritus] (mmol m⁻³)")
 
-xlims!(axN, -0.1, 40)
+xlims!(axN, -0.1, 50)
 xlims!(axB, -0.1, 1.0)
-xlims!(axD, -0.1, 2.0)
+xlims!(axD, -0.1, 1.5)
 
 slider = Slider(fig[2, 1:3], range=1:nt, startvalue=1)
 n = slider.value
@@ -168,88 +121,15 @@ Label(fig[0, 1:3], title)
 
 Nn = @lift interior(Nt[$n], 1, 1, :)
 Pn = @lift interior(Pt[$n], 1, 1, :)
-#Bn = @lift interior(Bt[$n], 1, 1, :)
+Bn = @lift interior(Bt[$n], 1, 1, :)
 Dn = @lift interior(Dt[$n], 1, 1, :)
 
 lines!(axN, Nn, z)
-lines!(axB, Pn, z, label = "P")
-#lines!(axB, Bn, z, label = "B")
+lines!(axB, Pn, z, label="P")
+lines!(axB, Bn, z, label="B")
 lines!(axD, Dn, z)
-#axislegend(axB, position = :rb)
+axislegend(axB, position = :rb)
 
 record(fig, "nutrients_plankton_bacteria_detritus.mp4", 1:nt, framerate=24) do nn
     n[] = nn
 end
-nothing #hide
-
-# ![](nutrients_plankton_bacteria_detritus.mp4)
-
-#= Figure 1: Extract the last frame
-N1n_last = interior(N1t[end], 1, 1, :)
-P1n_last = interior(P1t[end], 1, 1, :)
-P2n_last = interior(P2t[end], 1, 1, :)
-Z1n_last = interior(Z1t[end], 1, 1, :)
-Z2n_last = interior(Z2t[end], 1, 1, :)
-B1n_last = interior(B1t[end], 1, 1, :)
-B2n_last = interior(B2t[end], 1, 1, :)
-D1n_last = interior(D1t[end], 1, 1, :)
-D2n_last = interior(D2t[end], 1, 1, :)
-D3n_last = interior(D3t[end], 1, 1, :)
-D4n_last = interior(D4t[end], 1, 1, :)
-D5n_last = interior(D5t[end], 1, 1, :)
-
-last_frame = Figure(resolution=(1200, 600))
-axN = Axis(last_frame[1, 1], ylabel="z (m)", xlabel="[N] (mmol m⁻³)")
-axP = Axis(last_frame[1, 2], xlabel="[P] (mmol m⁻³)")
-axZ = Axis(last_frame[1, 3], xlabel="[Z] (mmol m⁻³)")
-axB = Axis(last_frame[1, 4], xlabel="[B] (mmol m⁻³)")
-axD = Axis(last_frame[1, 5], xlabel="[D] (mmol m⁻³)")
-
-lines!(axP, P1n_last, z)
-lines!(axP, P2n_last, z)
-lines!(axZ, Z1n_last, z)
-lines!(axZ, Z2n_last, z)
-lines!(axD, D1n_last, z)
-lines!(axD, D2n_last, z)
-lines!(axD, D3n_last, z)
-lines!(axD, D4n_last, z)
-lines!(axD, D5n_last, z)
-lines!(axB, B1n_last, z)
-lines!(axB, B2n_last, z)
-lines!(axN, N1n_last, z)
-
-# Save the last frame as a figure
-save("test.png", last_frame)
-
-#=
-# Figure 2: sum of each variable vs. time
-N_time = zeros(1:nt)
-P_time = zeros(1:nt)
-Z_time = zeros(1:nt)
-B_time = zeros(1:nt)
-D1_time = zeros(1:nt)
-D2_time = zeros(1:nt)
-
-for times = 1:nt
-    N_time[times] = sum(Nt[:,:,:,times])
-    P_time[times] = sum(Pt[:,:,:,times])
-    Z_time[times] = sum(Zt[:,:,:,times])
-    B_time[times] = sum(Bt[:,:,:,times])
-    D1_time[times] = sum(D1t[:,:,:,times])
-    D2_time[times] = sum(D2t[:,:,:,times])
-end
-
-TimeVar = Figure()
-ax2 = Axis(TimeVar[1,1], title="Variable over time",ylabel="Variable (mmol m⁻³)", xlabel="Time (days)")
-lines!(ax2, 1:nt, N_time, label="N")  
-lines!(ax2, 1:nt, P_time, label="P")  
-lines!(ax2, 1:nt, Z_time, label="Z")  
-lines!(ax2, 1:nt, B_time, label="B")  
-lines!(ax2, 1:nt, D1_time, label="dD") 
-lines!(ax2, 1:nt, D2_time, label="pD") 
-
-axislegend()
- 
-save("TimeVariations.png", TimeVar)
-=#
-=#
