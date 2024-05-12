@@ -26,6 +26,7 @@ struct NutrientsPlanktonBacteriaDetritus{FT, W} <: AbstractBiogeochemistry
     PAR_attenuation_scale :: FT
     detritus_vertical_velocity :: W  
     iron_half_saturation :: FT
+    iron_concentration :: FT
 end
 
 """
@@ -45,7 +46,8 @@ end
                                         PAR_half_saturation          = 10.0,
                                         PAR_attenuation_scale        = 25.0,
                                         detritus_vertical_velocity   = -10/day,
-                                        iron_half_saturation         = 0.1)
+                                        iron_half_saturation         = 0.0001,
+                                        iron_concentration         = 0.00001)
 
 Return a five-tracer biogeochemistry model for the interaction of nutrients (N), phytoplankton (P), 
 zooplankton(Z), bacteria (B), detritus (D).
@@ -126,7 +128,8 @@ function NutrientsPlanktonBacteriaDetritus(; grid,
                                            PAR_half_saturation          = 10.0,     # W m⁻²
                                            PAR_attenuation_scale        = 25.0,     # m
                                            detritus_vertical_velocity   = -10/day,  # m s⁻¹
-                                           iron_half_saturation         = 0.1)      # mmol m⁻³ 
+                                           iron_half_saturation         = 0.0001,
+                                           iron_concentration           = 0.00001)      # mmol m⁻³ 
 
     if detritus_vertical_velocity isa Number
         w₀ = detritus_vertical_velocity
@@ -159,7 +162,8 @@ function NutrientsPlanktonBacteriaDetritus(; grid,
                                              convert(FT, PAR_half_saturation),            
                                              convert(FT, PAR_attenuation_scale),          
                                              detritus_vertical_velocity,
-                                             convert(FT, iron_half_saturation))
+                                             convert(FT, iron_half_saturation),
+                                             convert(FT, iron_concentration))
 end
 
 const NPZBD = NutrientsPlanktonBacteriaDetritus
@@ -210,6 +214,7 @@ end
     y = bgc.bacteria_yield
     γ = bgc.zooplankton_yield
     kᶠᵉ = bgc.iron_half_saturation
+    Fe = bgc.iron_concentration
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -222,7 +227,6 @@ end
     D = @inbounds fields.D[i, j, k]
     B = @inbounds fields.B[i, j, k]
     N = @inbounds fields.N[i, j, k]
-    Fe = 0.1*((-z+0.1)^0.3)
     
     if sum(B) > 0
         return (- phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P, kᶠᵉ, Fe) +
@@ -248,6 +252,7 @@ end
     mq = bgc.quadratic_mortality_rate
     γ = bgc.zooplankton_yield
     kᶠᵉ = bgc.iron_half_saturation
+    Fe = bgc.iron_concentration
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -258,7 +263,6 @@ end
     P = @inbounds fields.P[i, j, k]
     Z = @inbounds fields.Z[i, j, k]
     N = @inbounds fields.N[i, j, k]
-    Fe = 0.1*((-z+0.1)^0.3)
 
     return (phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P, kᶠᵉ, Fe) -
             phytoplankton_mortality(mlin, mq, P) -

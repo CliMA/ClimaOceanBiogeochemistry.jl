@@ -5,11 +5,11 @@
 using Oceananigans
 using GLMakie
 
-filename1 = "plot/NPBD_MLD2_before.jld2"
-filename2 = "plot/NPBD_MLD2_after.jld2"
+filename1 = "plot/NPBD_Fe_before.jld2"
+filename2 = "plot/NPBD_Fe_after.jld2"
 
-filename3 = "plot/NPD_MLD2_before.jld2"
-filename4 = "plot/NPD_MLD2_after.jld2"
+filename3 = "plot/NPD_Fe_before.jld2"
+filename4 = "plot/NPD_Fe_after.jld2"
 # filename1 = "plot/NPBD_3.jld2"
 # filename2 = "plot/NPD_2.jld2"
 

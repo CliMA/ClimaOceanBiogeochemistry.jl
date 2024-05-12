@@ -37,14 +37,15 @@ validate_tracer_advection(tracer_advection::AbstractAdvectionScheme, ::SingleCol
 # We put the pieces together.
 # The important line here is `biogeochemistry = NutrientsPlanktonBacteriaDetritus()`.
 # We use all default parameters.
- 
-model = HydrostaticFreeSurfaceModel(; grid,
+
+model1 = HydrostaticFreeSurfaceModel(; grid,
                                     velocities = PrescribedVelocityFields(),
                                     biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid,
                                                                                         #linear_remineralization_rate = 0.1/day,                                                    
                                                                                         maximum_bacteria_growth_rate = 0.9/day,
                                                                                         detritus_half_saturation = 0.05, 
-                                                                                        detritus_vertical_velocity = -5/day),
+                                                                                        detritus_vertical_velocity = -5/day,
+                                                                                        iron_concentration =0.00003),
                                     tracers = (:N, :P, :Z, :B, :D),
                                     tracer_advection = WENO(),
                                     buoyancy = nothing,
@@ -55,48 +56,133 @@ model = HydrostaticFreeSurfaceModel(; grid,
 # We initialize the model with reasonable nutrients, detritus, and a nutrient
 # mixed layer.
 
-#set!(model, N1=3, P1=1e-1, P2=5e-2,Z1=1e-1,Z2=1e-2, B1=1e-1,B2=2e-2, D1=1e-1, D2=1e-2,D3=2e-1, D4=1e-1,D5=2e-1)
-set!(model, N=20, P=1e-1, Z=0,B=1e-1, D=5e-1)
+set!(model1, N=20, P=1e-1, Z=0,B=1e-1, D=5e-1)
 
-simulation = Simulation(model, Δt=30minutes, stop_time=2000days)
+simulation1 = Simulation(model1, Δt=30minutes, stop_time=1825days)
+
+# Define a callback function to apply the perturbation
+
+# function perturbation_callback(sim)
+#     # For a month in Year 5: 1810-1840 days
+#     if time(sim) >= 50days && time(sim) < 53days 
+#         model.biogeochemistry.iron_concentration = 0.001
+#         # Apply Fe
+#         set!(model)    
+#     end
+# end
+
+# # Add the perturbation callback to the simulation
+# simulation.callbacks[:perturbation] = Callback(perturbation_callback,IterationInterval(100))
+# ERROR: setfield!: immutable struct of type NutrientsPlanktonBacteriaDetritus cannot be changed
 
 function progress(sim)
     @printf("Iteration: %d, time: %s, total(N): %.2e \n",
             iteration(sim), prettytime(sim),
-            sum(model.tracers.N)+sum(model.tracers.P)+sum(model.tracers.Z)+sum(model.tracers.B)+sum(model.tracers.D))
-            #=
-            sum(model.tracers.N1)+
-            sum(model.tracers.P1)+sum(model.tracers.P2)+
-            sum(model.tracers.Z1)+ sum(model.tracers.Z2)
-            sum(model.tracers.B1)+ sum(model.tracers.B2)+
-            sum(model.tracers.D1)+sum(model.tracers.D2)+sum(model.tracers.D3)+sum(model.tracers.D4)+sum(model.tracers.D5))
-            =#
+            sum(model1.tracers.N)+sum(model1.tracers.P)+sum(model1.tracers.Z)+sum(model1.tracers.B)+sum(model1.tracers.D))
     return nothing
 end
 
-simulation.callbacks[:progress] = Callback(progress, IterationInterval(100))
+simulation1.callbacks[:progress] = Callback(progress, IterationInterval(100))
 
-N = model.tracers.N
-P = model.tracers.P
-Z = model.tracers.Z
-B = model.tracers.B
-D = model.tracers.D
+N = model1.tracers.N
+P = model1.tracers.P
+Z = model1.tracers.Z
+B = model1.tracers.B
+D = model1.tracers.D
 
-filename = "nutrients_plankton_bacteria_detritus.jld2"
+filename = "NPBD_FeFert1.jld2"
 
-simulation.output_writers[:fields] = JLD2OutputWriter(model, model.tracers;
+simulation1.output_writers[:fields] = JLD2OutputWriter(model1, model1.tracers;
                                                       filename,
                                                       schedule = TimeInterval(1day),
                                                       overwrite_existing = true)
 
-run!(simulation)
+run!(simulation1)
+
+####################################### Part 2: Fe fertilization #######################################
+Nₘ = model1.tracers.N
+Pₘ = model1.tracers.P
+Zₘ = model1.tracers.Z
+Bₘ = model1.tracers.B
+Dₘ = model1.tracers.D
+
+model2 = HydrostaticFreeSurfaceModel(; grid,
+                                    velocities = PrescribedVelocityFields(),
+                                    biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid,
+                                                                                        #linear_remineralization_rate = 0.1/day,                                                    
+                                                                                        maximum_bacteria_growth_rate = 0.9/day,
+                                                                                        detritus_half_saturation = 0.05, 
+                                                                                        detritus_vertical_velocity = -5/day,
+                                                                                        iron_concentration =0.0001),
+                                    tracers = (:N, :P, :Z, :B, :D),
+                                    tracer_advection = WENO(),
+                                    buoyancy = nothing,
+                                    closure = vertical_diffusion) 
+
+set!(model2, N=Nₘ, P=Pₘ, Z=Zₘ,B=Bₘ, D=Dₘ)
+simulation2 = Simulation(model2, Δt=30minutes, stop_time=100days)
+
+function progress(sim)
+    @printf("Iteration: %d, time: %s, total(N): %.2e \n",
+            iteration(sim), prettytime(sim),
+            sum(model2.tracers.N)+sum(model2.tracers.P)+sum(model2.tracers.Z)+sum(model2.tracers.B)+sum(model2.tracers.D))
+    return nothing
+end
+simulation2.callbacks[:progress] = Callback(progress, IterationInterval(100))
+
+filename = "NPBD_FeFert2.jld2"
+simulation2.output_writers[:fields] = JLD2OutputWriter(model2, model2.tracers;
+                                                      filename = filename,
+                                                      schedule = TimeInterval(1day),
+                                                      overwrite_existing = true)
+
+run!(simulation2)
+
+####################################### Part 3: After Fe fertilization #######################################
+Nₘ2 = model2.tracers.N
+Pₘ2 = model2.tracers.P
+Zₘ2 = model2.tracers.Z
+Bₘ2 = model2.tracers.B
+Dₘ2 = model2.tracers.D
+
+model3 = HydrostaticFreeSurfaceModel(; grid,
+                                    velocities = PrescribedVelocityFields(),
+                                    biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid,
+                                                                                        # linear_remineralization_rate = 0.1/day,                                                    
+                                                                                        maximum_bacteria_growth_rate = 0.9/day,
+                                                                                        detritus_half_saturation = 0.05, 
+                                                                                        detritus_vertical_velocity = -5/day,
+                                                                                        iron_concentration =0.00003),
+                                    tracers = (:N, :P, :Z, :B, :D),
+                                    tracer_advection = WENO(),
+                                    buoyancy = nothing,
+                                    closure = vertical_diffusion) 
+
+set!(model3, N=Nₘ2, P=Pₘ2, Z=Zₘ2,B=Bₘ2, D=Dₘ2)
+simulation3 = Simulation(model3, Δt=30minutes, stop_time=1825days)
+
+function progress(sim)
+    @printf("Iteration: %d, time: %s, total(N): %.2e \n",
+            iteration(sim), prettytime(sim),
+            sum(model3.tracers.N)+sum(model3.tracers.P)+sum(model3.tracers.Z)+sum(model3.tracers.B)+sum(model3.tracers.D))
+    return nothing
+end
+simulation3.callbacks[:progress] = Callback(progress, IterationInterval(100))
+
+filename = "NPBD_FeFert3.jld2"
+simulation3.output_writers[:fields] = JLD2OutputWriter(model3, model3.tracers;
+                                                      filename = filename,
+                                                      schedule = TimeInterval(1day),
+                                                      overwrite_existing = true)
+
+run!(simulation3)
 
 # ###################### Visualization ######################
-#
+#=
 # All that's left is to visualize the results.
 Nt = FieldTimeSeries(filename, "N")
 Pt = FieldTimeSeries(filename, "P")
-Bt = FieldTimeSeries(filename, "B")
+#Bt = FieldTimeSeries(filename, "B")
 Dt = FieldTimeSeries(filename, "D")
 
 t = Pt.times
@@ -121,15 +207,17 @@ Label(fig[0, 1:3], title)
 
 Nn = @lift interior(Nt[$n], 1, 1, :)
 Pn = @lift interior(Pt[$n], 1, 1, :)
-Bn = @lift interior(Bt[$n], 1, 1, :)
+#Bn = @lift interior(Bt[$n], 1, 1, :)
 Dn = @lift interior(Dt[$n], 1, 1, :)
 
 lines!(axN, Nn, z)
 lines!(axB, Pn, z, label="P")
-lines!(axB, Bn, z, label="B")
+#lines!(axB, Bn, z, label="B")
 lines!(axD, Dn, z)
 axislegend(axB, position = :rb)
 
 record(fig, "nutrients_plankton_bacteria_detritus.mp4", 1:nt, framerate=24) do nn
     n[] = nn
 end
+nothing
+=#
