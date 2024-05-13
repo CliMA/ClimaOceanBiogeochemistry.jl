@@ -136,28 +136,28 @@ function progress(simulation)
 
     if (iteration(simulation) == 1)
         # Establish and set initial values for the anomaly fields
-        DIC₀[1,1,1] = simulation.model.tracers.DIC[
-            1,1,simulation.model.grid.Nz,
+        DIC₀[1, 1, 1] = simulation.model.tracers.DIC[
+            1, 1, simulation.model.grid.Nz,
             ]
-        ALK₀[1,1,1] = simulation.model.tracers.ALK[
-            1,1,simulation.model.grid.Nz,
+        ALK₀[1, 1, 1] = simulation.model.tracers.ALK[
+            1, 1, simulation.model.grid.Nz,
             ] 
     else
         @printf("Surface DIC (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
-            ((simulation.model.tracers.DIC[1,1,grid.Nz]-
-                DIC₀[1,1,1])/simulation.model.timestepper.previous_Δt) * 1e7)
+            ((simulation.model.tracers.DIC[1, 1, grid.Nz]-
+                DIC₀[1, 1, 1])/simulation.model.timestepper.previous_Δt) * 1e7)
         @printf("Surface ALK (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
-            ((simulation.model.tracers.ALK[1,1,grid.Nz]-
-                ALK₀[1,1,1])/simulation.model.timestepper.previous_Δt) * 1e7)
+            ((simulation.model.tracers.ALK[1, 1, grid.Nz]-
+                ALK₀[1, 1, 1])/simulation.model.timestepper.previous_Δt) * 1e7)
         @printf("Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
             simulation.model.tracers.DIC.boundary_conditions.top.condition[1,1] * 1e7)
 
         # update the anomaly fields
-        DIC₀[1,1,1] = simulation.model.tracers.DIC[
-                1,1,simulation.model.grid.Nz,
+        DIC₀[1, 1, 1] = simulation.model.tracers.DIC[
+                1, 1, simulation.model.grid.Nz,
                 ]
-        ALK₀[1,1,1] = simulation.model.tracers.ALK[
-                1,1,simulation.model.grid.Nz,
+        ALK₀[1, 1, 1] = simulation.model.tracers.ALK[
+                1, 1, simulation.model.grid.Nz,
                 ]    
     end
 end
@@ -173,6 +173,12 @@ Base.@kwdef struct Pᶠˡᵘˣᶜᵒ²{FT}
     silicate_conc        :: FT = 15e-6 # mol kg⁻¹
     initial_pH_guess     :: FT = 8.0
     reference_density    :: FT = 1024.5 # kg m⁻³
+    schmidt_dic_coeff0   :: FT = 2116.8
+    schmidt_dic_coeff1   :: FT = 136.25 
+    schmidt_dic_coeff2   :: FT = 4.7353 
+    schmidt_dic_coeff3   :: FT = 9.2307e-2
+    schmidt_dic_coeff4   :: FT = 7.555e-4
+    schmidt_dic_coeff5   :: FT = 660.0
 end
 
 # Build operation for CO₂ flux calculation, used in callback below to calculate every time step
@@ -195,7 +201,12 @@ solubility/activity of CO₂ in seawater.
        exchange_coefficient, 
        silicate_conc, 
        initial_pH_guess, 
-       reference_density   
+       reference_density,
+       schmidt_dic_coeff0, 
+       schmidt_dic_coeff1, 
+       schmidt_dic_coeff2, 
+       schmidt_dic_coeff3, 
+       schmidt_dic_coeff4,    
        ) = Pᶠˡᵘˣᶜᵒ²()
 
     U₁₀      = surface_wind_speed  
@@ -204,7 +215,13 @@ solubility/activity of CO₂ in seawater.
     Kʷₐᵥₑ    = exchange_coefficient
     Siᵀ      = silicate_conc       
     pH       = initial_pH_guess
-    ρʳᵉᶠ     = reference_density 
+    ρʳᵉᶠ     = reference_density
+    a₀ˢᶜᵈⁱᶜ   = schmidt_dic_coeff0 
+    a₁ˢᶜᵈⁱᶜ   = schmidt_dic_coeff1 
+    a₂ˢᶜᵈⁱᶜ   = schmidt_dic_coeff2 
+    a₃ˢᶜᵈⁱᶜ   = schmidt_dic_coeff3 
+    a₄ˢᶜᵈⁱᶜ   = schmidt_dic_coeff4 
+    a₅ˢᶜᵈⁱᶜ   = schmidt_dic_coeff5 
     co₂_flux = simulation.model.tracers.DIC.boundary_conditions.top.condition
 
     @inbounds for i in 1:co₂_flux.grid.Nx
@@ -244,16 +261,17 @@ solubility/activity of CO₂ in seawater.
                     )
 
         # compute schmidt number for DIC
-        Sᶜᵈⁱᶜ =  2116.8 - 
-                  136.25 * Θᶜ + 
-                    4.7353 * Θᶜ^2 - 
-                    0.092307 * Θᶜ^3 + 
-                    7.555e-4 * Θᶜ^4
-            
+        Cˢᶜᵈⁱᶜ =  ( a₀ˢᶜᵈⁱᶜ - 
+                    a₁ˢᶜᵈⁱᶜ * Θᶜ + 
+                    a₂ˢᶜᵈⁱᶜ * Θᶜ^2 - 
+                    a₃ˢᶜᵈⁱᶜ * Θᶜ^3 + 
+                    a₄ˢᶜᵈⁱᶜ * Θᶜ^4 
+                  )/a₅ˢᶜᵈⁱᶜ
+
         # compute gas exchange coefficient/piston velocity and correct with Schmidt number
         Kʷ =  (
                (Kʷₐᵥₑ * cmhr⁻¹_per_ms⁻¹) * U₁₀^2
-              ) / sqrt(Sᶜᵈⁱᶜ/660)    
+              ) / sqrt(Cˢᶜᵈⁱᶜ)    
             
         # compute co₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards in the soda)
         co₂_flux[
@@ -322,9 +340,9 @@ tt = Tt.times
 nt = length(tt)
 z  = znodes(Tt)
 
-CO₂_flux_time_series   = [CO₂t[1,1,1,i] for i in 1:nt]
-pCO₂_ocean_time_series = [opCO₂t[1,1,1,i] for i in 1:nt]
-pCO₂_atmos_time_series = [apCO₂t[1,1,1,i] for i in 1:nt]
+CO₂_flux_time_series   = [CO₂t[1, 1, 1, i] for i in 1:nt]
+pCO₂_ocean_time_series = [opCO₂t[1, 1, 1, i] for i in 1:nt]
+pCO₂_atmos_time_series = [apCO₂t[1, 1, 1, i] for i in 1:nt]
 
 fig = Figure(size=(1200, 1200))
 n = Observable(1)
