@@ -62,7 +62,7 @@ ocean_co₂ = Field{Center, Center, Nothing}(grid)
 atmos_co₂ = Field{Center, Center, Nothing}(grid)
 
 ## Supply some coefficients and external data for the CO₂ flux calculation
-Base.@kwdef struct Pᶠˡᵘˣᶜᵒ²{FT}
+Base.@kwdef struct CO2_flux_parameters{FT}
     surface_wind_speed   :: FT = 10. # ms⁻¹
     applied_pressure     :: FT = 0.0 # atm
     atmospheric_pCO₂     :: FT = 280e-6 # atm
@@ -86,7 +86,7 @@ using the piston velocity formulation of Wanninkhof (1992) and the
 solubility/activity of CO₂ in seawater.
 """
 @inline function compute_co₂_flux!(simulation)
-## get coefficients from Pᶠˡᵘˣᶜᵒ² struct
+## get coefficients from CO2_flux_parameters struct
 ## I really want the option to take these from the model
     (; surface_wind_speed, 
         applied_pressure,
@@ -101,7 +101,7 @@ solubility/activity of CO₂ in seawater.
         schmidt_dic_coeff3, 
         schmidt_dic_coeff4, 
         schmidt_dic_coeff5,
-        ) = Pᶠˡᵘˣᶜᵒ²()
+        ) = CO2_flux_parameters()
 
     U₁₀      = surface_wind_speed  
     Δpᵦₐᵣ    = applied_pressure # (i.e. Pˢᵘʳᶠ-Pᵃᵗᵐ)
@@ -120,32 +120,14 @@ solubility/activity of CO₂ in seawater.
 
     cmhr⁻¹_per_ms⁻¹ = 1 / 3.6e5 # conversion factor from cm/hr to m/s
 
+    Nz = size(simulation.model.grid, 3)
+
     ## access model fields
-    Θᶜ = simulation.model.tracers.T[
-            simulation.model.grid.Nx,
-            simulation.model.grid.Ny,
-            simulation.model.grid.Nz,
-            ]
-    Sᴬ = simulation.model.tracers.S[
-            simulation.model.grid.Nx,
-            simulation.model.grid.Ny,
-            simulation.model.grid.Nz,
-            ]
-    Cᵀ = simulation.model.tracers.DIC[
-            simulation.model.grid.Nx,
-            simulation.model.grid.Ny,
-            simulation.model.grid.Nz,
-            ]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
-    Aᵀ = simulation.model.tracers.ALK[
-            simulation.model.grid.Nx,
-            simulation.model.grid.Ny,
-            simulation.model.grid.Nz,
-            ]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
-    Pᵀ = simulation.model.tracers.PO₄[
-            simulation.model.grid.Nx,
-            simulation.model.grid.Ny,
-            simulation.model.grid.Nz,
-            ]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
+    Θᶜ = simulation.model.tracers.T[1,1,Nz]
+    Sᴬ = simulation.model.tracers.S[1,1,Nz]
+    Cᵀ = simulation.model.tracers.DIC[1,1,Nz]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
+    Aᵀ = simulation.model.tracers.ALK[1,1,Nz]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
+    Pᵀ = simulation.model.tracers.PO₄[1,1,Nz]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
 
     ## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
     ## Returns ocean pCO₂ (in atm) and atmosphere/ocean solubility coefficients (mol kg⁻¹ atm⁻¹)
@@ -168,26 +150,14 @@ solubility/activity of CO₂ in seawater.
           ) / sqrt(Cˢᶜᵈⁱᶜ)    
         
     ## compute co₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards in the soda)
-    co₂_flux[
-        simulation.model.grid.Nx,
-        simulation.model.grid.Ny,
-        simulation.model.grid.Nz
-        ] = - Kʷ * (
+    co₂_flux[1,1,Nz] = - Kʷ * (
                     pCO₂ᵃᵗᵐ * Pᵈⁱᶜₖₛₒₗₐ - 
                     pCO₂ᵒᶜᵉ * Pᵈⁱᶜₖₛₒₗₒ
                    ) * ρʳᵉᶠ # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
 
     ## store the oceanic and atmospheric CO₂ concentrations into Fields
-    ocean_co₂[
-        simulation.model.grid.Nx,
-        simulation.model.grid.Ny,
-        simulation.model.grid.Nz,
-        ] = pCO₂ᵒᶜᵉ
-    atmos_co₂[
-        simulation.model.grid.Nx,
-        simulation.model.grid.Ny,
-        simulation.model.grid.Nz,
-        ] = pCO₂ᵃᵗᵐ 
+    ocean_co₂[1,1,Nz] = pCO₂ᵒᶜᵉ
+    atmos_co₂[1,1,Nz] = pCO₂ᵃᵗᵐ 
     return nothing
 end
 
@@ -254,19 +224,13 @@ ALK₀ = Field{Center, Center, Nothing}(grid)
 Function to print DIC, ALK, and CO₂ flux tendency during the simulation
 """
 function progress(simulation) 
-    @printf("Iteration: %d, time: %s\n", 
-        iteration(simulation), 
-        prettytime(simulation),
-        )
+    @printf("Iteration: %d, time: %s\n", iteration(simulation), prettytime(simulation))
+    Nz = size(simulation.model.grid, 3)
 
-    if (iteration(simulation) == 1)
+    if iteration(simulation) == 1
         ## Establish and set initial values for the anomaly fields
-        DIC₀[1, 1, 1] = simulation.model.tracers.DIC[
-            1, 1, simulation.model.grid.Nz,
-            ]
-        ALK₀[1, 1, 1] = simulation.model.tracers.ALK[
-            1, 1, simulation.model.grid.Nz,
-            ] 
+        DIC₀[1, 1, 1] = simulation.model.tracers.DIC[1, 1, Nz]
+        ALK₀[1, 1, 1] = simulation.model.tracers.ALK[1, 1, Nz]
     else
         @printf("Surface DIC (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
             ((simulation.model.tracers.DIC[1, 1, grid.Nz]-
@@ -278,12 +242,8 @@ function progress(simulation)
             simulation.model.tracers.DIC.boundary_conditions.top.condition[1,1] * 1e7)
 
         ## update the anomaly fields
-        DIC₀[1, 1, 1] = simulation.model.tracers.DIC[
-                1, 1, simulation.model.grid.Nz,
-                ]
-        ALK₀[1, 1, 1] = simulation.model.tracers.ALK[
-                1, 1, simulation.model.grid.Nz,
-                ]    
+        DIC₀[1, 1, 1] = simulation.model.tracers.DIC[1, 1, Nz]
+        ALK₀[1, 1, 1] = simulation.model.tracers.ALK[1, 1, Nz]    
     end
 end
 

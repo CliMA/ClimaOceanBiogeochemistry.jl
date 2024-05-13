@@ -34,7 +34,7 @@ atmos_co₂ = Field{Center, Center, Nothing}(grid)
 
 # Build function for CO₂ flux calculation. Dissolved CO₂ in the soda will exchange with the overlying atmosphere
 # These are some coefficients and constants that we'll use in the calculation
-Base.@kwdef struct Pᶠˡᵘˣᶜᵒ²{FT}
+Base.@kwdef struct CO2_flux_parameters{FT}
     surface_wind_speed   :: FT = 10. # ms⁻¹
     atmospheric_pCO₂     :: FT = 280e-6 # atm
     exchange_coefficient :: FT = 0.337 # cm hr⁻¹
@@ -60,7 +60,7 @@ formulation of Wanninkhof (1992) and the solubility/activity of
 CO₂ that depends on temperature, etc.
 """
 @inline function compute_co₂_flux!(simulation)
-## Get coefficients from Pᶠˡᵘˣᶜᵒ² struct
+## Get coefficients from CO2_flux_parameters struct
 ## I really want the option to take these from the model
     (; surface_wind_speed, 
        atmospheric_pCO₂, 
@@ -77,7 +77,7 @@ CO₂ that depends on temperature, etc.
        schmidt_dic_coeff3, 
        schmidt_dic_coeff4, 
        schmidt_dic_coeff5,
-       ) = Pᶠˡᵘˣᶜᵒ²()
+       ) = CO2_flux_parameters()
 
     U₁₀      = surface_wind_speed  
     pCO₂ᵃᵗᵐ  = atmospheric_pCO₂    
@@ -98,6 +98,8 @@ CO₂ that depends on temperature, etc.
 
     cmhr⁻¹_per_ms⁻¹ = 1 / 3.6e5 # conversion factor from cm/hr to m/s
 
+    Nz = size(simulation.model.grid, 3)
+
     ## applied pressure in atm (i.e. Pˢᵘʳᶠ-Pᵃᵗᵐ) 
     ## Positive when the can is sealed, then zero when the can is opens
     ## On average, the 12 ounce soda cans sold in the US tend to have a pressure of roughly 120 kPa when canned at 4 °C
@@ -109,16 +111,8 @@ CO₂ that depends on temperature, etc.
     end
 
     ## access model fields
-    Θᶜ = simulation.model.tracers.T[
-        simulation.model.grid.Nx,
-        simulation.model.grid.Ny,
-        simulation.model.grid.Nz
-        ]
-    Cᵀ = simulation.model.tracers.DIC[
-        simulation.model.grid.Nx,
-        simulation.model.grid.Ny,
-        simulation.model.grid.Nz
-        ]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
+    Θᶜ = simulation.model.tracers.T[1,1,Nz]
+    Cᵀ = simulation.model.tracers.DIC[1,1,Nz]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
 
     ## compute soda pCO₂ using the UniversalRobustCarbonSystem solver
     ## Returns soda pCO₂ (in atm) and atmosphere/soda solubility coefficients (mol kg⁻¹ atm⁻¹)
@@ -128,16 +122,8 @@ CO₂ that depends on temperature, etc.
                 )
 
     ## store the soda and atmospheric CO₂ concentrations into Fields
-    soda_co₂[
-        simulation.model.grid.Nx,
-        simulation.model.grid.Ny,
-        simulation.model.grid.Nz,
-        ] = (pCO₂ᵒᶜᵉ * Pᵈⁱᶜₖₛₒₗₒ ) * ρʳᵉᶠ # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
-    atmos_co₂[
-        simulation.model.grid.Nx,
-        simulation.model.grid.Ny,
-        simulation.model.grid.Nz,
-        ] = (pCO₂ᵃᵗᵐ * Pᵈⁱᶜₖₛₒₗₐ) * ρʳᵉᶠ # Convert mol kg⁻¹ to mol m⁻³ 
+    soda_co₂[1,1,Nz] = (pCO₂ᵒᶜᵉ * Pᵈⁱᶜₖₛₒₗₒ ) * ρʳᵉᶠ # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
+    atmos_co₂[1,1,Nz] = (pCO₂ᵃᵗᵐ * Pᵈⁱᶜₖₛₒₗₐ) * ρʳᵉᶠ # Convert mol kg⁻¹ to mol m⁻³ 
 
     ## compute schmidt number for DIC
     Cˢᶜᵈⁱᶜ =  ( a₀ˢᶜᵈⁱᶜ - 
@@ -153,11 +139,7 @@ CO₂ that depends on temperature, etc.
           ) / sqrt(Cˢᶜᵈⁱᶜ)    
     
     ## compute co₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards in the soda)
-    co₂_flux[
-        simulation.model.grid.Nx,
-        simulation.model.grid.Ny,
-        simulation.model.grid.Nz
-        ] = - Kʷ * (
+    co₂_flux[1,1,Nz] = - Kʷ * (
                     pCO₂ᵃᵗᵐ * Pᵈⁱᶜₖₛₒₗₐ - 
                     pCO₂ᵒᶜᵉ * Pᵈⁱᶜₖₛₒₗₒ
                    ) * ρʳᵉᶠ # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
