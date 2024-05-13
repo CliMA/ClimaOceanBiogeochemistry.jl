@@ -206,8 +206,9 @@ solubility/activity of CO₂ in seawater.
        schmidt_dic_coeff1, 
        schmidt_dic_coeff2, 
        schmidt_dic_coeff3, 
-       schmidt_dic_coeff4,    
-       ) = Pᶠˡᵘˣᶜᵒ²()
+       schmidt_dic_coeff4, 
+       schmidt_dic_coeff5,
+    ) = Pᶠˡᵘˣᶜᵒ²()
 
     U₁₀      = surface_wind_speed  
     Δpᵦₐᵣ    = applied_pressure # (i.e. Pˢᵘʳᶠ-Pᵃᵗᵐ)
