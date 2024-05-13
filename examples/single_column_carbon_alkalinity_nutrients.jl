@@ -1,4 +1,4 @@
-# # Nutrients, plankton, bacteria, detritus
+# # Simple carbon cycle biogeochemistry model
 #
 # This example illustrates how to use ClimaOceanBiogeochemistry's
 # `CarbonAlkalinityNutrients` model in a single column context.
@@ -17,7 +17,6 @@ using CairoMakie
 # ## A single column grid
 #
 # We set up a single column grid with 4 m grid spacing that's 256 m deep:
-
 grid = RectilinearGrid(size = 64,
                        z = (-256meters, 0),
                        topology = (Flat, Flat, Bounded))
@@ -28,6 +27,7 @@ grid = RectilinearGrid(size = 64,
 αᵀ = 2e-4
 #and haline contraction
 βˢ = 8e-4
+nothing #hide
 
 # ## Boundary conditions
 #
@@ -42,7 +42,7 @@ cᴾ = 3991.0 # J K⁻¹ kg⁻¹, typical heat capacity for seawater
 
 Qᵀ(t) = ifelse(t < 5days, Qʰ / (ρₒ * cᴾ), 0.0) # K m s⁻¹, surface _temperature_ flux
 
-# Finally, we impose a temperature gradient `dTdz` both initially and at the
+# we also impose a temperature gradient `dTdz` both initially and at the
 # bottom of the domain, culminating in the boundary conditions on temperature,
 
 dTdz = 0.01 # K m⁻¹
@@ -51,25 +51,153 @@ T_bcs = FieldBoundaryConditions(top    = FluxBoundaryCondition(Qᵀ),
                                 bottom = GradientBoundaryCondition(dTdz))
 
 
-# These are filled in compute_co₂_flux!
-ocean_co₂ = Field{Center, Center, Nothing}(grid)
-atmos_co₂ = Field{Center, Center, Nothing}(grid)
-
 # For air-sea CO₂ fluxes, we use a FluxBoundaryCondition for the "top" of the DIC tracer.
 # We'll write a callback to calculate the flux every time step.
 co₂_flux = Field{Center, Center, Nothing}(grid)
 
 dic_bcs  = FieldBoundaryConditions(top = FluxBoundaryCondition(co₂_flux))
 
-### We put the pieces together ###
-# The important line here is `biogeochemistry = CarbonAlkalinityNutrients()`.
+## These are filled in compute_co₂_flux!
+ocean_co₂ = Field{Center, Center, Nothing}(grid)
+atmos_co₂ = Field{Center, Center, Nothing}(grid)
+
+## Supply some coefficients and external data for the CO₂ flux calculation
+Base.@kwdef struct Pᶠˡᵘˣᶜᵒ²{FT}
+    surface_wind_speed   :: FT = 10. # ms⁻¹
+    applied_pressure     :: FT = 0.0 # atm
+    atmospheric_pCO₂     :: FT = 280e-6 # atm
+    exchange_coefficient :: FT = 0.337 # cm hr⁻¹
+    silicate_conc        :: FT = 15e-6 # mol kg⁻¹
+    initial_pH_guess     :: FT = 8.0
+    reference_density    :: FT = 1024.5 # kg m⁻³
+    schmidt_dic_coeff0   :: FT = 2116.8
+    schmidt_dic_coeff1   :: FT = 136.25 
+    schmidt_dic_coeff2   :: FT = 4.7353 
+    schmidt_dic_coeff3   :: FT = 9.2307e-2
+    schmidt_dic_coeff4   :: FT = 7.555e-4
+    schmidt_dic_coeff5   :: FT = 660.0
+end
+
+"""
+    compute_co₂_flux!(simulation)
+    
+Returns the tendency of DIC in the top layer due to air-sea CO₂ flux
+using the piston velocity formulation of Wanninkhof (1992) and the
+solubility/activity of CO₂ in seawater.
+"""
+@inline function compute_co₂_flux!(simulation)
+## get coefficients from Pᶠˡᵘˣᶜᵒ² struct
+## I really want the option to take these from the model
+    (; surface_wind_speed, 
+        applied_pressure,
+        atmospheric_pCO₂, 
+        exchange_coefficient, 
+        silicate_conc, 
+        initial_pH_guess, 
+        reference_density,
+        schmidt_dic_coeff0, 
+        schmidt_dic_coeff1, 
+        schmidt_dic_coeff2, 
+        schmidt_dic_coeff3, 
+        schmidt_dic_coeff4, 
+        schmidt_dic_coeff5,
+        ) = Pᶠˡᵘˣᶜᵒ²()
+
+    U₁₀      = surface_wind_speed  
+    Δpᵦₐᵣ    = applied_pressure # (i.e. Pˢᵘʳᶠ-Pᵃᵗᵐ)
+    pCO₂ᵃᵗᵐ  = atmospheric_pCO₂    
+    Kʷₐᵥₑ    = exchange_coefficient
+    Siᵀ      = silicate_conc       
+    pH       = initial_pH_guess
+    ρʳᵉᶠ     = reference_density
+    a₀ˢᶜᵈⁱᶜ   = schmidt_dic_coeff0 
+    a₁ˢᶜᵈⁱᶜ   = schmidt_dic_coeff1 
+    a₂ˢᶜᵈⁱᶜ   = schmidt_dic_coeff2 
+    a₃ˢᶜᵈⁱᶜ   = schmidt_dic_coeff3 
+    a₄ˢᶜᵈⁱᶜ   = schmidt_dic_coeff4 
+    a₅ˢᶜᵈⁱᶜ   = schmidt_dic_coeff5 
+    co₂_flux = simulation.model.tracers.DIC.boundary_conditions.top.condition
+
+    cmhr⁻¹_per_ms⁻¹ = 1 / 3.6e5 # conversion factor from cm/hr to m/s
+
+    ## access model fields
+    Θᶜ = simulation.model.tracers.T[
+            simulation.model.grid.Nx,
+            simulation.model.grid.Ny,
+            simulation.model.grid.Nz,
+            ]
+    Sᴬ = simulation.model.tracers.S[
+            simulation.model.grid.Nx,
+            simulation.model.grid.Ny,
+            simulation.model.grid.Nz,
+            ]
+    Cᵀ = simulation.model.tracers.DIC[
+            simulation.model.grid.Nx,
+            simulation.model.grid.Ny,
+            simulation.model.grid.Nz,
+            ]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
+    Aᵀ = simulation.model.tracers.ALK[
+            simulation.model.grid.Nx,
+            simulation.model.grid.Ny,
+            simulation.model.grid.Nz,
+            ]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
+    Pᵀ = simulation.model.tracers.PO₄[
+            simulation.model.grid.Nx,
+            simulation.model.grid.Ny,
+            simulation.model.grid.Nz,
+            ]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
+
+    ## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
+    ## Returns ocean pCO₂ (in atm) and atmosphere/ocean solubility coefficients (mol kg⁻¹ atm⁻¹)
+    (; pCO₂ᵒᶜᵉ, Pᵈⁱᶜₖₛₒₗₐ, Pᵈⁱᶜₖₛₒₗₒ) = 
+        UniversalRobustCarbonSystem(
+                Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
+                )
+
+    ## compute schmidt number for DIC
+    Cˢᶜᵈⁱᶜ =  ( a₀ˢᶜᵈⁱᶜ - 
+                a₁ˢᶜᵈⁱᶜ * Θᶜ + 
+                a₂ˢᶜᵈⁱᶜ * Θᶜ^2 - 
+                a₃ˢᶜᵈⁱᶜ * Θᶜ^3 + 
+                a₄ˢᶜᵈⁱᶜ * Θᶜ^4 
+              )/a₅ˢᶜᵈⁱᶜ
+
+    ## compute gas exchange coefficient/piston velocity and correct with Schmidt number
+    Kʷ =  (
+           (Kʷₐᵥₑ * cmhr⁻¹_per_ms⁻¹) * U₁₀^2
+          ) / sqrt(Cˢᶜᵈⁱᶜ)    
+        
+    ## compute co₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards in the soda)
+    co₂_flux[
+        simulation.model.grid.Nx,
+        simulation.model.grid.Ny,
+        simulation.model.grid.Nz
+        ] = - Kʷ * (
+                    pCO₂ᵃᵗᵐ * Pᵈⁱᶜₖₛₒₗₐ - 
+                    pCO₂ᵒᶜᵉ * Pᵈⁱᶜₖₛₒₗₒ
+                   ) * ρʳᵉᶠ # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
+
+    ## store the oceanic and atmospheric CO₂ concentrations into Fields
+    ocean_co₂[
+        simulation.model.grid.Nx,
+        simulation.model.grid.Ny,
+        simulation.model.grid.Nz,
+        ] = pCO₂ᵒᶜᵉ
+    atmos_co₂[
+        simulation.model.grid.Nx,
+        simulation.model.grid.Ny,
+        simulation.model.grid.Nz,
+        ] = pCO₂ᵃᵗᵐ 
+    return nothing
+end
+
+# ## We put the pieces together
+# The important line here is `biogeochemistry = CarbonAlkalinityNutrients(; grid)`.
 # We use all default parameters.
 model = HydrostaticFreeSurfaceModel(; 
     grid,
-    biogeochemistry     = CarbonAlkalinityNutrients(; 
-        grid,
-        ),
-    closure             = ScalarDiffusivity(; κ=1e-5),    
+    biogeochemistry     = CarbonAlkalinityNutrients(; grid ),
+    closure             = ScalarDiffusivity(; κ=1e-4),    
     tracers             = (:T, :S, :DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
     tracer_advection    = WENO(),
     buoyancy            = SeawaterBuoyancy(
@@ -87,9 +215,9 @@ model = HydrostaticFreeSurfaceModel(;
 ## Random noise damped at top and bottom
 Ξ(z) = randn() * z / model.grid.Lz * (1 + z / model.grid.Lz)
 Tᵢ(z) = 20 + dTdz * z + dTdz * model.grid.Lz * 1e-6 * Ξ(z)
-Sᵢ(z) = 35
 
-# We initialize the model with reasonable nutrient concentrations
+# We initialize the model with reasonable salinity and carbon/alkalinity/nutrient concentrations
+Sᵢ(z)   = 35.0  # psu
 DICᵢ(z) = 2.1   # mol/m³ 
 ALKᵢ(z) = 2.35   # mol/m³ 
 PO₄ᵢ(z) = 2.5e-3 # mol/m³ 
@@ -112,17 +240,14 @@ set!(
     )
 
 # ## A simulation of physical-biological interaction
-# 
-# We construct a simple simulation that emits a message every 10 iterations
-# and outputs tracer fields.
-
+# We run the simulation for 30 days with a time-step of 10 minutes.
 simulation = Simulation(model, Δt=10minutes, stop_time=30days)
 
-# We add a `TimeStepWizard` callback to adapt the simulation's time-step,
+# We add a `TimeStepWizard` callback to adapt the simulation's time-step...
 wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=60minutes)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(10))
 
-
+# ...and we emit a message every 10 iterations with information on DIC, ALK, and CO₂ flux tendencies.
 DIC₀ = Field{Center, Center, Nothing}(grid)
 ALK₀ = Field{Center, Center, Nothing}(grid)
 """
@@ -135,7 +260,7 @@ function progress(simulation)
         )
 
     if (iteration(simulation) == 1)
-        # Establish and set initial values for the anomaly fields
+        ## Establish and set initial values for the anomaly fields
         DIC₀[1, 1, 1] = simulation.model.tracers.DIC[
             1, 1, simulation.model.grid.Nz,
             ]
@@ -152,7 +277,7 @@ function progress(simulation)
         @printf("Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
             simulation.model.tracers.DIC.boundary_conditions.top.condition[1,1] * 1e7)
 
-        # update the anomaly fields
+        ## update the anomaly fields
         DIC₀[1, 1, 1] = simulation.model.tracers.DIC[
                 1, 1, simulation.model.grid.Nz,
                 ]
@@ -164,143 +289,7 @@ end
 
 simulation.callbacks[:progress] = Callback(progress, IterationInterval(10))
 
-# I really want the option to take these from the model
-Base.@kwdef struct Pᶠˡᵘˣᶜᵒ²{FT}
-    surface_wind_speed   :: FT = 10. # ms⁻¹
-    applied_pressure     :: FT = 0.0 # atm
-    atmospheric_pCO₂     :: FT = 280e-6 # atm
-    exchange_coefficient :: FT = 0.337 # cm hr⁻¹
-    silicate_conc        :: FT = 15e-6 # mol kg⁻¹
-    initial_pH_guess     :: FT = 8.0
-    reference_density    :: FT = 1024.5 # kg m⁻³
-    schmidt_dic_coeff0   :: FT = 2116.8
-    schmidt_dic_coeff1   :: FT = 136.25 
-    schmidt_dic_coeff2   :: FT = 4.7353 
-    schmidt_dic_coeff3   :: FT = 9.2307e-2
-    schmidt_dic_coeff4   :: FT = 7.555e-4
-    schmidt_dic_coeff5   :: FT = 660.0
-end
-
-# Build operation for CO₂ flux calculation, used in callback below to calculate every time step
-"""
-    compute_co₂_flux!(simulation)
-    
-Returns the tendency of DIC in the top layer due to air-sea CO₂ flux
-using the piston velocity formulation of Wanninkhof (1992) and the
-solubility/activity of CO₂ in seawater.
-"""
-@inline function compute_co₂_flux!(simulation)
-# conversion factor from cm/hr to m/s
-    cmhr⁻¹_per_ms⁻¹ = 1 / 3.6e5
-
-# get coefficients from Pᶠˡᵘˣᶜᵒ² struct
-# I really want the option to take these from the model
-    (; surface_wind_speed, 
-       applied_pressure,
-       atmospheric_pCO₂, 
-       exchange_coefficient, 
-       silicate_conc, 
-       initial_pH_guess, 
-       reference_density,
-       schmidt_dic_coeff0, 
-       schmidt_dic_coeff1, 
-       schmidt_dic_coeff2, 
-       schmidt_dic_coeff3, 
-       schmidt_dic_coeff4, 
-       schmidt_dic_coeff5,
-    ) = Pᶠˡᵘˣᶜᵒ²()
-
-    U₁₀      = surface_wind_speed  
-    Δpᵦₐᵣ    = applied_pressure # (i.e. Pˢᵘʳᶠ-Pᵃᵗᵐ)
-    pCO₂ᵃᵗᵐ  = atmospheric_pCO₂    
-    Kʷₐᵥₑ    = exchange_coefficient
-    Siᵀ      = silicate_conc       
-    pH       = initial_pH_guess
-    ρʳᵉᶠ     = reference_density
-    a₀ˢᶜᵈⁱᶜ   = schmidt_dic_coeff0 
-    a₁ˢᶜᵈⁱᶜ   = schmidt_dic_coeff1 
-    a₂ˢᶜᵈⁱᶜ   = schmidt_dic_coeff2 
-    a₃ˢᶜᵈⁱᶜ   = schmidt_dic_coeff3 
-    a₄ˢᶜᵈⁱᶜ   = schmidt_dic_coeff4 
-    a₅ˢᶜᵈⁱᶜ   = schmidt_dic_coeff5 
-    co₂_flux = simulation.model.tracers.DIC.boundary_conditions.top.condition
-
-    @inbounds for i in 1:co₂_flux.grid.Nx
-        @inbounds for j in 1:co₂_flux.grid.Ny
-        # access model fields
-            Θᶜ = simulation.model.tracers.T[
-                    simulation.model.grid.Nx,
-                    simulation.model.grid.Ny,
-                    simulation.model.grid.Nz,
-                    ]
-            Sᴬ = simulation.model.tracers.S[
-                    simulation.model.grid.Nx,
-                    simulation.model.grid.Ny,
-                    simulation.model.grid.Nz,
-                    ]
-            Cᵀ = simulation.model.tracers.DIC[
-                    simulation.model.grid.Nx,
-                    simulation.model.grid.Ny,
-                    simulation.model.grid.Nz,
-                    ]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
-            Aᵀ = simulation.model.tracers.ALK[
-                    simulation.model.grid.Nx,
-                    simulation.model.grid.Ny,
-                    simulation.model.grid.Nz,
-                    ]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
-            Pᵀ = simulation.model.tracers.PO₄[
-                    simulation.model.grid.Nx,
-                    simulation.model.grid.Ny,
-                    simulation.model.grid.Nz,
-                    ]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
-
-        # compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
-        # Returns ocean pCO₂ (in atm) and atmosphere/ocean solubility coefficients (mol kg⁻¹ atm⁻¹)
-        (; pCO₂ᵒᶜᵉ, Pᵈⁱᶜₖₛₒₗₐ, Pᵈⁱᶜₖₛₒₗₒ) = 
-            UniversalRobustCarbonSystem(
-                    Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
-                    )
-
-        # compute schmidt number for DIC
-        Cˢᶜᵈⁱᶜ =  ( a₀ˢᶜᵈⁱᶜ - 
-                    a₁ˢᶜᵈⁱᶜ * Θᶜ + 
-                    a₂ˢᶜᵈⁱᶜ * Θᶜ^2 - 
-                    a₃ˢᶜᵈⁱᶜ * Θᶜ^3 + 
-                    a₄ˢᶜᵈⁱᶜ * Θᶜ^4 
-                  )/a₅ˢᶜᵈⁱᶜ
-
-        # compute gas exchange coefficient/piston velocity and correct with Schmidt number
-        Kʷ =  (
-               (Kʷₐᵥₑ * cmhr⁻¹_per_ms⁻¹) * U₁₀^2
-              ) / sqrt(Cˢᶜᵈⁱᶜ)    
-            
-        # compute co₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards in the soda)
-        co₂_flux[
-            simulation.model.grid.Nx,
-            simulation.model.grid.Ny,
-            simulation.model.grid.Nz
-            ] = - Kʷ * (
-                        pCO₂ᵃᵗᵐ * Pᵈⁱᶜₖₛₒₗₐ - 
-                        pCO₂ᵒᶜᵉ * Pᵈⁱᶜₖₛₒₗₒ
-                       ) * ρʳᵉᶠ # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
-
-        # store the oceanic and atmospheric CO₂ concentrations into Fields
-        ocean_co₂[
-            simulation.model.grid.Nx,
-            simulation.model.grid.Ny,
-            simulation.model.grid.Nz,
-            ] = pCO₂ᵒᶜᵉ
-        atmos_co₂[
-            simulation.model.grid.Nx,
-            simulation.model.grid.Ny,
-            simulation.model.grid.Nz,
-            ] = pCO₂ᵃᵗᵐ 
-
-        end
-    end
-    return nothing
-end
-
+# Dont forget to add the callback to compute the CO₂ flux
 add_callback!(simulation, compute_co₂_flux!)
 
 # Output writer
@@ -318,6 +307,8 @@ simulation.output_writers[:jld2] = JLD2OutputWriter(model, outputs;
                                                     filename = filename_diags,
                                                     schedule = TimeInterval(20minutes),
                                                     overwrite_existing = true)
+
+# ## Run the example
 run!(simulation)
 
 # ## Visualization

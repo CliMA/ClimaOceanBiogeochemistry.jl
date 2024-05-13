@@ -1,7 +1,7 @@
-# # Nutrients, plankton, bacteria, detritus
+# # Illustration of using a carbon system solver
 #
 # This example illustrates how to use ClimaOceanBiogeochemistry's
-# `CarbonAlkalinityNutrients` model in a single column context.
+# `UniversalRobustCarbonSystem` model in a 0-d context.
 
 using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
 using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonChemistryCoefficients
@@ -17,6 +17,21 @@ using CairoMakie
 #   the other opened and left on the counter to go flat.
 #
 
+# ## Model setup 
+# The 0-d grid represents a 10cm bottle of soda
+grid = RectilinearGrid(size = 1,
+                       z = (-1meter/10, 0),
+                       topology = (Flat, Flat, Bounded))
+
+# For CO₂ exchange, we use a FluxBoundaryCondition for the "top" of the dissolved inorganic carbon (DIC) tracer.
+# We'll write a callback later to calculate the flux every time step.
+co₂_flux = Field{Center, Center, Nothing}(grid)
+dic_bcs  = FieldBoundaryConditions(top = FluxBoundaryCondition(co₂_flux))
+
+# Field arrays to store pCO₂ values filled in `compute_co₂_flux!`
+soda_co₂ = Field{Center, Center, Nothing}(grid)
+atmos_co₂ = Field{Center, Center, Nothing}(grid)
+
 # Build function for CO₂ flux calculation. Dissolved CO₂ in the soda will exchange with the overlying atmosphere
 # These are some coefficients and constants that we'll use in the calculation
 Base.@kwdef struct Pᶠˡᵘˣᶜᵒ²{FT}
@@ -25,10 +40,16 @@ Base.@kwdef struct Pᶠˡᵘˣᶜᵒ²{FT}
     exchange_coefficient :: FT = 0.337 # cm hr⁻¹
     salinity             :: FT = 35.0 # psu
     alkalinity           :: FT = 2.35e-3 # mol kg⁻¹
-    silicate_conc        :: FT = 0e-6 # mol kg⁻¹
+    silicate_conc        :: FT = 15e-6 # mol kg⁻¹
     phosphate_conc       :: FT = 0e-6 # mol kg⁻¹
     initial_pH_guess     :: FT = 8.0
-    reference_density    :: FT = 1000. # kg m⁻³
+    reference_density    :: FT = 1024.5 # kg m⁻³
+    schmidt_dic_coeff0   :: FT = 2116.8
+    schmidt_dic_coeff1   :: FT = 136.25 
+    schmidt_dic_coeff2   :: FT = 4.7353 
+    schmidt_dic_coeff3   :: FT = 9.2307e-2
+    schmidt_dic_coeff4   :: FT = 7.555e-4
+    schmidt_dic_coeff5   :: FT = 660.0
 end
 
 """
@@ -39,11 +60,8 @@ formulation of Wanninkhof (1992) and the solubility/activity of
 CO₂ that depends on temperature, etc.
 """
 @inline function compute_co₂_flux!(simulation)
-# conversion factor from cm/hr to m/s
-    cmhr⁻¹_per_ms⁻¹ = 1 / 3.6e5
-
-# get coefficients from Pᶠˡᵘˣᶜᵒ² struct
-# I really want the option to take these from the model
+## Get coefficients from Pᶠˡᵘˣᶜᵒ² struct
+## I really want the option to take these from the model
     (; surface_wind_speed, 
        atmospheric_pCO₂, 
        exchange_coefficient, 
@@ -53,6 +71,12 @@ CO₂ that depends on temperature, etc.
        phosphate_conc,
        initial_pH_guess, 
        reference_density,   
+       schmidt_dic_coeff0, 
+       schmidt_dic_coeff1, 
+       schmidt_dic_coeff2, 
+       schmidt_dic_coeff3, 
+       schmidt_dic_coeff4, 
+       schmidt_dic_coeff5,
        ) = Pᶠˡᵘˣᶜᵒ²()
 
     U₁₀      = surface_wind_speed  
@@ -64,19 +88,27 @@ CO₂ that depends on temperature, etc.
     Pᵀ       = phosphate_conc   
     pH       = initial_pH_guess
     ρʳᵉᶠ     = reference_density 
+    a₀ˢᶜᵈⁱᶜ   = schmidt_dic_coeff0 
+    a₁ˢᶜᵈⁱᶜ   = schmidt_dic_coeff1 
+    a₂ˢᶜᵈⁱᶜ   = schmidt_dic_coeff2 
+    a₃ˢᶜᵈⁱᶜ   = schmidt_dic_coeff3 
+    a₄ˢᶜᵈⁱᶜ   = schmidt_dic_coeff4 
+    a₅ˢᶜᵈⁱᶜ   = schmidt_dic_coeff5 
     co₂_flux = simulation.model.tracers.DIC.boundary_conditions.top.condition
 
-    # applied pressure in atm (i.e. Pˢᵘʳᶠ-Pᵃᵗᵐ) 
-    # Positive when the can is sealed, then zero when the can is opens
-    # On average, the 12 ounce soda cans sold in the US tend to have a pressure of roughly 120 kPa when canned at 4 °C
+    cmhr⁻¹_per_ms⁻¹ = 1 / 3.6e5 # conversion factor from cm/hr to m/s
+
+    ## applied pressure in atm (i.e. Pˢᵘʳᶠ-Pᵃᵗᵐ) 
+    ## Positive when the can is sealed, then zero when the can is opens
+    ## On average, the 12 ounce soda cans sold in the US tend to have a pressure of roughly 120 kPa when canned at 4 °C
     if iteration(simulation) <= 1
         Δpᵦₐᵣ   = 0.2
     else
-        # *pssshhhht* the bottle is opened
+        ## *pssshhhht* the bottle is opened
         Δpᵦₐᵣ   = 0.0
     end
 
-    # access model fields
+    ## access model fields
     Θᶜ = simulation.model.tracers.T[
         simulation.model.grid.Nx,
         simulation.model.grid.Ny,
@@ -88,14 +120,14 @@ CO₂ that depends on temperature, etc.
         simulation.model.grid.Nz
         ]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
 
-    # compute sodaic pCO₂ using the UniversalRobustCarbonSystem solver
-    # Returns soda pCO₂ (in atm) and atmosphere/soda solubility coefficients (mol kg⁻¹ atm⁻¹)
+    ## compute soda pCO₂ using the UniversalRobustCarbonSystem solver
+    ## Returns soda pCO₂ (in atm) and atmosphere/soda solubility coefficients (mol kg⁻¹ atm⁻¹)
     (; pCO₂ᵒᶜᵉ, Pᵈⁱᶜₖₛₒₗₐ, Pᵈⁱᶜₖₛₒₗₒ) = 
         UniversalRobustCarbonSystem(
                 Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
                 )
 
-    # store the soda and atmospheric CO₂ concentrations into Fields
+    ## store the soda and atmospheric CO₂ concentrations into Fields
     soda_co₂[
         simulation.model.grid.Nx,
         simulation.model.grid.Ny,
@@ -107,19 +139,20 @@ CO₂ that depends on temperature, etc.
         simulation.model.grid.Nz,
         ] = (pCO₂ᵃᵗᵐ * Pᵈⁱᶜₖₛₒₗₐ) * ρʳᵉᶠ # Convert mol kg⁻¹ to mol m⁻³ 
 
-    # compute schmidt number for DIC
-    Sᶜᵈⁱᶜ =  2116.8 - 
-              136.25 * Θᶜ + 
-                4.7353 * Θᶜ^2 - 
-                0.092307 * Θᶜ^3 + 
-                7.555e-4 * Θᶜ^4
+    ## compute schmidt number for DIC
+    Cˢᶜᵈⁱᶜ =  ( a₀ˢᶜᵈⁱᶜ - 
+                a₁ˢᶜᵈⁱᶜ * Θᶜ + 
+                a₂ˢᶜᵈⁱᶜ * Θᶜ^2 - 
+                a₃ˢᶜᵈⁱᶜ * Θᶜ^3 + 
+                a₄ˢᶜᵈⁱᶜ * Θᶜ^4 
+              )/a₅ˢᶜᵈⁱᶜ
     
-    # compute gas exchange coefficient/piston velocity and correct with Schmidt number
+    ## compute gas exchange coefficient/piston velocity and correct with Schmidt number
     Kʷ =  (
            (Kʷₐᵥₑ * cmhr⁻¹_per_ms⁻¹) * U₁₀^2
-          ) / sqrt(Sᶜᵈⁱᶜ/660)    
+          ) / sqrt(Cˢᶜᵈⁱᶜ)    
     
-    # compute co₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards in the soda)
+    ## compute co₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards in the soda)
     co₂_flux[
         simulation.model.grid.Nx,
         simulation.model.grid.Ny,
@@ -131,17 +164,7 @@ CO₂ that depends on temperature, etc.
     return nothing
 end
 
-# ## Model setup represents a 10cm bottle of soda
-grid = RectilinearGrid(size = 1,
-                       z = (-1meter/10, 0),
-                       topology = (Flat, Flat, Bounded))
-
-# For CO₂ exchange, we use a FluxBoundaryCondition for the "top" of the dissolved inorganic carbon (DIC) tracer.
-# We'll write a callback later to calculate the flux every time step.
-co₂_flux = Field{Center, Center, Nothing}(grid)
-dic_bcs  = FieldBoundaryConditions(top = FluxBoundaryCondition(co₂_flux))
-
-### We put the pieces together ###
+# # Simulation of a soda outgassing CO₂ in the fridge
 model_open_in_the_fridge = NonhydrostaticModel(; 
     grid,
     velocities = nothing,
@@ -150,23 +173,15 @@ model_open_in_the_fridge = NonhydrostaticModel(;
     tracers    = (:T, :DIC),
     boundary_conditions = (; DIC=dic_bcs),
     )
-# ## Initial conditions
+
+# Initial conditions for the refridgerated soda
 Tᵢ   = 4     # °C
 DICᵢ = 2.4   # mol/m³ 
-
 set!(model_open_in_the_fridge, T = Tᵢ, DIC = DICᵢ)
 
-# ## A simulation of a soda outgassing CO₂
 simulation = Simulation(model_open_in_the_fridge, Δt=10minutes, stop_time=24hours)
 
-# ## A callback to compute the CO₂ flux
-add_callback!(simulation, compute_co₂_flux!)
-
-# These are filled in compute_co₂_flux!
-soda_co₂ = Field{Center, Center, Nothing}(grid)
-atmos_co₂ = Field{Center, Center, Nothing}(grid)
-
-# ## An output writer
+# Add an output writer...
 fnm_fridge = "soda_in_the_fridge.jld2"
 outputs = (; co₂_flux, 
              soda_co₂, 
@@ -181,11 +196,15 @@ simulation.output_writers[:jld2] = JLD2OutputWriter(
     overwrite_existing = true,
     )
 
+# ... and don't forget to add a callback to compute the CO₂ flux
+add_callback!(simulation, compute_co₂_flux!)
+
+# Run the simulation
 run!(simulation)
 
-### We put the pieces together for the second model ###
-## Warming of soda temperature
-# K s⁻¹ linear increase from 4°C to 30°C over 12 hours then stops warming
+# # A simulation of a soda outgassing CO₂ on the counter
+# We simulate soda Warming up on the counter using a forcing function
+# linear increase from 4°C to 30°C over 12 hours then stops warming
 temperature_increase(z, t, p) = ifelse(t <= 12hours, p.∂T∂t * p.Δt , 0.0)
 
 warming = Forcing(
@@ -193,6 +212,7 @@ warming = Forcing(
      parameters=(∂T∂t=1e-6, Δt=10minutes),
      )
 
+# Build the second model for the soda on the counter
 model_open_on_the_counter = NonhydrostaticModel(; 
     grid,
     velocities = nothing,
@@ -205,17 +225,9 @@ model_open_on_the_counter = NonhydrostaticModel(;
 
 set!(model_open_on_the_counter, T = Tᵢ, DIC = DICᵢ)
 
-# ## A simulation of a soda outgassing CO₂
 simulation = Simulation(model_open_on_the_counter, Δt=10minutes, stop_time=24hours)
 
-# ## A callback to compute the CO₂ flux
-add_callback!(simulation, compute_co₂_flux!)
-
-# These are filled in compute_co₂_flux!
-soda_co₂ = Field{Center, Center, Nothing}(grid)
-atmos_co₂ = Field{Center, Center, Nothing}(grid)
-
-# ## An output writer
+# Add an output writer...
 fnm_counter = "soda_on_the_counter.jld2"
 outputs  = (; co₂_flux, 
               soda_co₂, 
@@ -229,6 +241,10 @@ simulation.output_writers[:jld2] = JLD2OutputWriter(
     schedule = TimeInterval(10minutes),
     overwrite_existing = true)
 
+# ..and don't forget to add a callback to compute the CO₂ flux
+add_callback!(simulation, compute_co₂_flux!)
+
+# Run the simulation
 run!(simulation)
 
 # ## Visualization
@@ -280,7 +296,7 @@ lines!(t/(3600),
        label = "counter soda temperature",
        )
 axislegend()
-
-## The cool soda's CO₂ concentration approaches equilibrium with the atmosphere (the saturated CO₂ concentration) quickly.
-## The warming soda continues to outgas, since the solubility of CO₂ decreases with temperature. It'll taste flatter because of the lower CO₂ concentration.
+nothing # hide
+# The cool soda's CO₂ concentration approaches equilibrium with the atmosphere (the saturated CO₂ concentration) quickly.
+# The warming soda continues to outgas, since the solubility of CO₂ decreases with temperature. It'll taste flatter because of the lower CO₂ concentration.
 fig
