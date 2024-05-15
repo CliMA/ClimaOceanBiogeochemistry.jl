@@ -1,3 +1,5 @@
+# In this example, we simulate the evolution of an NPZBD model in a three-dimensional domain
+
 using Oceananigans
 using Oceananigans.Units
 using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus
@@ -7,21 +9,16 @@ using Statistics
 using GLMakie
 
 # Resolution
-# Nx = Ny = 64
-# Nz = 64
 Nx = Ny = 32
 Nz = 32
 
 # Domain
-Lx = 100
-Ly = 200 # meters
-Lz = 100 # meters
-# Lx = 10kilometers # east-west extent [m]
-# Ly = 10kilometers # north-south extent [m]
-# Lz = 500meters    # depth [m]
+Lx = 1000 # meters
+Ly = 1000 # meters
+Lz = 1000 # meters
 
 # Output
-simulation_name = "LES_test"
+simulation_name = "NPD_3D_test"
 output_interval = 2minutes
 
 grid = RectilinearGrid(size = (Nx, Ny, Nz),
@@ -47,14 +44,14 @@ u_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(τˣ / ρₒ))
 buoyancy = SeawaterBuoyancy(; equation_of_state)
 
 biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid, 
-                                                    # linear_remineralization_rate = 0.15/day, 
-                                                    maximum_bacteria_growth_rate = 1.2/day,
-                                                    detritus_half_saturation     = 0.5,
-                                                    bacteria_yield               = 0.5,
+                                                    #linear_remineralization_rate = 0.15/day, 
+                                                    maximum_bacteria_growth_rate = 0.8/day,
+                                                    detritus_half_saturation     = 0.1,
+                                                    bacteria_yield               = 0.25,
                                                     detritus_vertical_velocity = -5/day)
 
 model = NonhydrostaticModel(; grid, buoyancy, biogeochemistry,
-                            tracers = (:T, :S),
+                            tracers = (:T, :S, :N, :P, :Z, :B, :D),
                             timestepper = :RungeKutta3,
                             advection = WENO(order=5),
                             boundary_conditions = (u = u_bcs, T = T_bcs))
@@ -66,20 +63,20 @@ g = 9.81 #Oceananigans.Buoyancy.g_Earth
 P₀ = 0.1 # μM
 #Z₀ = 0 # μM
 B₀ = 0.1 # μM
-Dᵢ = 0.5 # μM
-N₀ = 0.1  # μM, surface nutrient concentration
+D₀ = 1 # μM
+N₀ = 1  # μM, surface nutrient concentration
 hN = 10     # nutrient decay scale
 
 Nᵢ(x, y, z) = N₀ * (1 - exp(z / hN))
 Pᵢ(x, y, z) = P₀ *  exp(z / hN)
-#Zᵢ(x, y, z) = Z₀ *  exp(z / hN)
+Dᵢ(x, y, z) = D₀ *  exp(z / hN)
 Bᵢ(x, y, z) = B₀ *  exp(z / hN)
+#Zᵢ(x, y, z) = Z₀ *  exp(z / hN)
 
-#ϵ(x, y, z) = 1e-3 * randn()
-u=ϵ, v=ϵ, w=ϵ,
-set!(model, T=T₀, N=Nᵢ, P=Pᵢ,Z=0, B=Bᵢ, D=Dᵢ)
+ϵ(x, y, z) = 1e-3 * randn() 
+set!(model, u=ϵ, v=ϵ, w=ϵ, T=T₀, N=Nᵢ, P=Pᵢ,Z=0, B=Bᵢ, D=Dᵢ)
 
-simulation = Simulation(model, Δt=1.0, stop_time=2hour) #, stop_iteration=100)
+simulation = Simulation(model, Δt=10.0, stop_time=10days) #24hour) #, stop_iteration=100)
 
 wizard = TimeStepWizard(cfl=0.5, max_change=1.1)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(5))
@@ -106,7 +103,7 @@ run!(simulation)
 #T = model.tracers.T
 N = model.tracers.N
 P = model.tracers.P
-Z = model.tracers.Z
+#Z = model.tracers.Z
 B = model.tracers.B
 D = model.tracers.D
 w = model.velocities.w
@@ -119,7 +116,9 @@ Pn = interior(P, :, 1, :)
 Bn = interior(B, :, 1, :)
 Dn = interior(D, :, 1, :)
 
-fig1 = Figure()
+z = znodes(N)
+
+fig1 = Figure(size=(1200, 600))
 
 #axT = Axis(fig1[1, 1], title="Temperature")
 axw = Axis(fig1[1, 1], title="Vertical velocity")
@@ -150,12 +149,11 @@ axPcol = Axis(fig1[2, 3], title="Phytoplankton")
 axBcol = Axis(fig1[2, 4], title="Bacteria")
 axDcol = Axis(fig1[2, 5], title="Detritus")
 
-z = vec(reshape(collect(1.0:32.0), 1, 32))
-lines!(axwcol, w_col[2:end], z)
+lines!(axwcol, w_col[1:end-1], z)
 lines!(axNcol, N_col, z)
 lines!(axPcol, P_col, z)
 lines!(axBcol, B_col, z)
 lines!(axDcol, D_col, z)
 
 #display(fig1)
-save("NPZDB_3D.png", fig1)
+save("NPD_3D.png", fig1)

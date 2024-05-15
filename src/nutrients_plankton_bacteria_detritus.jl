@@ -124,7 +124,7 @@ function NutrientsPlanktonBacteriaDetritus(; grid,
                                            PAR_half_saturation          = 10.0,     # W m⁻²
                                            PAR_attenuation_scale        = 25.0,     # m
                                            detritus_vertical_velocity   = -10/day)  # m s⁻¹
-#=
+
     if detritus_vertical_velocity isa Number
         w₀ = detritus_vertical_velocity
         no_penetration = ImpenetrableBoundaryCondition()
@@ -138,7 +138,7 @@ function NutrientsPlanktonBacteriaDetritus(; grid,
 
         fill_halo_regions!(detritus_vertical_velocity)
     end
-=#
+
     FT = eltype(grid)
 
     return NutrientsPlanktonBacteriaDetritus(convert(FT, maximum_plankton_growth_rate),   
@@ -218,14 +218,14 @@ end
     B = @inbounds fields.B[i, j, k]
     N = @inbounds fields.N[i, j, k]
     
-    if sum(B) > 0
-        return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P)+ bacteria_production(μᵇ, kᴰ, y, D, B) * (1 / y - 1)+
+    if sum(B) != 0
+        return (- phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P)+ bacteria_production(μᵇ, kᴰ, y, D, B) * (1 / y - 1)+
                 zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1 / γ - 1)+
-                zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1 / γ - 1)
+                zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1 / γ - 1))
     elseif sum(B) == 0
-        return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P)+
+        return (- phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P)+
                 detritus_remineralization(r, D)+
-                zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1 / γ - 1)
+                zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1 / γ - 1))
     end
 
 end
@@ -251,8 +251,9 @@ end
     Z = @inbounds fields.Z[i, j, k]
     N = @inbounds fields.N[i, j, k]
 
-    return phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P)- phytoplankton_mortality(mlin, mq, P)-
-           zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) / γ
+    return (phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P)- 
+            phytoplankton_mortality(mlin, mq, P)-
+            zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) / γ)
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:Z}, clock, fields)
@@ -266,9 +267,9 @@ end
     B = @inbounds fields.B[i, j, k]
     Z = @inbounds fields.Z[i, j, k]
 
-    return zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z)+
+    return (zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z)+
            zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z)-
-           zooplankton_mortality(mlin, mq_Z, Z)
+           zooplankton_mortality(mlin, mq_Z, Z))
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:B}, clock, fields)
@@ -285,9 +286,9 @@ end
     B = @inbounds fields.B[i, j, k]
     Z = @inbounds fields.Z[i, j, k]
 
-    return bacteria_production(μᵇ, kᴰ, y, D, B)-
+    return (bacteria_production(μᵇ, kᴰ, y, D, B)-
            bacteria_mortality(mlin, mq, B)-
-           zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) / γ
+           zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) / γ)
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:D}, clock, fields)
@@ -304,7 +305,7 @@ end
     D = @inbounds fields.D[i, j, k] 
     B = @inbounds fields.B[i, j, k]
 
-    if sum(B) > 0
+    if sum(B) != 0
         return (bacteria_mortality(mlin, mq, B)+
                 phytoplankton_mortality(mlin, mq, P)+
                 zooplankton_mortality(mlin, mq_Z, Z)-
