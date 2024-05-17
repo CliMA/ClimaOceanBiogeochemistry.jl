@@ -50,10 +50,9 @@ biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid,
                                                     bacteria_yield               = 0.25,
                                                     detritus_vertical_velocity = -5/day)
 
-model = NonhydrostaticModel(; grid, buoyancy, biogeochemistry,
+model = HydrostaticFreeSurfaceModel(; grid, buoyancy, biogeochemistry,
                             tracers = (:T, :S, :N, :P, :Z, :B, :D),
-                            timestepper = :RungeKutta3,
-                            advection = WENO(order=5),
+                            tracer_advection = WENO(order=5),
                             boundary_conditions = (u = u_bcs, T = T_bcs))
 
 
