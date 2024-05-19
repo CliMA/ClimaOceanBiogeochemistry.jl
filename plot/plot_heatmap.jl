@@ -5,34 +5,22 @@
 using Oceananigans
 using GLMakie
 
-filename1 = "plot/NPBD_Fe_before.jld2"
-filename2 = "plot/NPBD_Fe_after.jld2"
-
-filename3 = "plot/NPD_Fe_before.jld2"
-filename4 = "plot/NPD_Fe_after.jld2"
-# filename1 = "plot/NPBD_3.jld2"
-# filename2 = "plot/NPD_2.jld2"
+filename1 = "NPBDF_fertilization.jld2"
+filename3 = "NPDF_fertilization.jld2"
 
 Nt = FieldTimeSeries(filename1, "N")
 Pt = FieldTimeSeries(filename1, "P")
 Bt = FieldTimeSeries(filename1, "B")
 Dt = FieldTimeSeries(filename1, "D")
-
-Nt_after = FieldTimeSeries(filename2, "N")
-Pt_after = FieldTimeSeries(filename2, "P")
-Bt_after = FieldTimeSeries(filename2, "B")
-Dt_after = FieldTimeSeries(filename2, "D")
+# Ft = FieldTimeSeries(filename1, "F")
 
 N1t = FieldTimeSeries(filename3, "N")
 P1t = FieldTimeSeries(filename3, "P")
 D1t = FieldTimeSeries(filename3, "D")
+# F1t = FieldTimeSeries(filename3, "F")
 
-N1t_after = FieldTimeSeries(filename4, "N")
-P1t_after = FieldTimeSeries(filename4, "P")
-D1t_after = FieldTimeSeries(filename4, "D")
-
-t = Nt.times
-nt = length(t) *2
+t = Nt.times[1001:3000]
+nt = length(t) 
 z = znodes(Nt)
 
 N_time = zeros(nt,length(z))
@@ -44,24 +32,15 @@ N1_time = zeros(nt,length(z))
 P1_time = zeros(nt,length(z))
 D1_time = zeros(nt,length(z))
 
-for i in 1:length(t)
-    N_time[i,:] = interior(Nt[i], 1, 1, :)
-    P_time[i,:] = interior(Pt[i], 1, 1, :)
-    B_time[i,:] = interior(Bt[i], 1, 1, :)
-    D_time[i,:] = interior(Dt[i], 1, 1, :)
+for i in 1:nt
+    N_time[i,:] = interior(Nt[i+1000], 1, 1, :)
+    P_time[i,:] = interior(Pt[i+1000], 1, 1, :)
+    B_time[i,:] = interior(Bt[i+1000], 1, 1, :)
+    D_time[i,:] = interior(Dt[i+1000], 1, 1, :)
 
-    N_time[i+length(t),:] = interior(Nt_after[i], 1, 1, :)
-    P_time[i+length(t),:] = interior(Pt_after[i], 1, 1, :)
-    B_time[i+length(t),:] = interior(Bt_after[i], 1, 1, :)
-    D_time[i+length(t),:] = interior(Dt_after[i], 1, 1, :)
-
-    N1_time[i,:] = interior(N1t[i], 1, 1, :)
-    P1_time[i,:] = interior(P1t[i], 1, 1, :)
-    D1_time[i,:] = interior(D1t[i], 1, 1, :)
-
-    N1_time[i+length(t),:] = interior(N1t_after[i], 1, 1, :)
-    P1_time[i+length(t),:] = interior(P1t_after[i], 1, 1, :)
-    D1_time[i+length(t),:] = interior(D1t_after[i], 1, 1, :)
+    N1_time[i,:] = interior(N1t[i+1000], 1, 1, :)
+    P1_time[i,:] = interior(P1t[i+1000], 1, 1, :)
+    D1_time[i,:] = interior(D1t[i+1000], 1, 1, :)
 end
 
 # Start plotting

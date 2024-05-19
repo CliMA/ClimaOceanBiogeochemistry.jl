@@ -6,7 +6,7 @@ module ClimaOceanBiogeochemistry
 # diffferent kinds of BGC model
 #include("nutrients_plankton_bacteria_detritus.jl")
 #include("multi_npzbd.jl")
-include("NPZBD_Fe.jl")
-include("carbon_alkalinity_nutrients.jl")
+include("NPZBD_explicitFe.jl")
+# include("carbon_alkalinity_nutrients.jl")
 
 end # module ClimaOceanBiogeochemistry

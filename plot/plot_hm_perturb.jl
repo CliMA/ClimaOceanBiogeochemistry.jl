@@ -40,7 +40,8 @@ Nt_6 = FieldTimeSeries(filename6, "N")
 Pt_6 = FieldTimeSeries(filename6, "P")
 Dt_6 = FieldTimeSeries(filename6, "D")
 
-nt = length(Nt.times)+ length(Nt_2.times)+length(Nt_3.times)
+# nt = length(Nt.times)+ length(Nt_2.times)+ length(Nt_3.times)
+nt = 300 + length(Nt_2.times)+300 
 z = znodes(Nt)
 
 N_time = zeros(nt,length(z))
@@ -52,7 +53,37 @@ N1_time = zeros(nt,length(z))
 P1_time = zeros(nt,length(z))
 D1_time = zeros(nt,length(z))
 
-for i in 1:length(Nt.times)
+# for i in 1:length(Nt.times)
+#     N_time[i,:] = interior(Nt[i], 1, 1, :)
+#     P_time[i,:] = interior(Pt[i], 1, 1, :)
+#     B_time[i,:] = interior(Bt[i], 1, 1, :)
+#     D_time[i,:] = interior(Dt[i], 1, 1, :)
+
+#     N1_time[i,:] = interior(Nt_4[i], 1, 1, :)
+#     P1_time[i,:] = interior(Pt_4[i], 1, 1, :)
+#     D1_time[i,:] = interior(Dt_4[i], 1, 1, :)
+# end
+# for i in 1:length(Nt_2.times)
+#     N_time[length(Nt.times)+i,:] = interior(Nt_2[i], 1, 1, :)
+#     P_time[length(Nt.times)+i,:] = interior(Pt_2[i], 1, 1, :)
+#     B_time[length(Nt.times)+i,:] = interior(Bt_2[i], 1, 1, :)
+#     D_time[length(Nt.times)+i,:] = interior(Dt_2[i], 1, 1, :)
+
+#     N1_time[length(Nt.times)+i,:] = interior(Nt_5[i], 1, 1, :)
+#     P1_time[length(Nt.times)+i,:] = interior(Pt_5[i], 1, 1, :)
+#     D1_time[length(Nt.times)+i,:] = interior(Dt_5[i], 1, 1, :)
+# end
+# for i in 1:length(Nt_3.times)
+#     N_time[length(Nt.times)+length(Nt_2.times)+i,:] = interior(Nt_3[i], 1, 1, :)
+#     P_time[length(Nt.times)+length(Nt_2.times)+i,:] = interior(Pt_3[i], 1, 1, :)
+#     B_time[length(Nt.times)+length(Nt_2.times)+i,:] = interior(Bt_3[i], 1, 1, :)
+#     D_time[length(Nt.times)+length(Nt_2.times)+i,:] = interior(Dt_3[i], 1, 1, :)
+
+#     N1_time[length(Nt.times)+length(Nt_2.times)+i,:] = interior(Nt_6[i], 1, 1, :)
+#     P1_time[length(Nt.times)+length(Nt_2.times)+i,:] = interior(Pt_6[i], 1, 1, :)
+#     D1_time[length(Nt.times)+length(Nt_2.times)+i,:] = interior(Dt_6[i], 1, 1, :)
+# end
+for i in 1:300
     N_time[i,:] = interior(Nt[i], 1, 1, :)
     P_time[i,:] = interior(Pt[i], 1, 1, :)
     B_time[i,:] = interior(Bt[i], 1, 1, :)
@@ -63,25 +94,26 @@ for i in 1:length(Nt.times)
     D1_time[i,:] = interior(Dt_4[i], 1, 1, :)
 end
 for i in 1:length(Nt_2.times)
-    N_time[length(Nt.times)+i,:] = interior(Nt_2[i], 1, 1, :)
-    P_time[length(Nt.times)+i,:] = interior(Pt_2[i], 1, 1, :)
-    B_time[length(Nt.times)+i,:] = interior(Bt_2[i], 1, 1, :)
-    D_time[length(Nt.times)+i,:] = interior(Dt_2[i], 1, 1, :)
+    N_time[300+i,:] = interior(Nt_2[i], 1, 1, :)
+    P_time[300+i,:] = interior(Pt_2[i], 1, 1, :)
+    B_time[300+i,:] = interior(Bt_2[i], 1, 1, :)
+    D_time[300+i,:] = interior(Dt_2[i], 1, 1, :)
 
-    N1_time[length(Nt.times)+i,:] = interior(Nt_5[i], 1, 1, :)
-    P1_time[length(Nt.times)+i,:] = interior(Pt_5[i], 1, 1, :)
-    D1_time[length(Nt.times)+i,:] = interior(Dt_5[i], 1, 1, :)
+    N1_time[300+i,:] = interior(Nt_5[i], 1, 1, :)
+    P1_time[300+i,:] = interior(Pt_5[i], 1, 1, :)
+    D1_time[300+i,:] = interior(Dt_5[i], 1, 1, :)
 end
-for i in 1:length(Nt_3.times)
-    N_time[length(Nt.times)+length(Nt_2.times)+i,:] = interior(Nt_3[i], 1, 1, :)
-    P_time[length(Nt.times)+length(Nt_2.times)+i,:] = interior(Pt_3[i], 1, 1, :)
-    B_time[length(Nt.times)+length(Nt_2.times)+i,:] = interior(Bt_3[i], 1, 1, :)
-    D_time[length(Nt.times)+length(Nt_2.times)+i,:] = interior(Dt_3[i], 1, 1, :)
+for i in 1:300
+    N_time[300+length(Nt_2.times)+i,:] = interior(Nt_3[i], 1, 1, :)
+    P_time[300+length(Nt_2.times)+i,:] = interior(Pt_3[i], 1, 1, :)
+    B_time[300+length(Nt_2.times)+i,:] = interior(Bt_3[i], 1, 1, :)
+    D_time[300+length(Nt_2.times)+i,:] = interior(Dt_3[i], 1, 1, :)
 
-    N1_time[length(Nt.times)+length(Nt_2.times)+i,:] = interior(Nt_6[i], 1, 1, :)
-    P1_time[length(Nt.times)+length(Nt_2.times)+i,:] = interior(Pt_6[i], 1, 1, :)
-    D1_time[length(Nt.times)+length(Nt_2.times)+i,:] = interior(Dt_6[i], 1, 1, :)
+    N1_time[300+length(Nt_2.times)+i,:] = interior(Nt_6[i], 1, 1, :)
+    P1_time[300+length(Nt_2.times)+i,:] = interior(Pt_6[i], 1, 1, :)
+    D1_time[300+length(Nt_2.times)+i,:] = interior(Dt_6[i], 1, 1, :)
 end
+
 
 # Start plotting
 fig = Figure(;size=(1200, 600))

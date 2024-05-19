@@ -41,12 +41,12 @@ validate_tracer_advection(tracer_advection::AbstractAdvectionScheme, ::SingleCol
 model1 = HydrostaticFreeSurfaceModel(; grid,
                                     velocities = PrescribedVelocityFields(),
                                     biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid,
-                                                                                        #linear_remineralization_rate = 0.1/day,                                                    
-                                                                                        maximum_bacteria_growth_rate = 0.9/day,
-                                                                                        detritus_half_saturation = 0.05, 
+                                                                                        linear_remineralization_rate = 0.1/day,                                                    
+                                                                                        # maximum_bacteria_growth_rate = 0.9/day,
+                                                                                        # detritus_half_saturation = 0.05, 
                                                                                         detritus_vertical_velocity = -5/day,
-                                                                                        iron_concentration =0.00003),
-                                    tracers = (:N, :P, :Z, :B, :D),
+                                                                                        stoichoimetric_ratio_iron_to_nitrate  = 2e-4),
+                                    tracers = (:N, :P, :Z, :B, :D, :F),
                                     tracer_advection = WENO(),
                                     buoyancy = nothing,
                                     closure = vertical_diffusion) 
@@ -56,29 +56,32 @@ model1 = HydrostaticFreeSurfaceModel(; grid,
 # We initialize the model with reasonable nutrients, detritus, and a nutrient
 # mixed layer.
 
-set!(model1, N=20, P=1e-1, Z=0,B=1e-1, D=5e-1)
+set!(model1, N=20, P=1e-1, Z=0, B=0, D=5e-1, F=1e-3)
 
-simulation1 = Simulation(model1, Δt=30minutes, stop_time=1825days)
+simulation1 = Simulation(model1, Δt=30minutes, stop_time=3000days)
 
 # Define a callback function to apply the perturbation
 
-# function perturbation_callback(sim)
-#     # For a month in Year 5: 1810-1840 days
-#     if time(sim) >= 50days && time(sim) < 53days 
-#         model.biogeochemistry.iron_concentration = 0.001
-#         # Apply Fe
-#         set!(model)    
-#     end
-# end
+function perturbation_callback(sim)
+    # For a month in Year 5: 1810-1840 days
+    if time(sim) >= 2000days && time(sim) < 2030days 
 
-# # Add the perturbation callback to the simulation
-# simulation.callbacks[:perturbation] = Callback(perturbation_callback,IterationInterval(100))
-# ERROR: setfield!: immutable struct of type NutrientsPlanktonBacteriaDetritus cannot be changed
+        # Apply Fe perturbation
+        Fₘ = model1.tracers.F 
+        Fₘ[:,:,95:100] .+=0.002
+        set!(model1, F=Fₘ)    
+    end
+end
+
+# Add the perturbation callback to the simulation
+simulation1.callbacks[:perturbation] = Callback(perturbation_callback,IterationInterval(100))
+
 
 function progress(sim)
-    @printf("Iteration: %d, time: %s, total(N): %.2e \n",
+    @printf("Iteration: %d, time: %s, total(N): %.2e , total(Fe): %.2e\n",
             iteration(sim), prettytime(sim),
-            sum(model1.tracers.N)+sum(model1.tracers.P)+sum(model1.tracers.Z)+sum(model1.tracers.B)+sum(model1.tracers.D))
+            sum(model1.tracers.N)+sum(model1.tracers.P)+sum(model1.tracers.Z)+sum(model1.tracers.B)+sum(model1.tracers.D),
+            sum(model1.tracers.F))
     return nothing
 end
 
@@ -89,8 +92,9 @@ P = model1.tracers.P
 Z = model1.tracers.Z
 B = model1.tracers.B
 D = model1.tracers.D
+F = model1.tracers.F
 
-filename = "NPBD_FeFert1.jld2"
+filename = "NPBD_Fe.jld2"
 
 simulation1.output_writers[:fields] = JLD2OutputWriter(model1, model1.tracers;
                                                       filename,
@@ -99,6 +103,7 @@ simulation1.output_writers[:fields] = JLD2OutputWriter(model1, model1.tracers;
 
 run!(simulation1)
 
+#=
 ####################################### Part 2: Fe fertilization #######################################
 Nₘ = model1.tracers.N
 Pₘ = model1.tracers.P
@@ -176,14 +181,16 @@ simulation3.output_writers[:fields] = JLD2OutputWriter(model3, model3.tracers;
                                                       overwrite_existing = true)
 
 run!(simulation3)
+=#
 
 # ###################### Visualization ######################
-#=
+
 # All that's left is to visualize the results.
 Nt = FieldTimeSeries(filename, "N")
 Pt = FieldTimeSeries(filename, "P")
-#Bt = FieldTimeSeries(filename, "B")
+# Bt = FieldTimeSeries(filename, "B")
 Dt = FieldTimeSeries(filename, "D")
+Ft = FieldTimeSeries(filename, "F")
 
 t = Pt.times
 nt = length(t)
@@ -194,30 +201,33 @@ fig = Figure(;size=(1200, 600))#resolution=(1200, 600))
 axN = Axis(fig[1, 1], ylabel="z (m)", xlabel="[Nutrient] (mmol m⁻³)")
 axB = Axis(fig[1, 2], ylabel="z (m)", xlabel="[Biomass] (mmol m⁻³)")
 axD = Axis(fig[1, 3], ylabel="z (m)", xlabel="[Detritus] (mmol m⁻³)")
+axF = Axis(fig[1, 4], ylabel="z (m)", xlabel="[Iron] (mmol m⁻³)")
 
 xlims!(axN, -0.1, 50)
 xlims!(axB, -0.1, 1.0)
 xlims!(axD, -0.1, 1.5)
+xlims!(axF, 0, 5e-3)
 
-slider = Slider(fig[2, 1:3], range=1:nt, startvalue=1)
+slider = Slider(fig[2, 1:4], range=1:nt, startvalue=1)
 n = slider.value
 
 title = @lift @sprintf("Equilibrium biogeochemistry at t = %d days", t[$n] / day)
-Label(fig[0, 1:3], title)
+Label(fig[0, 1:4], title)
 
 Nn = @lift interior(Nt[$n], 1, 1, :)
 Pn = @lift interior(Pt[$n], 1, 1, :)
-#Bn = @lift interior(Bt[$n], 1, 1, :)
+# Bn = @lift interior(Bt[$n], 1, 1, :)
 Dn = @lift interior(Dt[$n], 1, 1, :)
+Fn = @lift interior(Ft[$n], 1, 1, :)
 
-lines!(axN, Nn, z)
+lines!(axN, Nn, z, label="P")
 lines!(axB, Pn, z, label="P")
-#lines!(axB, Bn, z, label="B")
-lines!(axD, Dn, z)
+# lines!(axB, Bn, z, label="B")
+lines!(axD, Dn, z, label="D")
+lines!(axF, Fn, z, label="Fe")
 axislegend(axB, position = :rb)
 
 record(fig, "nutrients_plankton_bacteria_detritus.mp4", 1:nt, framerate=24) do nn
     n[] = nn
 end
 nothing
-=#
