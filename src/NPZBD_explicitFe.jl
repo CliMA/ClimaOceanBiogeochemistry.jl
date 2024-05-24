@@ -215,7 +215,7 @@ end
 @inline zooplankton_mortality(mlin,mq_Z, Z) = mlin * Z + mq_Z * Z^2
 @inline detritus_remineralization(r, D) = r * D
 
-@inline function iron_scavenging(kˢᶜᵃᵛ, Fₜ, Lₜ, β)
+@inline function iron_scavenging(kˢᶜᵃᵛ, Fₜ, Lₜ, β, D)
     # solve for the equilibrium free iron concentration
        # β = FeL / (Feᶠʳᵉᵉ * Lᶠʳᵉᵉ)
        # Lₜ = FeL + Lᶠʳᵉᵉ
@@ -233,7 +233,7 @@ end
        Feᶠʳᵉᵉ = (-R₂ + discriminant) / (2*R₁) 
 
        # return the linear scavenging rate (net scavenging)
-       return (kˢᶜᵃᵛ * Feᶠʳᵉᵉ) # * D : scavenge onto detritus 
+       return (kˢᶜᵃᵛ * Feᶠʳᵉᵉ * D) # scavenge onto detritus 
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:N}, clock, fields)
@@ -397,12 +397,12 @@ end
 
     if sum(B) != 0
         return (Rᶠᴺ * (- phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P, kᶠᵉ, F) +
-            bacteria_production(μᵇ, kᴰ, y, D, B, kᶠᵉ, F) *(1/y-1)) -
-            -iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β))
+               bacteria_production(μᵇ, kᴰ, y, D, B, kᶠᵉ, F) *(1/y-1)) -
+               iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β, D))
                 
     elseif sum(B) == 0
         return (Rᶠᴺ * (- phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P, kᶠᵉ, F) +
                detritus_remineralization(r, D)) -
-               iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β))
+               iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β, D))
     end
 end

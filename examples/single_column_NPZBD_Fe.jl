@@ -41,9 +41,9 @@ validate_tracer_advection(tracer_advection::AbstractAdvectionScheme, ::SingleCol
 model1 = HydrostaticFreeSurfaceModel(; grid,
                                     velocities = PrescribedVelocityFields(),
                                     biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid,
-                                                                                        linear_remineralization_rate = 0.1/day,                                                    
-                                                                                        # maximum_bacteria_growth_rate = 0.9/day,
-                                                                                        # detritus_half_saturation = 0.05, 
+                                                                                        # linear_remineralization_rate = 0.1/day,                                                    
+                                                                                        maximum_bacteria_growth_rate = 0.9/day,
+                                                                                        detritus_half_saturation = 0.05, 
                                                                                         detritus_vertical_velocity = -5/day,
                                                                                         stoichoimetric_ratio_iron_to_nitrate  = 2e-4),
                                     tracers = (:N, :P, :Z, :B, :D, :F),
@@ -56,7 +56,7 @@ model1 = HydrostaticFreeSurfaceModel(; grid,
 # We initialize the model with reasonable nutrients, detritus, and a nutrient
 # mixed layer.
 
-set!(model1, N=20, P=1e-1, Z=0, B=0, D=5e-1, F=1e-3)
+set!(model1, N=20, P=1e-1, Z=0, B=1e-1, D=5e-1, F=1e-3)
 
 simulation1 = Simulation(model1, Δt=30minutes, stop_time=3000days)
 
@@ -75,7 +75,6 @@ end
 
 # Add the perturbation callback to the simulation
 simulation1.callbacks[:perturbation] = Callback(perturbation_callback,IterationInterval(100))
-
 
 function progress(sim)
     @printf("Iteration: %d, time: %s, total(N): %.2e , total(Fe): %.2e\n",
@@ -188,7 +187,7 @@ run!(simulation3)
 # All that's left is to visualize the results.
 Nt = FieldTimeSeries(filename, "N")
 Pt = FieldTimeSeries(filename, "P")
-# Bt = FieldTimeSeries(filename, "B")
+Bt = FieldTimeSeries(filename, "B")
 Dt = FieldTimeSeries(filename, "D")
 Ft = FieldTimeSeries(filename, "F")
 
@@ -216,13 +215,13 @@ Label(fig[0, 1:4], title)
 
 Nn = @lift interior(Nt[$n], 1, 1, :)
 Pn = @lift interior(Pt[$n], 1, 1, :)
-# Bn = @lift interior(Bt[$n], 1, 1, :)
+Bn = @lift interior(Bt[$n], 1, 1, :)
 Dn = @lift interior(Dt[$n], 1, 1, :)
 Fn = @lift interior(Ft[$n], 1, 1, :)
 
-lines!(axN, Nn, z, label="P")
+lines!(axN, Nn, z, label="N")
 lines!(axB, Pn, z, label="P")
-# lines!(axB, Bn, z, label="B")
+lines!(axB, Bn, z, label="B")
 lines!(axD, Dn, z, label="D")
 lines!(axF, Fn, z, label="Fe")
 axislegend(axB, position = :rb)
