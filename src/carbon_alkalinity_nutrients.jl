@@ -19,7 +19,7 @@ struct CarbonAlkalinityNutrients{FT} <: AbstractBiogeochemistry
     stoichoimetric_ratio_carbon_to_phosphate   :: FT 
     stoichoimetric_ratio_nitrate_to_phosphate  :: FT 
     stoichoimetric_ratio_phosphate_to_oxygen   :: FT 
-    stoichoimetric_ratio_phosphate_to_iron     :: FT 
+    stoichoimetric_ratio_iron_to_phosphate     :: FT 
     stoichoimetric_ratio_carbon_to_nitrate     :: FT 
     stoichoimetric_ratio_carbon_to_oxygen      :: FT 
     stoichoimetric_ratio_carbon_to_iron        :: FT 
@@ -93,7 +93,7 @@ function CarbonAlkalinityNutrients(; reference_density = 1024,
                                    stoichoimetric_ratio_carbon_to_phosphate   = 106.0,
                                    stoichoimetric_ratio_nitrate_to_phosphate  = 16.0,
                                    stoichoimetric_ratio_phosphate_to_oxygen   = 170.0, 
-                                   stoichoimetric_ratio_phosphate_to_iron     = 4.68e-4,
+                                   stoichoimetric_ratio_iron_to_phosphate     = 4.68e-4,
                                    stoichoimetric_ratio_carbon_to_nitrate     = 106 / 16,
                                    stoichoimetric_ratio_carbon_to_oxygen      = 106 / 170, 
                                    stoichoimetric_ratio_carbon_to_iron        = 106 / 1.e-3,
@@ -115,7 +115,7 @@ function CarbonAlkalinityNutrients(; reference_density = 1024,
                                      stoichoimetric_ratio_carbon_to_phosphate,
                                      stoichoimetric_ratio_nitrate_to_phosphate,
                                      stoichoimetric_ratio_phosphate_to_oxygen,
-                                     stoichoimetric_ratio_phosphate_to_iron,
+                                     stoichoimetric_ratio_iron_to_phosphate,
                                      stoichoimetric_ratio_carbon_to_nitrate,
                                      stoichoimetric_ratio_carbon_to_oxygen,
                                      stoichoimetric_ratio_carbon_to_iron,
@@ -151,7 +151,26 @@ end
 Iron scavenging should depend on free iron, involves solving a quadratic equation in terms
 of ligand concentration and stability coefficient, but this is a simple first order approximation.
 """
-@inline iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β) = kˢᶜᵃᵛ * ( F - Lₜ )
+@inline function iron_scavenging(kˢᶜᵃᵛ, Fₜ, Lₜ, β)
+    # solve for the equilibrium free iron concentration
+       # β = FeL / (Feᶠʳᵉᵉ * Lᶠʳᵉᵉ)
+       # Lₜ = FeL + Lᶠʳᵉᵉ
+       # Fₜ = FeL + Feᶠʳᵉᵉ
+       # --> R₁(Feᶠʳᵉᵉ)² + R₂ Feᶠʳᵉᵉ + R₃ = 0
+       β⁻¹ = 1/β
+       R₁  = 1
+       R₂  = (Lₜ + β⁻¹ - Fₜ) 
+       R₃  = -(Fₜ * β⁻¹) 
+
+       # simple quadratic solution for roots
+       discriminant = ( R₂*R₂ - ( 4*R₁*R₃ ))^(1/2)
+
+       # directly solve for the free iron concentration
+       Feᶠʳᵉᵉ = (-R₂ + discriminant) / (2*R₁) 
+
+       # return the linear scavenging rate (net scavenging)
+       return (kˢᶜᵃᵛ * Feᶠʳᵉᵉ)
+end
 
 @inline iron_sources() = 0.0
 
@@ -315,8 +334,10 @@ Tracer sources and sinks for FeT
     Rᶜᴺ = bgc.stoichoimetric_ratio_carbon_to_nitrate     
     Rᶜᴼ = bgc.stoichoimetric_ratio_carbon_to_oxygen      
     Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron        
-    Rᶠᴾ = bgc.stoichoimetric_ratio_phosphate_to_iron
-    Rᶜᵃᶜᵒ³ = bgc.rain_ratio_inorganic_to_organic_carbon     
+    Rᶠᴾ = bgc.stoichoimetric_ratio_iron_to_phosphate
+    Lₜ     = bgc.ligand_concentration
+    β     = bgc.ligand_stability_coefficient
+    kˢᶜᵃᵛ = bgc.iron_scavenging_rate
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -327,12 +348,12 @@ Tracer sources and sinks for FeT
     F = @inbounds fields.Fe[i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
-    return Rᶠᴾ * (
+    return (Rᶠᴾ * (
                 - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-                + dissolved_organic_phosphate_remin(γ, D))
+                + dissolved_organic_phosphate_remin(γ, D)) 
            #    + particulate_organic_phosphate_remin()) +
            #    + iron_sources()
-           #    - iron_scavenging())
+               - iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β))
     end
 
 """
