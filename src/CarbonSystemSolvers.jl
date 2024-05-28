@@ -1,17 +1,20 @@
 module CarbonSystemSolvers
-export CarbonSystem
+export CarbonSystem, CarbonChemistryCoefficients
 
 include("carbon_chemistry_coefficients.jl")
 
 struct CarbonSystem{FT}
-    pH     :: FT
-    CO₂ˢᵒˡ :: FT
-    HCO₃⁻  :: FT
-    CO₃²⁻  :: FT
-    Cᵀ     :: FT
-    Aᵀ     :: FT
-    pCO₂ᵒᶜᵉ:: FT
-    pCO₂ᵃᵗᵐ:: FT
+    pH      :: FT
+    CO₂ˢᵒˡ  :: FT
+    HCO₃⁻   :: FT
+    CO₃²⁻   :: FT
+    Cᵀ      :: FT
+    Aᵀ      :: FT
+    pCO₂ᵒᶜᵉ :: FT
+    pCO₂ᵃᵗᵐ :: FT
+    Pᵈⁱᶜₖₛₒₗₐ :: FT
+    Pᵈⁱᶜₖₛₒₗₒ :: FT
+    Pᵈⁱᶜₖ₀   :: FT
 end
 
 """
@@ -108,7 +111,6 @@ export UniversalRobustCarbonSystem,
         CarbonSystem
 
 using ..CarbonSystemSolvers: CarbonSystem, CarbonChemistryCoefficients, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, FCᵀHCO₃⁻
-#include("carbon_chemistry_coefficients.jl")
 
 """
     UniversalRobustCarbonSystem(
@@ -121,6 +123,7 @@ using ..CarbonSystemSolvers: CarbonSystem, CarbonChemistryCoefficients, FCᵀCO�
             Siᵀ     :: FT = 15.0e-6,
             pH      :: FT = 8.0,
             pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
+            Pᶜᵒᵉᶠᶠ :: CarbonChemistryCoefficients,
             )
 
 Uses the Munhoven (2013) SolveSAPHE package to solve the distribution of carbon species
@@ -134,7 +137,8 @@ Uses the Munhoven (2013) SolveSAPHE package to solve the distribution of carbon 
         Pᵀ      :: FT = 1.0e-6,
         Siᵀ     :: FT = 15.0e-6,
         pH      :: FT = 8.0,
-        pCO₂ᵃᵗᵐ :: FT = 280.0e-6) where {FT}
+        pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
+        ) where {FT}
 
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
     Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
@@ -166,7 +170,10 @@ Uses the Munhoven (2013) SolveSAPHE package to solve the distribution of carbon 
     CO₃²⁻  = FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     pCO₂ᵒᶜᵉ= CO₂ˢᵒˡ / Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ # correct for fugacity of CO₂ in seawater?
 
-    return CarbonSystem(pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ)
+    return CarbonSystem(
+        pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ, 
+        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₐ, Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₒ, Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
+        )
 end # end function
 
 """
@@ -642,7 +649,6 @@ export AlkalinityCorrectionCarbonSystem,
         CarbonSystem
 
 using ..CarbonSystemSolvers: CarbonSystem, CarbonChemistryCoefficients, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, FCᵀHCO₃⁻
-#include("carbon_chemistry_coefficients.jl")
 
 """
     AlkalinityCorrectionCarbonSystem(
@@ -697,7 +703,10 @@ Uses the Follows et al (2006) method to solve the distribution of carbon species
     CO₃²⁻  = FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     pCO₂ᵒᶜᵉ= CO₂ˢᵒˡ / Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ # correct for fugacity of CO₂ in seawater?
 
-    return CarbonSystem(pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ)
+    return CarbonSystem(
+        pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ,
+        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₐ, Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₒ, Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
+        )
 end # end function
 
 """
@@ -966,7 +975,10 @@ Not for serious use, but as a placeholder and for testing purposes
     CO₃²⁻  = FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     pCO₂ᵒᶜᵉ= CO₂ˢᵒˡ / Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ # correct for fugacity of CO₂ in seawater?
 
-    return CarbonSystem(pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ)
+    return CarbonSystem(
+        pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ,
+        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₐ, Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₒ, Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
+        )
 end # end function
 
 """

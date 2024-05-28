@@ -1,28 +1,30 @@
 struct CarbonChemistryCoefficients{FT}
-    Cᵈⁱᶜₖ₀       :: FT
-    Cᵈⁱᶜₖ₁ᵣ₉₃    :: FT
-    Cᵈⁱᶜₖ₂ᵣ₉₃    :: FT
-    Cᵈⁱᶜₖ₁ₘ₉₅    :: FT
-    Cᵈⁱᶜₖ₂ₘ₉₅    :: FT
+    Cᵈⁱᶜₖₛₒₗₐ     :: FT
+    Cᵈⁱᶜₖₛₒₗₒ     :: FT
+    Cᵈⁱᶜₖ₀       :: FT 
+    Cᵈⁱᶜₖ₁ᵣ₉₃    :: FT 
+    Cᵈⁱᶜₖ₂ᵣ₉₃    :: FT 
+    Cᵈⁱᶜₖ₁ₘ₉₅    :: FT 
+    Cᵈⁱᶜₖ₂ₘ₉₅    :: FT 
     Cᵈⁱᶜₖ₁ₗ₀₀     :: FT
     Cᵈⁱᶜₖ₂ₗ₀₀     :: FT
-    Cᵇₖ₁         :: FT
-    Cᴴ²ᴼₖ₁       :: FT
-    Cᴾᴼ⁴ₖ₁       :: FT
-    Cᴾᴼ⁴ₖ₂       :: FT
-    Cᴾᴼ⁴ₖ₃       :: FT
-    Cˢⁱᵗₖ₁       :: FT
-    Cᴴ²ˢₖ₁       :: FT
+    Cᵇₖ₁         :: FT 
+    Cᴴ²ᴼₖ₁       :: FT 
+    Cᴾᴼ⁴ₖ₁       :: FT 
+    Cᴾᴼ⁴ₖ₂       :: FT 
+    Cᴾᴼ⁴ₖ₃       :: FT 
+    Cˢⁱᵗₖ₁       :: FT 
+    Cᴴ²ˢₖ₁       :: FT 
     Cᴺᴴ⁴ₖ₁       :: FT
     Cᴴᶠᵦ₁        :: FT
     Cᴴᶠₖ₁        :: FT
     Cᴴˢᴼ⁴ₖ₁      :: FT
     Cᶜᵃˡᶜⁱᵗᵉₛₚ   :: FT
     Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ :: FT
-    Cᴮᵀ         :: FT
-    Cᶠᵀ         :: FT
-    Cᶜᵃ         :: FT
-    Cˢᴼ⁴        :: FT
+    Cᴮᵀ         :: FT 
+    Cᶠᵀ         :: FT 
+    Cᶜᵃ         :: FT 
+    Cˢᴼ⁴        :: FT 
     H⁺ₛoverH⁺ₜ   :: FT
     H⁺ₜoverH⁺₃   :: FT
     H⁺ₛoverH⁺₃   :: FT
@@ -33,7 +35,9 @@ end
 
 Return dissociation coefficients necessary to solve for the distribution of carbonate species.
 """
-@inline function CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+@inline function CarbonChemistryCoefficients(
+    Θᶜ = 25, Sᴬ = 35, Δpᵦₐᵣ = 0,
+    )
 # Need a conversion from Absolute Salinity, Sᴬ, to Practical Salinity, Sᴾ
     Sᵖ = Sᴬ
 # Sᴾ = Sᴬ / (1.0 - 0.35 * Sᴬ / 35.0) ??
@@ -42,6 +46,8 @@ Return dissociation coefficients necessary to solve for the distribution of carb
 # Also need to convert from Absolute Pressure, Pᴬ, to Applied Pressure in bars, the pressure relative to (1x) atm
 
     return CarbonChemistryCoefficients(
+            Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, Pᵈⁱᶜₖₛₒₗₐ),
+            Fᵈⁱᶜₖₚᵣₑ(Θᴷ, Sᵖ, Pᵈⁱᶜₖₚᵣₑ) * Fᵈⁱᶜₖ₀(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀), # Fᵈⁱᶜₖₛₒₗₒ
             Fᵈⁱᶜₖ₀(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀),
             Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₁ᵣ₉₃),
             Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, Pᵈⁱᶜₖ₂ᵣ₉₃),
@@ -263,6 +269,76 @@ end
 #    (; a₀, a₁, a₂) = params()
 #    return (a₀ / a₁) * (Sᵖ / a₂)
 #end
+
+Base.@kwdef struct Pᵈⁱᶜₖₛₒₗₐ{FT}
+    a₀ :: FT = -162.8301
+    a₁ :: FT =  218.2968
+    a₂ :: FT =   90.9241
+    a₃ :: FT = -  1.47696
+    b₀ :: FT =   0.025695
+    b₁ :: FT = - 0.025225
+    b₂ :: FT =   0.0049867
+end
+
+"""
+    Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, Pᵈⁱᶜₖₛₒₗₐ)
+
+    Calculate f = k0(1-pH2O)*correction term for non-ideality in (mol/kg-SW)/atm given temperature 
+    in K, `Θᴷ`, practical salinity, `Sᵖ`, and coefficients, `Pᵈⁱᶜₖₛₒₗₐ`. Currently no pressure correction
+
+    References: Weiss & Price (1980, Mar. Chem., 8, 347-359 Eq 13 with table 6 values)
+    pH scale  : N/A
+    Note      : currently no pressure correction
+"""
+@inline function Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, params = Pᵈⁱᶜₖₛₒₗₐ)
+    (; a₀, a₁, a₂, a₃, b₀, b₁, b₂) = params()
+    return exp(
+               a₀ + 
+               a₁/Θᴷ₁₀₀(Θᴷ) +
+               a₂*log(Θᴷ₁₀₀(Θᴷ)) +
+               a₃*Θᴷ₁₀₀(Θᴷ)*Θᴷ₁₀₀(Θᴷ) +    
+               (
+                b₀ + 
+                b₁*(Θᴷ₁₀₀(Θᴷ)) +
+                b₂*Θᴷ₁₀₀(Θᴷ)*Θᴷ₁₀₀(Θᴷ)
+              )*Sᵖ
+             )
+end
+
+Base.@kwdef struct Pᵈⁱᶜₖₚᵣₑ{FT}
+    a₀ :: FT = -1636.75
+    a₁ :: FT = -  12.0408
+    a₂ :: FT = -   0.0327957 
+    a₃ :: FT =     3.16528e-5
+    b₀ :: FT =    57.7
+    b₁ :: FT = -   0.118
+    p₁ :: FT =     1.01325 # p_bar_oneatmosphere, Handbook (2007)
+end
+
+"""
+    Fᵈⁱᶜₖₚᵣₑ(Θᴷ, Sᵖ, Pᵈⁱᶜₖₚᵣₑ)
+
+Return fugacity prefactor needed for non-ideality of CO₂ in the  ocean 
+    in (mol/kg-SW)/atm given temperature in K, `Θᴷ`, practical salinity, 
+    `Sᵖ`, and coefficients, `Pᵈⁱᶜₖₚᵣₑ`.
+
+References: Weiss (1974) Marine Chemistry
+pH scale  : N/A
+Note      : currently no pressure correction
+"""
+@inline function Fᵈⁱᶜₖₚᵣₑ(Θᴷ, Sᵖ, params = Pᵈⁱᶜₖₚᵣₑ)
+    (; a₀, a₁, a₂, a₃, b₀, b₁, p₁) = params()
+
+#  "x2" term often neglected (assumed=1) in applications of Weiss (1974) eq.9
+#   x2 = 1 - x1 = 1 - xCO2 (it is very close to 1, but not quite)
+    return exp( 
+        (a₀ + 
+         a₁*Θᴷ + 
+         a₂*Θᴷ*Θᴷ + 
+         a₃*Θᴷ*Θᴷ*Θᴷ+
+        2*(b₀ + b₁*Θᴷ)) * 
+        (p₁ / Rₜ(Θᴷ)))
+end
 
 Base.@kwdef struct Pᵈⁱᶜₖ₀{FT}
     a₀ :: FT = -60.2409

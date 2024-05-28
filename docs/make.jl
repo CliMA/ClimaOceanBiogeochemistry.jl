@@ -13,6 +13,7 @@ const OUTPUT_DIR   = joinpath(@__DIR__, "src/literated")
 
 to_be_literated = [
     "single_column_nutrients_plankton_bacteria_detritus.jl",
+    "soda_outgassing.jl",
     "single_column_carbon_alkalinity_nutrients.jl",
     "simple_plankton_growth_death.jl"
 ]
@@ -39,6 +40,7 @@ pages = [
     "Examples" => [
         "Single column nutrients, plankton, bacteria, detritus" => "literated/single_column_nutrients_plankton_bacteria_detritus.md",
         "Single column carbon, alkalinity, nutrients" => "literated/single_column_carbon_alkalinity_nutrients.md",
+        "Soda outgassing" => "literated/soda_outgassing.md",
         "Simple plankton growth and death" => "literated/simple_plankton_growth_death.md"
     ],
     "Library" => [ 
