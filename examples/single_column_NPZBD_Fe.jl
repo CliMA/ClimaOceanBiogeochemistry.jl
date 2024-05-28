@@ -58,23 +58,23 @@ model1 = HydrostaticFreeSurfaceModel(; grid,
 
 set!(model1, N=20, P=1e-1, Z=0, B=1e-1, D=5e-1, F=1e-3)
 
-simulation1 = Simulation(model1, Δt=30minutes, stop_time=3000days)
+simulation1 = Simulation(model1, Δt=30minutes, stop_time=1000days)
 
 # Define a callback function to apply the perturbation
 
-function perturbation_callback(sim)
-    # For a month in Year 5: 1810-1840 days
-    if time(sim) >= 2000days && time(sim) < 2030days 
+# function perturbation_callback(sim)
+#     # For a month in Year 5: 1810-1840 days
+#     if time(sim) >= 2000days && time(sim) < 2030days 
 
-        # Apply Fe perturbation
-        Fₘ = model1.tracers.F 
-        Fₘ[:,:,95:100] .+=0.002
-        set!(model1, F=Fₘ)    
-    end
-end
+#         # Apply Fe perturbation
+#         Fₘ = model1.tracers.F 
+#         Fₘ[:,:,95:100] .+=0.002
+#         set!(model1, F=Fₘ)    
+#     end
+# end
 
-# Add the perturbation callback to the simulation
-simulation1.callbacks[:perturbation] = Callback(perturbation_callback,IterationInterval(100))
+# # Add the perturbation callback to the simulation
+# simulation1.callbacks[:perturbation] = Callback(perturbation_callback,IterationInterval(100))
 
 function progress(sim)
     @printf("Iteration: %d, time: %s, total(N): %.2e , total(Fe): %.2e\n",
