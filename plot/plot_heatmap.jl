@@ -52,72 +52,72 @@ fig = Figure(;size=(1300, 600))
 
 # First, NPBD model
 # Create an Axis object
-axN = Axis(fig[1, 1])
-axP = Axis(fig[1, 3])
-axB = Axis(fig[1, 5])
-axD = Axis(fig[1, 7])
-axF = Axis(fig[1, 9])
+axN = Axis(fig[2, 1])
+axP = Axis(fig[2, 3])
+axD = Axis(fig[2, 5])
+axB = Axis(fig[2, 7])
+axF = Axis(fig[2, 9])
 
 # Plot the heatmap
 hmN = heatmap!(axN, N_time, colormap=:plasma, colorrange = (0, 40))
 axN.xlabel = "Time"
 axN.ylabel = "Depth"
 axN.title = "[Nutrient] (mmol m⁻³)"
-Colorbar(fig[1, 2], hmN)
+Colorbar(fig[2, 2], hmN)
 
 hmP = heatmap!(axP, P_time, colormap=:plasma, colorrange = (0, 1.0))
 axP.xlabel = "Time"
 axP.ylabel = "Depth"
 axP.title = "[Phytoplankton] (mmol m⁻³)"
-Colorbar(fig[1, 4], hmP)
-
-hmB = heatmap!(axB, B_time, colormap=:plasma, colorrange = (0, 0.2))
-axB.xlabel = "Time"
-axB.ylabel = "Depth"
-axB.title = "[Bacteria] (mmol m⁻³)"
-Colorbar(fig[1, 6], hmB)
+Colorbar(fig[2, 4], hmP)
 
 hmD = heatmap!(axD, D_time, colormap=:plasma, colorrange = (0, 2.0))
 axD.xlabel = "Time"
 axD.ylabel = "Depth"
 axD.title = "[Detritus] (mmol m⁻³)"
-Colorbar(fig[1, 8], hmD)
+Colorbar(fig[2, 6], hmD)
+
+hmB = heatmap!(axB, B_time, colormap=:plasma, colorrange = (0, 0.2))
+axB.xlabel = "Time"
+axB.ylabel = "Depth"
+axB.title = "[Bacteria] (mmol m⁻³)"
+Colorbar(fig[2, 8], hmB)
 
 hmF = heatmap!(axF, F_time, colormap=:plasma, colorrange = (0, 0.007))
 axF.xlabel = "Time"
 axF.ylabel = "Depth"
 axF.title = "[Fe] (mmol m⁻³)"
-Colorbar(fig[1, 10], hmF)
+Colorbar(fig[2, 10], hmF)
 
 # Then, NPD model
-axN1 = Axis(fig[2, 1])
-axP1 = Axis(fig[2, 3])
-axD1 = Axis(fig[2, 7])
-axF1 = Axis(fig[2, 9])
+axN1 = Axis(fig[1, 1])
+axP1 = Axis(fig[1, 3])
+axD1 = Axis(fig[1, 5])
+axF1 = Axis(fig[1, 9])
 
 hmN1 = heatmap!(axN1, N1_time, colormap=:plasma, colorrange = (0, 40))
 axN1.xlabel = "Time"
 axN1.ylabel = "Depth"
 axN1.title = "[Nutrient] (mmol m⁻³)"
-Colorbar(fig[2, 2], hmN1)
+Colorbar(fig[1, 2], hmN1)
 
 hmP1 = heatmap!(axP1, P1_time, colormap=:plasma, colorrange = (0, 1.0))
 axP1.xlabel = "Time"
 axP1.ylabel = "Depth"
 axP1.title = "[Phytoplankton] (mmol m⁻³)"
-Colorbar(fig[2, 4], hmP1)
+Colorbar(fig[1, 4], hmP1)
 
 hmD1 = heatmap!(axD1, D1_time, colormap=:plasma, colorrange = (0, 2.0))
 axD1.xlabel = "Time"
 axD1.ylabel = "Depth"
 axD1.title = "[Detritus] (mmol m⁻³)"
-Colorbar(fig[2, 8], hmD1)
+Colorbar(fig[1, 6], hmD1)
 
 hmF1 = heatmap!(axF1, F1_time, colormap=:plasma, colorrange = (0, 0.007))
 axF1.xlabel = "Time"
 axF1.ylabel = "Depth"
 axF1.title = "[Fe] (mmol m⁻³)"
-Colorbar(fig[2, 10], hmF1)
+Colorbar(fig[1, 10], hmF1)
 
 # Display the figure
 display(fig)
