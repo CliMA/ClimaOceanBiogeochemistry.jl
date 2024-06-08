@@ -41,10 +41,10 @@ validate_tracer_advection(tracer_advection::AbstractAdvectionScheme, ::SingleCol
 model = HydrostaticFreeSurfaceModel(; grid,
                                     velocities = PrescribedVelocityFields(),
                                     biogeochemistry = NutrientsPlanktonBacteriaDetritus(; grid,
-                                                                                        linear_remineralization_rate = 0.15/day,                                                    
-                                                                                        # maximum_bacteria_growth_rate = 1.2/day,
-                                                                                        # detritus_half_saturation = 0.5,
-                                                                                        # bacteria_yield = 0.5,
+                                                                                        # linear_remineralization_rate = 0.18/day,                                                    
+                                                                                        maximum_bacteria_growth_rate = 0.9/day,
+                                                                                        detritus_half_saturation = 0.5,
+                                                                                        bacteria_yield = 0.5,
                                                                                         detritus_vertical_velocity = -5/day),
                                     tracers = (:N, :P, :Z, :B, :D),
                                     tracer_advection = WENO(),
@@ -57,7 +57,7 @@ model = HydrostaticFreeSurfaceModel(; grid,
 # mixed layer.
 
 #set!(model, N1=3, P1=1e-1, P2=5e-2,Z1=1e-1,Z2=1e-2, B1=1e-1,B2=2e-2, D1=1e-1, D2=1e-2,D3=2e-1, D4=1e-1,D5=2e-1)
-set!(model, N=20, P=1e-1, Z=0,B=0, D=5e-1)
+set!(model, N=20, P=1e-1, Z=0,B=1e-1, D=5e-1)
 
 simulation = Simulation(model, Δt=30minutes, stop_time=3650days)
 
@@ -143,7 +143,7 @@ run!(simulation)
 # All that's left is to visualize the results.
 Nt = FieldTimeSeries(filename, "N")
 Pt = FieldTimeSeries(filename, "P")
-# Bt = FieldTimeSeries(filename, "B")
+Bt = FieldTimeSeries(filename, "B")
 Dt = FieldTimeSeries(filename, "D")
 
 t = Pt.times
@@ -168,14 +168,14 @@ Label(fig[0, 1:3], title)
 
 Nn = @lift interior(Nt[$n], 1, 1, :)
 Pn = @lift interior(Pt[$n], 1, 1, :)
-#Bn = @lift interior(Bt[$n], 1, 1, :)
+Bn = @lift interior(Bt[$n], 1, 1, :)
 Dn = @lift interior(Dt[$n], 1, 1, :)
 
 lines!(axN, Nn, z)
 lines!(axB, Pn, z, label = "P")
-#lines!(axB, Bn, z, label = "B")
+lines!(axB, Bn, z, label = "B")
 lines!(axD, Dn, z)
-#axislegend(axB, position = :rb)
+axislegend(axB, position = :rb)
 
 record(fig, "nutrients_plankton_bacteria_detritus.mp4", 1:nt, framerate=24) do nn
     n[] = nn
