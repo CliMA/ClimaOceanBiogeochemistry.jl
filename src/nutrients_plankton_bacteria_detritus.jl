@@ -45,8 +45,8 @@ end
                                         PAR_attenuation_scale        = 25.0,
                                         detritus_vertical_velocity   = -10/day)
 
-Return a six-tracer biogeochemistry model for the interaction of nutrients (N), phytoplankton (P), 
-zooplankton(Z), bacteria (B), dissolved detritus (D1), and particulate detritus (D2).
+Return a five-tracer biogeochemistry model for the interaction of nutrients (N), phytoplankton (P), 
+zooplankton(Z), bacteria (B), and detritus (D).
 
 Keyword Arguments
 =================
@@ -105,10 +105,10 @@ Biogeochemical functions
 ========================
 * transitions for `N`, `P`, `Z`, `B`, `D`
 
-* `biogeochemical_drift_velocity` for `D2`, modeling the sinking of detritus at
+* `biogeochemical_drift_velocity` for `D`, modeling the sinking of detritus at
   a constant `detritus_sinking_speed`.
 """
-function NutrientsPlanktonBacteriaDetritus(grid;
+function NutrientsPlanktonBacteriaDetritus(; grid,
                                            maximum_plankton_growth_rate = 1/day, # Add reference for each parameter
                                            maximum_bacteria_growth_rate = 1/day,
                                            maximum_grazing_rate         = 3/day,
@@ -218,15 +218,14 @@ end
     B = @inbounds fields.B[i, j, k]
     N = @inbounds fields.N[i, j, k]
     
-    if sum(B) > 0
-        return (- phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P)
-                + bacteria_production(μᵇ, kᴰ, y, D, B) * (1 / y - 1)
-                + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1 / γ - 1)
-                + zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1 / γ - 1))
+    if sum(B) != 0
+        return (- phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P)+ bacteria_production(μᵇ, kᴰ, y, D, B) * (1 / y - 1)+
+                zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1 / γ - 1)+
+                zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1 / γ - 1))
     elseif sum(B) == 0
-        return (- phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P)
-                + detritus_remineralization(r, D)
-                + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1 / γ - 1))
+        return (- phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P)+
+                detritus_remineralization(r, D)+
+                zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1 / γ - 1))
     end
 
 end
@@ -252,9 +251,9 @@ end
     Z = @inbounds fields.Z[i, j, k]
     N = @inbounds fields.N[i, j, k]
 
-    return (phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P)
-            - phytoplankton_mortality(mlin, mq, P)
-            - zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) / γ)
+    return (phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P)- 
+            phytoplankton_mortality(mlin, mq, P)-
+            zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) / γ)
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:Z}, clock, fields)
@@ -268,9 +267,9 @@ end
     B = @inbounds fields.B[i, j, k]
     Z = @inbounds fields.Z[i, j, k]
 
-    return (zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z)
-            + zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z)
-            - zooplankton_mortality(mlin, mq_Z, Z))
+    return (zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z)+
+           zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z)-
+           zooplankton_mortality(mlin, mq_Z, Z))
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:B}, clock, fields)
@@ -287,9 +286,9 @@ end
     B = @inbounds fields.B[i, j, k]
     Z = @inbounds fields.Z[i, j, k]
 
-    return (bacteria_production(μᵇ, kᴰ, y, D, B)
-            - bacteria_mortality(mlin, mq, B)
-            - zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) / γ)
+    return (bacteria_production(μᵇ, kᴰ, y, D, B)-
+           bacteria_mortality(mlin, mq, B)-
+           zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) / γ)
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:D}, clock, fields)
@@ -306,14 +305,14 @@ end
     D = @inbounds fields.D[i, j, k] 
     B = @inbounds fields.B[i, j, k]
 
-    if sum(B) > 0
-        return (bacteria_mortality(mlin, mq, B)
-                + phytoplankton_mortality(mlin, mq, P)
-                + zooplankton_mortality(mlin, mq_Z, Z)
-                - bacteria_production(μᵇ, kᴰ, y, D, B) / y)
+    if sum(B) != 0
+        return (bacteria_mortality(mlin, mq, B)+
+                phytoplankton_mortality(mlin, mq, P)+
+                zooplankton_mortality(mlin, mq_Z, Z)-
+                bacteria_production(μᵇ, kᴰ, y, D, B) / y)
     elseif sum(B) == 0
-        return (phytoplankton_mortality(mlin, mq, P)
-                + zooplankton_mortality(mlin, mq_Z, Z)
-                - detritus_remineralization(r, D))
+        return phytoplankton_mortality(mlin, mq, P)+
+               zooplankton_mortality(mlin, mq_Z, Z)-
+               detritus_remineralization(r, D)
     end
 end
