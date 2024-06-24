@@ -254,7 +254,7 @@ Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
    # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
     z₀ = log(0.01)*λ 
     # calculate the remineralization rate constant (r) of POP
-    r = b*wₛ[i,j,k]/(z+z₀)
+    r = b*wₛ[i,j,k]/(z+z₀)+ 1e-5/(z+1001) 
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
@@ -294,7 +294,7 @@ Tracer sources and sinks for Alkalinity (ALK)
    # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
     z₀ = log(0.01)*λ 
     # calculate the remineralization rate constant (r) of POP
-    r = b *wₛ[i,j,k]/(z+z₀)
+    r = b*wₛ[i,j,k]/(z+z₀)+ 1e-5/(z+1001) 
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
@@ -332,7 +332,7 @@ Tracer sources and sinks for inorganic/dissolved Nitrate (NO₃).
    # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
     z₀ = log(0.01)*λ 
     # calculate the remineralization rate constant (r) of POP
-    r = b *wₛ[i,j,k]/(z+z₀)
+    r = b*wₛ[i,j,k]/(z+z₀)+ 1e-5/(z+1001) 
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
@@ -372,7 +372,7 @@ Tracer sources and sinks for dissolved iron (FeT).
    # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
     z₀ = log(0.01)*λ 
     # calculate the remineralization rate constant (r) of POP
-    r = b *wₛ[i,j,k]/(z+z₀)
+    r = b*wₛ[i,j,k]/(z+z₀)+ 1e-5/(z+1001) 
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
@@ -410,8 +410,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
     z₀ = log(0.01)*λ 
     # calculate the remineralization rate constant (r) of POP
-    r = b *wₛ[i,j,k]/(z+z₀)
-
+    r = b*wₛ[i,j,k]/(z+z₀)+ 1e-5/(z+1001) 
     
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
@@ -473,7 +472,7 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
    # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
     z₀ = log(0.01)*λ 
     # calculate the remineralization rate constant (r) of POP
-    r = b *wₛ[i,j,k]/(z+z₀)
+    r = b*wₛ[i,j,k]/(z+z₀)+ 1e-5/(z+1001) 
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]

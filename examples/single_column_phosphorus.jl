@@ -8,7 +8,7 @@ using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 using Oceananigans
 using Oceananigans.Units
 using Printf
-using GLMakie
+using CairoMakie
 
 # ## A single column grid
 #
@@ -39,9 +39,9 @@ validate_tracer_advection(tracer_advection::AbstractAdvectionScheme, ::SingleCol
 model = HydrostaticFreeSurfaceModel(; grid,
                                     velocities = PrescribedVelocityFields(),
                                     biogeochemistry = CarbonAlkalinityNutrients(; grid,
-                                                                                maximum_net_community_production_rate  = 5e-3/day,
-                                                                                #dissolved_organic_phosphorus_remin_timescale  = 1/365.25days,
-                                                                                particulate_organic_phosphorus_sinking_velocity = 0/day),
+                                                                                maximum_net_community_production_rate  = 2e-1/day,
+                                                                                dissolved_organic_phosphorus_remin_timescale  = 1/365.25days,
+                                                                                particulate_organic_phosphorus_sinking_velocity = -1/day),
                                     tracers = (:DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
                                     tracer_advection = WENO(),
                                     buoyancy = nothing,
@@ -53,7 +53,7 @@ model = HydrostaticFreeSurfaceModel(; grid,
 
 set!(model, DIC=2.1, ALK=2.35, NO₃=3.6e-2, PO₄=2e-3, DOP=5e-4, POP=1.5e-3, Fe = 1e-6) # mol PO₄ m⁻³
 
-simulation = Simulation(model, Δt=30minutes, stop_time=1500days)
+simulation = Simulation(model, Δt=30minutes, stop_time=1000days)
 
 function progress(sim)
     @printf("Iteration: %d, time: %s, total(P): %.2e \n",
@@ -88,7 +88,6 @@ fig = Figure(;size=(800, 600))#resolution=(1200, 600))
 
 ax1 = Axis(fig[1, 1], ylabel="z (m)", xlabel="[Inorganic PO₄] (mol m⁻³)")
 ax2 = Axis(fig[1, 2], ylabel="z (m)", xlabel="[Organic P] (mol m⁻³)")
-# ax3 = Axis(fig[1, 3], ylabel="z (m)", xlabel="Flux (mol m⁻² d⁻¹)")
 
 xlims!(ax1, 0, 0.01)
 xlims!(ax2, 0, 0.005)
