@@ -28,6 +28,8 @@ struct CarbonAlkalinityNutrients{FT, W} <: AbstractBiogeochemistry
     stoichoimetric_ratio_carbon_to_iron           :: FT 
     stoichoimetric_ratio_silicate_to_phosphate    :: FT
     rain_ratio_inorganic_to_organic_carbon        :: FT 
+    constant_particulate_organic_phosphate_remin  :: FT # true = 1; false = 0
+    particulate_organic_phosphate_remin_timescale :: FT
     iron_scavenging_rate                          :: FT # s⁻¹
     ligand_concentration                          :: FT # mol L m⁻³
     ligand_stability_coefficient                  :: FT
@@ -54,6 +56,7 @@ end
                                 stoichoimetric_ratio_carbon_to_iron           = 106 / 1.e-3,
                                 stoichoimetric_ratio_silicate_to_phosphate    = 15.0,
                                 rain_ratio_inorganic_to_organic_carbon        = 1e-1,
+                                constant_particulate_organic_phosphate_remin  = 0, 
                                 iron_scavenging_rate                          = 5e-4 / day,
                                 ligand_concentration                          = 1e-9 * reference_density,
                                 ligand_stability_coefficient                  = 1e8
@@ -107,7 +110,8 @@ function CarbonAlkalinityNutrients(; grid,
                                    stoichoimetric_ratio_carbon_to_iron          = 117. / 4.68e-4,
                                    stoichoimetric_ratio_silicate_to_phosphate   = 15.0,
                                    rain_ratio_inorganic_to_organic_carbon       = 1.e-2,
-                                   #particulate_organic_phosphate_remin_timescale= 0.03 / day, 
+                                   constant_particulate_organic_phosphate_remin = 0, # if POP remin rate is a constant, = 1
+                                   particulate_organic_phosphate_remin_timescale= 0.03 / day, 
                                    iron_scavenging_rate                         = 0.2 / 365.25days, # s⁻¹
                                    ligand_concentration                         = 1e-9 * reference_density, # mol L m⁻³
                                    ligand_stability_coefficient                 = 1e8,
@@ -147,6 +151,8 @@ function CarbonAlkalinityNutrients(; grid,
                                      convert(FT, stoichoimetric_ratio_carbon_to_iron),
                                      convert(FT, stoichoimetric_ratio_silicate_to_phosphate),
                                      convert(FT, rain_ratio_inorganic_to_organic_carbon),
+                                     convert(FT, constant_particulate_organic_phosphate_remin),
+                                     convert(FT, particulate_organic_phosphate_remin_timescale), 
                                      convert(FT, iron_scavenging_rate),
                                      convert(FT, ligand_concentration),
                                      convert(FT, ligand_stability_coefficient),
@@ -187,7 +193,7 @@ Calculate remineralization of dissolved organic phosphorus according to a first-
 """
 Calculate remineralization of particulate organic phosphorus according to a first-order rate constant.
 """
-@inline particulate_organic_phosphorus_remin(r, POP) = r * POP
+@inline particulate_organic_phosphorus_remin(r, POP) = max(0, r * POP) # to avoid potential negative flux
 
 """
 Calculate remineralization of particulate organic carbon.
@@ -245,28 +251,34 @@ Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
     Rᶜᵃᶜᵒ³ = bgc.rain_ratio_inorganic_to_organic_carbon 
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
+    Rᵣ = bgc.constant_particulate_organic_phosphate_remin
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
     # TODO: design a user interface for prescribing incoming shortwave
     I = 700 * exp(z / λ)
 
-   # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
-    z₀ = log(0.01)*λ 
-    # calculate the remineralization rate constant (r) of POP
-    r = b*wₛ[i,j,k]/(z+z₀)+ 1e-5/(z+1001) 
-
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
     Feₜ = @inbounds fields.Fe[i, j, k]
     DOP = @inbounds fields.DOP[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
-    
+       
+    if Rᵣ == 0 # if POP remineralization rate is NOT a constant
+        # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
+        z₀ = log(0.01)*λ 
+        # calculate the remineralization rate constant (r) of POP
+        r = b*wₛ[i,j,k]/(z+z₀)
+    else
+        # Constant remineralization rate of particulate organic phosphate
+        r = bgc.particulate_organic_phosphate_remin_timescale
+    end
+
     return (Rᶜᴾ * (
                     dissolved_organic_phosphorus_remin(γ, DOP) +
                     particulate_organic_phosphorus_remin(r, POP) -
                     (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
-                ) + particulate_inorganic_carbon_remin())
+                ) .+ particulate_inorganic_carbon_remin())
 end
 
 """
@@ -285,23 +297,29 @@ Tracer sources and sinks for Alkalinity (ALK)
     Rᶜᵃᶜᵒ³ = bgc.rain_ratio_inorganic_to_organic_carbon     
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
+    Rᵣ = bgc.constant_particulate_organic_phosphate_remin
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
     # TODO: design a user interface for prescribing incoming shortwave
     I = 700 * exp(z / λ)
 
-   # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
-    z₀ = log(0.01)*λ 
-    # calculate the remineralization rate constant (r) of POP
-    r = b*wₛ[i,j,k]/(z+z₀)+ 1e-5/(z+1001) 
-
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
     Feₜ = @inbounds fields.Fe[i, j, k]
     DOP = @inbounds fields.DOP[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
-    
+        
+    if Rᵣ == 0
+        # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
+        z₀ = log(0.01)*λ 
+        # calculate the remineralization rate constant (r) of POP
+        r = b*wₛ[i,j,k]/(z+z₀)
+    else
+        # Constant remineralization rate of particulate organic phosphate
+        r = bgc.particulate_organic_phosphate_remin_timescale
+    end
+
     return (-Rᴺᴾ * (
         - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
         dissolved_organic_phosphorus_remin(γ, DOP) +
@@ -323,22 +341,29 @@ Tracer sources and sinks for inorganic/dissolved Nitrate (NO₃).
     Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
+    α = bgc.fraction_of_particulate_export 
+    Rᵣ = bgc.constant_particulate_organic_phosphate_remin
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
     # TODO: design a user interface for prescribing incoming shortwave
     I = 700 * exp(z / λ)
 
-   # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
-    z₀ = log(0.01)*λ 
-    # calculate the remineralization rate constant (r) of POP
-    r = b*wₛ[i,j,k]/(z+z₀)+ 1e-5/(z+1001) 
-
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
     Feₜ = @inbounds fields.Fe[i, j, k]
     DOP = @inbounds fields.DOP[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
+
+    if Rᵣ == 0
+        # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
+        z₀ = log(0.01)*λ 
+        # calculate the remineralization rate constant (r) of POP
+        r = b*wₛ[i,j,k]/(z+z₀)
+    else
+        # Constant remineralization rate of particulate organic phosphate
+        r = bgc.particulate_organic_phosphate_remin_timescale
+    end
 
     return (Rᴺᴾ * (
            - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
@@ -363,22 +388,29 @@ Tracer sources and sinks for dissolved iron (FeT).
     kˢᶜᵃᵛ = bgc.iron_scavenging_rate
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
+    α = bgc.fraction_of_particulate_export 
+    Rᵣ = bgc.constant_particulate_organic_phosphate_remin
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
     # TODO: design a user interface for prescribing incoming shortwave
     I = 700 * exp(z / λ)
 
-   # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
-    z₀ = log(0.01)*λ 
-    # calculate the remineralization rate constant (r) of POP
-    r = b*wₛ[i,j,k]/(z+z₀)+ 1e-5/(z+1001) 
-
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
     Feₜ = @inbounds fields.Fe[i, j, k]
     DOP = @inbounds fields.DOP[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
+
+    if Rᵣ == 0
+        # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
+        z₀ = log(0.01)*λ 
+        # calculate the remineralization rate constant (r) of POP
+        r = b*wₛ[i,j,k]/(z+z₀)
+    else
+        # Constant remineralization rate of particulate organic phosphate
+        r = bgc.particulate_organic_phosphate_remin_timescale
+    end
 
     return (Rᶠᴾ * (
                 -   net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) 
@@ -401,23 +433,30 @@ Tracer sources and sinks for dissolved iron (FeT).
     γ = bgc.dissolved_organic_phosphorus_remin_timescale 
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
+    α = bgc.fraction_of_particulate_export 
+    Rᵣ = bgc.constant_particulate_organic_phosphate_remin
     
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
     # TODO: design a user interface for prescribing incoming shortwave
     I = 700 * exp(z / λ)
     
-    # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
-    z₀ = log(0.01)*λ 
-    # calculate the remineralization rate constant (r) of POP
-    r = b*wₛ[i,j,k]/(z+z₀)+ 1e-5/(z+1001) 
-    
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
     Feₜ = @inbounds fields.Fe[i, j, k]
     DOP = @inbounds fields.DOP[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
-    
+
+    if Rᵣ == 0
+        # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
+        z₀ = log(0.01)*λ 
+        # calculate the remineralization rate constant (r) of POP
+        r = b*wₛ[i,j,k]/(z+z₀)
+    else
+        # Constant remineralization rate of particulate organic phosphate
+        r = bgc.particulate_organic_phosphate_remin_timescale
+    end
+
     return (- net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
             dissolved_organic_phosphorus_remin(γ, DOP) +
             particulate_organic_phosphorus_remin(r, POP))
@@ -463,21 +502,27 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
     α = bgc.fraction_of_particulate_export     
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
+    Rᵣ = bgc.constant_particulate_organic_phosphate_remin
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
     # TODO: design a user interface for prescribing incoming shortwave
     I = 700 * exp(z / λ)
 
-   # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
-    z₀ = log(0.01)*λ 
-    # calculate the remineralization rate constant (r) of POP
-    r = b*wₛ[i,j,k]/(z+z₀)+ 1e-5/(z+1001) 
-
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
     Feₜ = @inbounds fields.Fe[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
+
+    if Rᵣ == 0
+        # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
+        z₀ = log(0.01)*λ 
+        # calculate the remineralization rate constant (r) of POP
+        r = b*wₛ[i,j,k]/(z+z₀)
+    else
+        # Constant remineralization rate of particulate organic phosphate
+        r = bgc.particulate_organic_phosphate_remin_timescale
+    end
 
     return (α * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
            particulate_organic_phosphorus_remin(r, POP))
