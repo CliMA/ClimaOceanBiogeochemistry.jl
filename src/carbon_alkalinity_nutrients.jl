@@ -190,7 +190,9 @@ end
     Fₗᵢₘ = F / (F + kᶠ)
 
     # return the net community production
-    return μᵖ * Lₗᵢₘ * min(Pₗᵢₘ, Nₗᵢₘ, Fₗᵢₘ)
+    return max(0,
+        μᵖ * Lₗᵢₘ * min(Pₗᵢₘ, Nₗᵢₘ, Fₗᵢₘ)
+    )
 end
 
 """
@@ -200,7 +202,7 @@ Calculate the remineralization of dissolved organic phosphate.
 """
 @inline dissolved_organic_phosphate_remin(remineralization_rate, 
                                           dissolved_organic_phosphorus_concentration) = 
-        remineralization_rate * dissolved_organic_phosphorus_concentration
+        max(0, remineralization_rate * dissolved_organic_phosphorus_concentration)
 
 # Martin Curve
 @inline particulate_organic_phosphate_remin() = 0.0
