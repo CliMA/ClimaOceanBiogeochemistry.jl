@@ -12,6 +12,7 @@ struct CarbonAlkalinityNutrients{FT} <: AbstractBiogeochemistry
     phosphate_half_saturation                  :: FT # mol P m⁻³
     nitrate_half_saturation                    :: FT # mol N m⁻³
     iron_half_saturation                       :: FT # mol Fe m⁻³
+    incident_PAR                               :: FT # W m⁻²
     PAR_half_saturation                        :: FT  # W m⁻²
     PAR_attenuation_scale                      :: FT  # m
     fraction_of_particulate_export             :: FT
@@ -37,6 +38,7 @@ end
                                 phosphate_half_saturation                   = 1e-7 * reference_density,
                                 nitrate_half_saturation                     = 1.6e-6 * reference_density,
                                 iron_half_saturation                        = 1e-10 * reference_density,
+                                incident_PAR                                = 700,
                                 PAR_half_saturation                         = 10.0,
                                 PAR_attenuation_scale                       = 25.0,
                                 fraction_of_particulate_export              = 0.33
@@ -86,6 +88,7 @@ function CarbonAlkalinityNutrients(; reference_density = 1024,
                                    phosphate_half_saturation                  = 1e-7 * reference_density, # mol P m⁻³
                                    nitrate_half_saturation                    = 1.6e-6 * reference_density, # mol N m⁻³
                                    iron_half_saturation                       = 1e-10 * reference_density, # mol Fe m⁻³
+                                   incident_PAR                               = 700, # W m⁻²
                                    PAR_half_saturation                        = 10.0,  # W m⁻²
                                    PAR_attenuation_scale                      = 25.0,  # m
                                    fraction_of_particulate_export             = 0.33,
@@ -108,6 +111,7 @@ function CarbonAlkalinityNutrients(; reference_density = 1024,
                                      phosphate_half_saturation,
                                      nitrate_half_saturation,
                                      iron_half_saturation,
+                                     incident_PAR,
                                      PAR_half_saturation,
                                      PAR_attenuation_scale,
                                      fraction_of_particulate_export,
@@ -131,11 +135,72 @@ const CAN = CarbonAlkalinityNutrients
 
 @inline required_biogeochemical_tracers(::CAN) = (:DIC, :Alk, :PO₄, :NO₃, :DOP, :Fe)
 
-@inline function net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F)
-    return μᵖ * I / (I + kᴵ) * min(P / (P + kᴾ), N / (N + kᴺ), F / (F + kᶠ))
+"""
+    PAR(surface_photosynthetically_active_ratiation, 
+        photosynthetically_active_ratiation_attenuation_scale, 
+        depth)
+
+Calculate the photosynthetically active radiation (PAR) at a given depth due to attenuation.
+"""
+@inline function PAR(surface_photosynthetically_active_ratiation, 
+                     photosynthetically_active_ratiation_attenuation_scale, 
+                     depth)
+
+    I₀ = surface_photosynthetically_active_ratiation
+    λ  = photosynthetically_active_ratiation_attenuation_scale
+    z  = depth
+    return I₀ * exp(z / λ)
 end
 
-@inline dissolved_organic_phosphate_remin(γ, D) = γ * D
+"""
+    net_community_production(maximum_net_community_production_rate,
+                             light_half_saturation, 
+                             phosphate_half_saturation, 
+                             nitrate_half_saturation, 
+                             iron_half_saturation, 
+                             photosynthetically_active_radiation, 
+                             phosphate_concentration, 
+                             nitrate_concentration, 
+                             iron_concentration)
+
+"""
+@inline function net_community_production(maximum_net_community_production_rate,
+                                          light_half_saturation, 
+                                          phosphate_half_saturation, 
+                                          nitrate_half_saturation, 
+                                          iron_half_saturation, 
+                                          photosynthetically_active_radiation, 
+                                          phosphate_concentration, 
+                                          nitrate_concentration, 
+                                          iron_concentration)
+    μᵖ=maximum_net_community_production_rate
+    kᴵ=light_half_saturation
+    kᴾ=phosphate_half_saturation
+    kᴺ=nitrate_half_saturation
+    kᶠ=iron_half_saturation
+    I =photosynthetically_active_radiation
+    P =phosphate_concentration
+    N =nitrate_concentration
+    F =iron_concentration
+
+    # calculate the limitation terms
+    Lₗᵢₘ = I / (I + kᴵ)
+    Pₗᵢₘ = P / (P + kᴾ)
+    Nₗᵢₘ = N / (N + kᴺ)
+    Fₗᵢₘ = F / (F + kᶠ)
+
+    # return the net community production
+    return μᵖ * Lₗᵢₘ * min(Pₗᵢₘ, Nₗᵢₘ, Fₗᵢₘ)
+end
+
+"""
+    dissolved_organic_phosphate_remin(remineralization_rate, 
+                                      dissolved_organic_phosphorus_concentration)
+Calculate the remineralization of dissolved organic phosphate.
+"""
+@inline dissolved_organic_phosphate_remin(remineralization_rate, 
+                                          dissolved_organic_phosphorus_concentration) = 
+        remineralization_rate * dissolved_organic_phosphorus_concentration
 
 # Martin Curve
 @inline particulate_organic_phosphate_remin() = 0.0
@@ -148,15 +213,25 @@ end
 @inline freshwater_virtual_flux() = 0.0
 
 """
-Iron scavenging should depend on free iron, involves solving a quadratic equation in terms
-of ligand concentration and stability coefficient, but this is a simple first order approximation.
+    iron_scavenging(iron_scavenging_rate, iron_concentration, ligand_concentration, ligand_stability_coefficient)
+
+Calculate the scavenging loss of iron. Iron scavenging should depend on free iron, involves solving a quadratic 
+equation in terms of ligand concentration and stability coefficient, but this is a simple first order approximation.
 """
-@inline iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β) = kˢᶜᵃᵛ * ( F - Lₜ )
+@inline function iron_scavenging(iron_scavenging_rate, iron_concentration, ligand_concentration, ligand_stability_coefficient) 
+    kˢᶜᵃᵛ=iron_scavenging_rate
+    F    =iron_concentration
+    Lₜ    =ligand_concentration
+    β    =ligand_stability_coefficient
+
+    # return iron loss by scavenging
+    return kˢᶜᵃᵛ * ( F - Lₜ )
+end
 
 @inline iron_sources() = 0.0
 
 """
-Tracer sources and sinks for DIC
+Tracer sources and sinks for dissolved inorganic carbon (DIC)
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:DIC}, clock, fields)
     μᵖ = bgc.maximum_net_community_production_rate
@@ -164,6 +239,7 @@ Tracer sources and sinks for DIC
     kᴾ = bgc.nitrate_half_saturation
     kᶠ = bgc.iron_half_saturation
     kᴵ = bgc.PAR_half_saturation
+    I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
     γ = bgc.dissolved_organic_phosphate_remin_timescale
     α = bgc.fraction_of_particulate_export
@@ -177,7 +253,7 @@ Tracer sources and sinks for DIC
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+    I = PAR(I₀, λ, z)
 
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
@@ -193,7 +269,7 @@ Tracer sources and sinks for DIC
 end
 
 """
-Tracer sources and sinks for ALK
+Tracer sources and sinks for alkalinity (ALK)
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:Alk}, clock, fields)
     μᵖ = bgc.maximum_net_community_production_rate
@@ -201,6 +277,7 @@ Tracer sources and sinks for ALK
     kᴾ = bgc.nitrate_half_saturation
     kᶠ = bgc.iron_half_saturation
     kᴵ = bgc.PAR_half_saturation
+    I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
     γ = bgc.dissolved_organic_phosphate_remin_timescale
     α = bgc.fraction_of_particulate_export
@@ -214,7 +291,7 @@ Tracer sources and sinks for ALK
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+    I = PAR(I₀, λ, z)
 
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
@@ -224,12 +301,12 @@ Tracer sources and sinks for ALK
     return -Rᴺᴾ * (
         - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
         dissolved_organic_phosphate_remin(γ, D) +
-        particulate_organic_phosphate_remin()) +
-        2 * particulate_inorganic_carbon_remin()
+        particulate_organic_phosphate_remin()
+        ) + 2 * particulate_inorganic_carbon_remin()
 end
 
 """
-Tracer sources and sinks for PO₄
+Tracer sources and sinks for phosphate (PO₄)
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:PO₄}, clock, fields)
     μᵖ = bgc.maximum_net_community_production_rate
@@ -237,6 +314,7 @@ Tracer sources and sinks for PO₄
     kᴾ = bgc.nitrate_half_saturation
     kᶠ = bgc.iron_half_saturation
     kᴵ = bgc.PAR_half_saturation
+    I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
     γ = bgc.dissolved_organic_phosphate_remin_timescale
     α = bgc.fraction_of_particulate_export
@@ -250,7 +328,7 @@ Tracer sources and sinks for PO₄
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+    I = PAR(I₀, λ, z)
 
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
@@ -263,7 +341,7 @@ Tracer sources and sinks for PO₄
 end
 
 """
-Tracer sources and sinks for NO₃
+Tracer sources and sinks for nitrate (NO₃)
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:NO₃}, clock, fields)
     μᵖ = bgc.maximum_net_community_production_rate
@@ -271,6 +349,7 @@ Tracer sources and sinks for NO₃
     kᴾ = bgc.nitrate_half_saturation
     kᶠ = bgc.iron_half_saturation
     kᴵ = bgc.PAR_half_saturation
+    I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
     γ = bgc.dissolved_organic_phosphate_remin_timescale
     α = bgc.fraction_of_particulate_export
@@ -284,7 +363,7 @@ Tracer sources and sinks for NO₃
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+    I = PAR(I₀, λ, z)
 
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
@@ -298,7 +377,7 @@ Tracer sources and sinks for NO₃
 end
 
 """
-Tracer sources and sinks for FeT
+Tracer sources and sinks for dissolved iron (FeT)
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:Fe}, clock, fields)
     μᵖ = bgc.maximum_net_community_production_rate
@@ -306,9 +385,10 @@ Tracer sources and sinks for FeT
     kᴾ = bgc.nitrate_half_saturation
     kᶠ = bgc.iron_half_saturation
     kᴵ = bgc.PAR_half_saturation
-    λ = bgc.PAR_attenuation_scale
-    γ = bgc.dissolved_organic_phosphate_remin_timescale
-    α = bgc.fraction_of_particulate_export
+    I  = bgc.incident_PAR
+    λ  = bgc.PAR_attenuation_scale
+    γ  = bgc.dissolved_organic_phosphate_remin_timescale
+    α  = bgc.fraction_of_particulate_export
     Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
     Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
     Rᴾᴼ = bgc.stoichoimetric_ratio_phosphate_to_oxygen   
@@ -317,10 +397,12 @@ Tracer sources and sinks for FeT
     Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron        
     Rᶠᴾ = bgc.stoichoimetric_ratio_phosphate_to_iron
     Rᶜᵃᶜᵒ³ = bgc.rain_ratio_inorganic_to_organic_carbon     
-
+    kˢᶜᵃᵛ  = bgc.iron_scavenging_rate
+    Lₜ      = bgc.ligand_concentration
+    β      = bgc.ligand_stability_coefficient
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+    I = PAR(I₀, λ, z)
 
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
@@ -332,11 +414,11 @@ Tracer sources and sinks for FeT
                 + dissolved_organic_phosphate_remin(γ, D))
            #    + particulate_organic_phosphate_remin()) +
            #    + iron_sources()
-           #    - iron_scavenging())
-    end
+                - iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β)
+end
 
 """
-Tracer sources and sinks for DOP
+Tracer sources and sinks for dissolved organic phosphorus (DOP)
 """
 @inline function (bgc::CAN)(i, j, k, grid, ::Val{:DOP}, clock, fields)
     μᵖ = bgc.maximum_net_community_production_rate
@@ -344,13 +426,14 @@ Tracer sources and sinks for DOP
     kᴾ = bgc.nitrate_half_saturation
     kᶠ = bgc.iron_half_saturation
     kᴵ = bgc.PAR_half_saturation
+    I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
     γ = bgc.dissolved_organic_phosphate_remin_timescale
     α = bgc.fraction_of_particulate_export     
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = exp(z / λ)
+    I = PAR(I₀, λ, z)
 
     P = @inbounds fields.PO₄[i, j, k]
     N = @inbounds fields.NO₃[i, j, k]
@@ -359,5 +442,4 @@ Tracer sources and sinks for DOP
 
     return - dissolved_organic_phosphate_remin(γ, D) +
              (1 - α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F)
-
 end
