@@ -9,94 +9,96 @@
 #   * How to use the `TimeStepWizard` to adapt the simulation time-step.
 #   * How to use `Average` to diagnose spatial averages of model fields.
 
-using Oceananigans
-using Oceananigans.Units: minutes, hour, hours, day, days
-
 using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
-using CairoMakie
+using GLMakie
 using Printf
 using Statistics
 
-# We use a two-dimensional grid with 100² points,
-# 10 m grid spacing, and a `Flat` `y`-direction:
+using Oceananigans
+using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
+using Oceananigans.Units
 
-grid = RectilinearGrid(size=(100, 100), extent=(1000, 1000), topology=(Bounded, Flat, Bounded))
+#################################### Grid ####################################
+# Parameters
+Nx = 1000
+Nz = 100
+Lx = 100kilometers   # m
+Lz = 1000            # m
+
+# We use a two-dimensional grid, with a `Flat` `y`-direction:
+grid = RectilinearGrid(size = (Nx, Nz),
+                       x = (0, Lx),
+                       z = (-Lz, 0),
+                       topology=(Bounded, Flat, Bounded))
 
 #################################### Boundary conditions ####################################
 
-velocity_bcs = FieldBoundaryConditions(top=ValueBoundaryCondition(0.0),
-                                    bottom=ValueBoundaryCondition(0.0))
+# Compute piston velocity `wp` from restoring time-scale τ★
+Δz = zspacings(grid, Center())
+τ★ = 1days  
+wp = Δz / τ★ # piston velocity = 10 m/day
 
-################################# The model #################################
+# Compute buoyancy flux Jᵇ
+M² = 1e-12         # s⁻², squared buoyancy frequency
+@inline function Jᵇ(x, t, b, p)
+    b★ = p.M² * x   # m s⁻², reference buoyancy
+    return p.wp * (b★ - b) # m² s⁻³
+end
+top_buoyancy_bc = FluxBoundaryCondition(Jᵇ, field_dependencies=:b, parameters=(; M², wp))
+b_bcs = FieldBoundaryConditions(top=top_buoyancy_bc)
 
-biogeochemistry = CarbonAlkalinityNutrients(; grid,
-                                            maximum_net_community_production_rate  = 5e-2/day,
-                                            fraction_of_particulate_export  = 1,
-                                            martin_curve_exponent = 2,
-                                            particulate_organic_phosphorus_sinking_velocity = -1.0/day)
-                            
+# Wind stress boundary condition
+τ₀ = 1e-4           # m² s⁻²
+@inline step(x, xc, dx) = (1 + tanh((x - xc) / dx)) / 2 # between 0 and 1
+@inline τx(x, t, p) = - p.τ₀ * step(x, p.Lx/2, p.Lx/5)
+x_wind_stress = FluxBoundaryCondition(τx, parameters=(; τ₀, Lx))
+u_bcs = FieldBoundaryConditions(top=x_wind_stress)
 
-model = NonhydrostaticModel(; grid,
-                            advection = UpwindBiasedFifthOrder(),
-                            biogeochemistry,
-                            tracers = (:b, :DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
-                            timestepper = :RungeKutta3,
-                            closure = ScalarDiffusivity(; ν=1e-4, κ=1e-4))
-                            boundary_conditions = (u=velocity_bcs, w=velocity_bcs),
-                            #buoyancy = BuoyancyTracer())
+#################################### Model ####################################
 
-################################# Initial condition #################################
+model = HydrostaticFreeSurfaceModel(; grid,
+                                    buoyancy = BuoyancyTracer(),
+                                    # biogeochemistry = CarbonAlkalinityNutrients(; grid,
+                                    #                                     maximum_net_community_production_rate  = 5e-2/day,
+                                    #                                     fraction_of_particulate_export = 1),
+                                    coriolis = FPlane(; f=1e-4),
+                                    closure = CATKEVerticalDiffusivity(),
+                                    # tracers = (:b, :e, :DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
+                                    tracers = (:b, :e), 
+                                    boundary_conditions = (; u=u_bcs, b=b_bcs))
+
+N² = 1e-5           # s⁻²
+bᵢ(x, z) = N² * z + M² * x
 
 # Biogeochemical
-N₀ = 1e-2 # Surface nutrient concentration
-D₀ = 1e-3 # Surface detritus concentration
+# N₀ = 1e-2 # Surface nutrient concentration
+# D₀ = 1e-3 # Surface detritus concentration
 
-Nᵢ(x,z) = N₀ * (-z / 115).^0.84
-Dᵢ(x,z) = D₀ * (-z / 115).^-0.84
+# Nᵢ(x,z) = N₀ * (-z / 115).^0.84
+# Dᵢ(x,z) = D₀ * (-z / 115).^-0.84
 
-# Physical
-bᵢ(x, z) = 1e-4 * z
+# set!(model, b=bᵢ, DIC=2.1, ALK=2.35, NO₃=1e-2, PO₄=Nᵢ, DOP=Dᵢ, POP=Dᵢ, Fe = 1e-6) # mol PO₄ m⁻³
+set!(model, b=bᵢ) 
 
-u, v, w = model.velocities
-
-uᵢ = rand(size(u)...)
-wᵢ = rand(size(w)...)
-
-uᵢ .-= mean(uᵢ)
-wᵢ .-= mean(wᵢ)
-
-set!(model, u=uᵢ, w=wᵢ, b=bᵢ, DIC=2.1, ALK=2.35, NO₃=1e-2, PO₄=Nᵢ, DOP=0, POP=Dᵢ, Fe = 1e-6) # mol PO₄ m⁻³
-
-############################## We build a simulation ##############################
-
-simulation = Simulation(model, Δt=5minutes, stop_time=10days)
-
-# with a `TimeStepWizard` that limits the
-# time-step to 2 minutes, and adapts the time-step such that CFL
-# (Courant-Freidrichs-Lewy) number hovers around `1.0`,
-
-#conjure_time_step_wizard!(simulation, cfl=1.0, max_Δt=2minutes)
-
-# We also add a callback that prints the progress of the simulation,
+# TODO: When Δt is large, the model reaches NaN after some time
+simulation = Simulation(model; Δt = 20seconds, stop_time=10days)
 
 # progress(sim) = @printf("Iteration: %d, time: %s, total(P): %.2e\n",
 #                         iteration(sim), prettytime(sim), 
 #                         sum(model.tracers.PO₄)+sum(model.tracers.DOP)+sum(model.tracers.POP))
+progress(sim) = @printf("Iteration: %d, time: %s\n",
+                        iteration(sim), prettytime(sim))
 
-# add_callback!(simulation, progress, IterationInterval(100))
-
-
-# and a basic `JLD2OutputWriter` that writes velocities and both
-# the two-dimensional and horizontally-averaged tracer concentrations
+add_callback!(simulation, progress, IterationInterval(100))
 
 outputs = (u = model.velocities.u,
-            w = model.velocities.w,
-            PO₄= model.tracers.PO₄,
-            DOP = model.tracers.DOP,
-            POP = model.tracers.POP,
-            avg_PO₄ = Average(model.tracers.PO₄, dims=(1, 2)),
-            avg_DOP = Average(model.tracers.DOP, dims=(1, 2)),
-            avg_POP = Average(model.tracers.POP, dims=(1, 2)))
+            w = model.velocities.w)
+            # PO₄= model.tracers.PO₄,
+            # DOP = model.tracers.DOP,
+            # POP = model.tracers.POP,
+            # avg_PO₄ = Average(model.tracers.PO₄, dims=(1, 2)),
+            # avg_DOP = Average(model.tracers.DOP, dims=(1, 2)),
+            # avg_POP = Average(model.tracers.POP, dims=(1, 2)))
 
 simulation.output_writers[:simple_output] =
     JLD2OutputWriter(model, outputs,
@@ -106,86 +108,64 @@ simulation.output_writers[:simple_output] =
 
 run!(simulation)
 
-
-
 ############################ Visualizing the solution ############################
-
 
 filepath = simulation.output_writers[:simple_output].filepath
 
 u_timeseries = FieldTimeSeries(filepath, "u")
 w_timeseries = FieldTimeSeries(filepath, "w")
-PO4_timeseries = FieldTimeSeries(filepath, "PO₄")
-avg_PO4_timeseries = FieldTimeSeries(filepath, "avg_PO₄")
-POP_timeseries = FieldTimeSeries(filepath, "POP")
-avg_POP_timeseries = FieldTimeSeries(filepath, "avg_POP")
-
 times = w_timeseries.times
+xw, yw, zw = nodes(w_timeseries)
 
-# and then we construct the ``x, z`` grid,
-
-# xw, yw, zw = nodes(w_timeseries)
-xi, yi, zi = nodes(PO4_timeseries) # inorganic
-# xd, yd, zd = nodes(DOP_timeseries) # dissolved
-xp, yp, zp = nodes(POP_timeseries) # particulate
-nothing #hide
-
-# Finally, we animate 
-
-@info "Making a movie..."
+# PO4_timeseries = FieldTimeSeries(filepath, "PO₄")
+# avg_PO4_timeseries = FieldTimeSeries(filepath, "avg_PO₄")
+# POP_timeseries = FieldTimeSeries(filepath, "POP")
+# avg_POP_timeseries = FieldTimeSeries(filepath, "avg_POP")
+# xi, yi, zi = nodes(avg_PO4_timeseries)
 
 n = Observable(1)
-title = @lift @sprintf("t = %s", prettytime(times[$n]))
+title = @lift @sprintf("t = %d days", times[$n] / day)
 
 uₙ = @lift interior(u_timeseries[$n], :, 1, :)
 wₙ = @lift interior(w_timeseries[$n], :, 1, :)
 
-PO4ₙ = @lift interior(PO4_timeseries[$n], :, 1, :)
-avg_PO4ₙ = @lift interior(avg_PO4_timeseries[$n], 1, 1, :)
+# PO4ₙ = @lift interior(PO4_timeseries[$n], :, 1, :)
+# avg_PO4ₙ = @lift interior(avg_PO4_timeseries[$n], 1, 1, :)
 
-POPₙ = @lift interior(POP_timeseries[$n], :, 1, :)
-avg_POPₙ = @lift interior(avg_POP_timeseries[$n], 1, 1, :)
-# DOPₙ = @lift interior(DOP_timeseries[$n], :, 1, :)
-# avg_DOPₙ = @lift interior(avg_DOP_timeseries[$n], 1, 1, :)
+# POPₙ = @lift interior(POP_timeseries[$n], :, 1, :)
+# avg_POPₙ = @lift interior(avg_POP_timeseries[$n], 1, 1, :)
 
+fig = Figure(size = (1000, 600))
 
-PO4_lims = (0.0, 0.01)
-# DOP_lims = (0.0, 0.005)
-POP_lims = (0.0, 0.01)
-
-fig = Figure(size = (1000, 1000))
-
-ax_u = Axis(fig[2, 2]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_u = heatmap!(ax_u, xi, zi, uₙ; colormap = :balance)
-Colorbar(fig[2, 1], hm_u; label = "u", flipaxis = false)
+ax_u = Axis(fig[2, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
+hm_u = heatmap!(ax_u, xw, zw, uₙ; colorrange = (-0.02, 0.02), colormap = :balance)
+Colorbar(fig[2, 2], hm_u; label = "u", flipaxis = false)
 
 ax_w = Axis(fig[2, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_w = heatmap!(ax_w, xi, zi, wₙ; colormap = :balance)
+hm_w = heatmap!(ax_w, xw, zw, wₙ; colorrange = (-0.02, 0.02), colormap = :balance)
+Colorbar(fig[2, 4], hm_w; label = "w", flipaxis = false)
 
-ax_PO4 = Axis(fig[3, 2]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-ax_POP = Axis(fig[4, 2]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
+# ax_PO4 = Axis(fig[3, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
+# hm_PO4 = heatmap!(ax_PO4, xw, zw, PO4ₙ; colormap = :matter, colorrange = (0.0, 0.05))
+# Colorbar(fig[3, 2], hm_PO4; label = "[PO₄]", flipaxis = false)
 
-ax_avg_PO4 = Axis(fig[3, 3]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", yaxisposition = :right)
-ax_avg_POP = Axis(fig[4, 3]; xlabel = "[POP] (μM)", ylabel = "z (m)", yaxisposition = :right)
-xlims!(ax_avg_PO4, 0.0, 0.01)
-xlims!(ax_avg_POP, 0.0, 0.01)
+# ax_POP = Axis(fig[3, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
+# hm_POP = heatmap!(ax_POP, xw, zw, POPₙ; colormap = :matter, colorrange = (0.0, 0.02))
+# Colorbar(fig[3, 4], hm_POP; label = "[POP]", flipaxis = false)
 
-fig[1, 1:3] = Label(fig, title, tellwidth=false)
+# ax_avg_PO4 = Axis(fig[4, 1]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", yaxisposition = :right)
+# xlims!(ax_avg_PO4, 0.0, 0.08)
+# lines!(ax_avg_PO4, avg_PO4ₙ, zi)
 
-hm_PO4 = heatmap!(ax_PO4, xi, zi, PO4ₙ; colormap = :matter, colorrange = PO4_lims)
-Colorbar(fig[3, 1], hm_PO4; label = "[PO₄]", flipaxis = false)
-hm_POP = heatmap!(ax_POP, xp, zp, POPₙ; colormap = :matter, colorrange = POP_lims)
-Colorbar(fig[4, 1], hm_POP; label = "[POP]", flipaxis = false)
+# ax_avg_POP = Axis(fig[4, 3]; xlabel = "[POP] (μM)", ylabel = "z (m)", yaxisposition = :right)
+# xlims!(ax_avg_POP, 0.0, 0.01)
+# lines!(ax_avg_POP, avg_POPₙ, zi)
 
-lines!(ax_avg_PO4, avg_PO4ₙ, zi)
-lines!(ax_avg_POP, avg_POPₙ, zp)
-
-current_figure() #hide
-fig
+fig[1, 1:4] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "Remin_2D.mp4", frames, framerate=8) do i
+record(fig, "Remin_2D.mp4", frames, framerate=24) do i
     n[] = i
 end
 nothing #hide
