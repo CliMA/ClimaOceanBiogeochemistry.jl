@@ -225,19 +225,19 @@ equation in terms of ligand concentration and stability coefficient. Ligand-comp
                                  ligand_concentration, 
                                  ligand_stability_coefficient) 
     kˢᶜᵃᵛ = iron_scavenging_rate
-    F     = iron_concentration
-    L     = ligand_concentration
+    Fe    = iron_concentration
+    Lᶠᵉ   = ligand_concentration
     β     = ligand_stability_coefficient
 
     # solve for the equilibrium free iron concentration
        # β = FeL / (Feᶠʳᵉᵉ * Lᶠʳᵉᵉ)
-       # Lₜ = FeL + Lᶠʳᵉᵉ
+       # Lᶠᵉ = FeL + Lᶠʳᵉᵉ
        # Fₜ = FeL + Feᶠʳᵉᵉ
        # --> R₁(Feᶠʳᵉᵉ)² + R₂ Feᶠʳᵉᵉ + R₃ = 0
        β⁻¹ = 1/β
        R₁  = 1
-       R₂  = (L + β⁻¹ - F) 
-       R₃  = -(F * β⁻¹) 
+       R₂  =  (Lᶠᵉ + β⁻¹ - Fe) 
+       R₃  = -(Fe * β⁻¹) 
 
        # simple quadratic solution for roots
        discriminant = sqrt( R₂*R₂ - ( 4*R₁*R₃ ))
@@ -417,7 +417,7 @@ Tracer sources and sinks for dissolved iron (FeT)
     Rᶜᴼ = bgc.stoichoimetric_ratio_carbon_to_oxygen      
     Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron
     Rᶠᴾ = bgc.stoichoimetric_ratio_iron_to_phosphate
-    Lₜ     = bgc.ligand_concentration
+    Lᶠᵉ   = bgc.ligand_concentration
     β     = bgc.ligand_stability_coefficient
     kˢᶜᵃᵛ = bgc.iron_scavenging_rate
 
@@ -436,7 +436,7 @@ Tracer sources and sinks for dissolved iron (FeT)
                   particulate_organic_phosphate_remin()
                  ) + 
                  iron_sources() -
-                 iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β)
+                 iron_scavenging(kˢᶜᵃᵛ, F, Lᶠᵉ, β)
 end
 
 
