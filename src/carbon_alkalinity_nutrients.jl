@@ -226,7 +226,7 @@ equation in terms of ligand concentration and stability coefficient. Ligand-comp
                                  ligand_stability_coefficient) 
     kˢᶜᵃᵛ = iron_scavenging_rate
     F     = iron_concentration
-    Lₜ     = ligand_concentration
+    L     = ligand_concentration
     β     = ligand_stability_coefficient
 
     # solve for the equilibrium free iron concentration
@@ -236,8 +236,8 @@ equation in terms of ligand concentration and stability coefficient. Ligand-comp
        # --> R₁(Feᶠʳᵉᵉ)² + R₂ Feᶠʳᵉᵉ + R₃ = 0
        β⁻¹ = 1/β
        R₁  = 1
-       R₂  = (Lₜ + β⁻¹ - Fₜ) 
-       R₃  = -(Fₜ * β⁻¹) 
+       R₂  = (L + β⁻¹ - F) 
+       R₃  = -(F * β⁻¹) 
 
        # simple quadratic solution for roots
        discriminant = sqrt( R₂*R₂ - ( 4*R₁*R₃ ))
