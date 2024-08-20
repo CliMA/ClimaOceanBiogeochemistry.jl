@@ -20,7 +20,7 @@ struct CarbonAlkalinityNutrients{FT} <: AbstractBiogeochemistry
     stoichoimetric_ratio_carbon_to_phosphate   :: FT 
     stoichoimetric_ratio_nitrate_to_phosphate  :: FT 
     stoichoimetric_ratio_phosphate_to_oxygen   :: FT 
-    stoichoimetric_ratio_phosphate_to_iron     :: FT 
+    stoichoimetric_ratio_iron_to_phosphate     :: FT 
     stoichoimetric_ratio_carbon_to_nitrate     :: FT 
     stoichoimetric_ratio_carbon_to_oxygen      :: FT 
     stoichoimetric_ratio_carbon_to_iron        :: FT 
@@ -96,7 +96,7 @@ function CarbonAlkalinityNutrients(; reference_density = 1024,
                                    stoichoimetric_ratio_carbon_to_phosphate   = 106.0,
                                    stoichoimetric_ratio_nitrate_to_phosphate  = 16.0,
                                    stoichoimetric_ratio_phosphate_to_oxygen   = 170.0, 
-                                   stoichoimetric_ratio_phosphate_to_iron     = 4.68e-4,
+                                   stoichoimetric_ratio_iron_to_phosphate     = 4.68e-4,
                                    stoichoimetric_ratio_carbon_to_nitrate     = 106 / 16,
                                    stoichoimetric_ratio_carbon_to_oxygen      = 106 / 170, 
                                    stoichoimetric_ratio_carbon_to_iron        = 106 / 1.e-3,
@@ -119,7 +119,7 @@ function CarbonAlkalinityNutrients(; reference_density = 1024,
                                      stoichoimetric_ratio_carbon_to_phosphate,
                                      stoichoimetric_ratio_nitrate_to_phosphate,
                                      stoichoimetric_ratio_phosphate_to_oxygen,
-                                     stoichoimetric_ratio_phosphate_to_iron,
+                                     stoichoimetric_ratio_iron_to_phosphate,
                                      stoichoimetric_ratio_carbon_to_nitrate,
                                      stoichoimetric_ratio_carbon_to_oxygen,
                                      stoichoimetric_ratio_carbon_to_iron,
@@ -217,8 +217,8 @@ Calculate the remineralization of dissolved organic phosphate.
 """
     iron_scavenging(iron_scavenging_rate, iron_concentration, ligand_concentration, ligand_stability_coefficient)
 
-Calculate the scavenging loss of iron. Iron scavenging should depend on free iron, involves solving a quadratic 
-equation in terms of ligand concentration and stability coefficient, but this is a simple first order approximation.
+Calculate the scavenging loss of iron. Iron scavenging depends on free iron, which involves solving a quadratic 
+equation in terms of ligand concentration and stability coefficient. Ligand-complexed iron is safe from being scavenged.
 """
 @inline function iron_scavenging(iron_scavenging_rate, iron_concentration, ligand_concentration, ligand_stability_coefficient) 
     kˢᶜᵃᵛ=iron_scavenging_rate
@@ -226,8 +226,24 @@ equation in terms of ligand concentration and stability coefficient, but this is
     Lₜ    =ligand_concentration
     β    =ligand_stability_coefficient
 
-    # return iron loss by scavenging
-    return kˢᶜᵃᵛ * ( F - Lₜ )
+    # solve for the equilibrium free iron concentration
+       # β = FeL / (Feᶠʳᵉᵉ * Lᶠʳᵉᵉ)
+       # Lₜ = FeL + Lᶠʳᵉᵉ
+       # Fₜ = FeL + Feᶠʳᵉᵉ
+       # --> R₁(Feᶠʳᵉᵉ)² + R₂ Feᶠʳᵉᵉ + R₃ = 0
+       β⁻¹ = 1/β
+       R₁  = 1
+       R₂  = (Lₜ + β⁻¹ - Fₜ) 
+       R₃  = -(Fₜ * β⁻¹) 
+
+       # simple quadratic solution for roots
+       discriminant = ( R₂*R₂ - ( 4*R₁*R₃ ))^(1/2)
+
+       # directly solve for the free iron concentration
+       Feᶠʳᵉᵉ = (-R₂ + discriminant) / (2*R₁) 
+
+       # return the linear scavenging rate (net scavenging)
+       return (kˢᶜᵃᵛ * Feᶠʳᵉᵉ)
 end
 
 @inline iron_sources() = 0.0
@@ -396,12 +412,12 @@ Tracer sources and sinks for dissolved iron (FeT)
     Rᴾᴼ = bgc.stoichoimetric_ratio_phosphate_to_oxygen   
     Rᶜᴺ = bgc.stoichoimetric_ratio_carbon_to_nitrate     
     Rᶜᴼ = bgc.stoichoimetric_ratio_carbon_to_oxygen      
-    Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron        
-    Rᶠᴾ = bgc.stoichoimetric_ratio_phosphate_to_iron
-    Rᶜᵃᶜᵒ³ = bgc.rain_ratio_inorganic_to_organic_carbon     
-    kˢᶜᵃᵛ  = bgc.iron_scavenging_rate
-    Lₜ      = bgc.ligand_concentration
-    β      = bgc.ligand_stability_coefficient
+    Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron
+    Rᶠᴾ = bgc.stoichoimetric_ratio_iron_to_phosphate
+    Lₜ     = bgc.ligand_concentration
+    β     = bgc.ligand_stability_coefficient
+    kˢᶜᵃᵛ = bgc.iron_scavenging_rate
+
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
     I = PAR(I₀, λ, z)
@@ -411,13 +427,14 @@ Tracer sources and sinks for dissolved iron (FeT)
     F = @inbounds fields.Fe[i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
-    return Rᶠᴾ * (
+    return (Rᶠᴾ * (
                 - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-                + dissolved_organic_phosphate_remin(γ, D))
+                + dissolved_organic_phosphate_remin(γ, D)) 
            #    + particulate_organic_phosphate_remin()) +
            #    + iron_sources()
                 - iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β)
 end
+
 
 """
 Tracer sources and sinks for dissolved organic phosphorus (DOP)

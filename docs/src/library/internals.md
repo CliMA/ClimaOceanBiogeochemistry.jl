@@ -7,6 +7,7 @@ Documentation for `ClimaOceanBiogeochemistry.jl`'s internal interface.
 ```@autodocs
 Modules = [ClimaOceanBiogeochemistry, 
            ClimaOceanBiogeochemistry.CarbonSystemSolvers,
+           ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver,
            ClimaOceanBiogeochemistry.CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver,
            ClimaOceanBiogeochemistry.CarbonSystemSolvers.DirectCubicCarbonSolver]
 Public  = false
