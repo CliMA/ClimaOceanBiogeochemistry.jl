@@ -220,11 +220,14 @@ Calculate the remineralization of dissolved organic phosphate.
 Calculate the scavenging loss of iron. Iron scavenging depends on free iron, which involves solving a quadratic 
 equation in terms of ligand concentration and stability coefficient. Ligand-complexed iron is safe from being scavenged.
 """
-@inline function iron_scavenging(iron_scavenging_rate, iron_concentration, ligand_concentration, ligand_stability_coefficient) 
-    kˢᶜᵃᵛ=iron_scavenging_rate
-    F    =iron_concentration
-    Lₜ    =ligand_concentration
-    β    =ligand_stability_coefficient
+@inline function iron_scavenging(iron_scavenging_rate, 
+                                 iron_concentration, 
+                                 ligand_concentration, 
+                                 ligand_stability_coefficient) 
+    kˢᶜᵃᵛ = iron_scavenging_rate
+    F     = iron_concentration
+    Lₜ     = ligand_concentration
+    β     = ligand_stability_coefficient
 
     # solve for the equilibrium free iron concentration
        # β = FeL / (Feᶠʳᵉᵉ * Lᶠʳᵉᵉ)
@@ -237,7 +240,7 @@ equation in terms of ligand concentration and stability coefficient. Ligand-comp
        R₃  = -(Fₜ * β⁻¹) 
 
        # simple quadratic solution for roots
-       discriminant = ( R₂*R₂ - ( 4*R₁*R₃ ))^(1/2)
+       discriminant = sqrt( R₂*R₂ - ( 4*R₁*R₃ ))
 
        # directly solve for the free iron concentration
        Feᶠʳᵉᵉ = (-R₂ + discriminant) / (2*R₁) 
@@ -427,12 +430,13 @@ Tracer sources and sinks for dissolved iron (FeT)
     F = @inbounds fields.Fe[i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
-    return (Rᶠᴾ * (
+    return Rᶠᴾ * (
                 - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-                + dissolved_organic_phosphate_remin(γ, D)) 
-           #    + particulate_organic_phosphate_remin()) +
-           #    + iron_sources()
-                - iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β)
+                  dissolved_organic_phosphate_remin(γ, D) + 
+                  particulate_organic_phosphate_remin()
+                 ) + 
+                 iron_sources() -
+                 iron_scavenging(kˢᶜᵃᵛ, F, Lₜ, β)
 end
 
 
