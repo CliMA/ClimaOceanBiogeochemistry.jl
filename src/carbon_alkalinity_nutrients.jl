@@ -38,7 +38,7 @@ end
                                 phosphate_half_saturation                   = 1e-7 * reference_density,
                                 nitrate_half_saturation                     = 1.6e-6 * reference_density,
                                 iron_half_saturation                        = 1e-10 * reference_density,
-                                incident_PAR                                = 700,
+                                incident_PAR                                = 700.0,
                                 PAR_half_saturation                         = 10.0,
                                 PAR_attenuation_scale                       = 25.0,
                                 fraction_of_particulate_export              = 0.33
@@ -88,7 +88,7 @@ function CarbonAlkalinityNutrients(; reference_density = 1024,
                                    phosphate_half_saturation                  = 1e-7 * reference_density, # mol P m⁻³
                                    nitrate_half_saturation                    = 1.6e-6 * reference_density, # mol N m⁻³
                                    iron_half_saturation                       = 1e-10 * reference_density, # mol Fe m⁻³
-                                   incident_PAR                               = 700, # W m⁻²
+                                   incident_PAR                               = 700.0, # W m⁻²
                                    PAR_half_saturation                        = 10.0,  # W m⁻²
                                    PAR_attenuation_scale                      = 25.0,  # m
                                    fraction_of_particulate_export             = 0.33,
