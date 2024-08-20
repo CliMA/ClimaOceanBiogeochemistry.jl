@@ -387,7 +387,7 @@ Tracer sources and sinks for dissolved iron (FeT)
     kᴾ = bgc.nitrate_half_saturation
     kᶠ = bgc.iron_half_saturation
     kᴵ = bgc.PAR_half_saturation
-    I  = bgc.incident_PAR
+    I₀ = bgc.incident_PAR
     λ  = bgc.PAR_attenuation_scale
     γ  = bgc.dissolved_organic_phosphate_remin_timescale
     α  = bgc.fraction_of_particulate_export
