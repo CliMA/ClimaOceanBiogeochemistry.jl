@@ -37,7 +37,8 @@ struct CarbonAlkalinityNutrients{FT,W} <: AbstractBiogeochemistry
 end
 
 """
-    CarbonAlkalinityNutrients(; reference_density                             = 1024.5,
+    CarbonAlkalinityNutrients(; grid,
+                                reference_density                             = 1024.5,
                                 maximum_net_community_production_rate         = 1 / day,
                                 phosphate_half_saturation                     = 1e-7 * reference_density,
                                 nitrate_half_saturation                       = 1.6e-6 * reference_density,
@@ -299,7 +300,7 @@ end
 """
 Add surface input of iron. This sould be a boundary condition, but for now we just add a constant source.
 """
-@inline iron_sources() = 1e-7
+@inline iron_sources() = 0.0
 
 """
 Tracer sources and sinks for dissolved inorganic carbon (DIC)
@@ -373,9 +374,9 @@ Tracer sources and sinks for alkalinity (ALK)
     DOP = @inbounds fields.DOP[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
     
-    return -Rᴺᴾ * (
-        - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
-        dissolved_organic_phosphate_remin(γ, DOP) +
+    return Rᴺᴾ * (
+         (1 - 2 * (Rᶜᴾ/Rᴺᴾ) * Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
+        dissolved_organic_phosphate_remin(γ, DOP) -
         particulate_organic_phosphate_remin(r, POP)
         ) + 2 * particulate_inorganic_carbon_remin()
 end
@@ -475,7 +476,7 @@ Tracer sources and sinks for dissolved iron (FeT)
     Rᶜᴺ = bgc.stoichoimetric_ratio_carbon_to_nitrate     
     Rᶜᴼ = bgc.stoichoimetric_ratio_carbon_to_oxygen      
     Rᶜᶠ = bgc.stoichoimetric_ratio_carbon_to_iron
-    Rᶠᴾ = bgc.stoichoimetric_ratio_iron_to_phosphate
+    Rᶠᴾ = bgc.stoichoimetric_ratio_phosphate_to_iron
     Lᶠᵉ   = bgc.ligand_concentration
     β     = bgc.ligand_stability_coefficient
     kˢᶜᵃᵛ = bgc.iron_scavenging_rate
@@ -497,7 +498,7 @@ Tracer sources and sinks for dissolved iron (FeT)
                   particulate_organic_phosphate_remin(r, POP)
                  ) +
             iron_sources() -
-            iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lₜ, β)
+            iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lᶠᵉ, β)
     end
 
 """
@@ -537,6 +538,7 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
     kᴾ = bgc.nitrate_half_saturation
     kᶠ = bgc.iron_half_saturation
     kᴵ = bgc.PAR_half_saturation
+    I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
     r = bgc.particulate_organic_phosphate_remin_timescale
     α = bgc.fraction_of_particulate_export     
