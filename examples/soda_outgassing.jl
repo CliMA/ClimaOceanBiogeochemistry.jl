@@ -278,7 +278,8 @@ lines!(t/(3600),
        label = "counter soda temperature",
        )
 axislegend()
-nothing # hide
 # The cool soda's CO₂ concentration approaches equilibrium with the atmosphere (the saturated CO₂ concentration) quickly.
 # The warming soda continues to outgas, since the solubility of CO₂ decreases with temperature. It'll taste flatter because of the lower CO₂ concentration.
-fig
+save("soda_outgassing_0d.png", fig)
+nothing #hide
+# ![](soda_outgassing_0d.png)

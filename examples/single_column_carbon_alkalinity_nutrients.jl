@@ -17,9 +17,13 @@ using CairoMakie
 # ## A single column grid
 #
 # We set up a single column grid with 4 m grid spacing that's 256 m deep:
-grid = RectilinearGrid(size = 512,
-                       z = (-4096, 0),
-                       topology = (Flat, Flat, Bounded))
+grid = RectilinearGrid(
+    size = 512,
+    z = (-4096, 0),
+    topology = (
+        Flat, Flat, Bounded
+     ),
+)
 
 # ## Buoyancy that depends on temperature and salinity
 # We use the `SeawaterBuoyancy` model with a linear equation of state,
@@ -42,21 +46,17 @@ cᴾ = 3991.0 # J K⁻¹ kg⁻¹, typical heat capacity for seawater
 
 Qᵀ(t) = ifelse(t < 30days, Qʰ / (ρₒ * cᴾ), 0.0) # K m s⁻¹, surface _temperature_ flux
 
-# we also impose a temperature gradient `dTdz` both initially and at the
-# bottom of the domain, culminating in the boundary conditions on temperature,
-
-dTdz = 0.02 # K m⁻¹
-
-T_bcs = FieldBoundaryConditions(top    = FluxBoundaryCondition(Qᵀ),
-                                #bottom = GradientBoundaryCondition(dTdz),
-                                )
-
+T_bcs = FieldBoundaryConditions(
+    top = FluxBoundaryCondition(Qᵀ)
+    )
 
 # For air-sea CO₂ fluxes, we use a FluxBoundaryCondition for the "top" of the DIC tracer.
 # We'll write a callback to calculate the flux every time step.
 co₂_flux = Field{Center, Center, Nothing}(grid)
 
-dic_bcs  = FieldBoundaryConditions(top = FluxBoundaryCondition(co₂_flux))
+dic_bcs  = FieldBoundaryConditions(
+    top = FluxBoundaryCondition(co₂_flux)
+    )
 
 ## These are filled in compute_co₂_flux!
 ocean_co₂ = Field{Center, Center, Nothing}(grid)
@@ -164,17 +164,19 @@ end
 
 # ## We put the pieces together
 # The important line here is `biogeochemistry = CarbonAlkalinityNutrients(; grid)`.
-# We use all default parameters.
-background_diffusivity = ScalarDiffusivity(κ=1e-4)
-catke = CATKEVerticalDiffusivity()
-
+# We adjust some of the parameters of the model to make the simulation more interesting.
 model = HydrostaticFreeSurfaceModel(; 
     grid,
     biogeochemistry     = CarbonAlkalinityNutrients(; 
                             grid,
-                            maximum_net_community_production_rate = 2/day,),
-    closure             = (background_diffusivity), #CATKEVerticalDiffusivity(), # ScalarDiffusivity(; κ=1e-4), #   
-    tracers             = (:T, :S, :DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
+                            maximum_net_community_production_rate = 1/365.25day,
+                            PAR_attenuation_scale = 100,
+                            particulate_organic_phosphate_sinking_speed = -100 / day,
+                            ),
+    closure             = ScalarDiffusivity(κ=1e-4),   
+    tracers             = (
+        :T, :S, :DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe
+        ),
     tracer_advection    = WENO(),
     buoyancy            = SeawaterBuoyancy(
         equation_of_state  = LinearEquationOfState(
@@ -182,25 +184,33 @@ model = HydrostaticFreeSurfaceModel(;
             haline_contraction = βˢ
             ),
         ),
-    boundary_conditions = (; T=T_bcs, DIC=dic_bcs),
+    boundary_conditions = (; 
+        T=T_bcs, DIC=dic_bcs
+        ),
     )
 
 # ## Initial conditions
 #
-## Temperature initial condition: a stable density gradient with random noise superposed.
-## Random noise damped at top and bottom
+# Temperature initial condition: a stable density gradient with random noise superposed.
+# Random noise damped at top and bottom
+# we also impose a temperature gradient `dTdz` 
+dTdz = 0.02 # K m⁻¹
+
+## Random noise
 Ξ(z) = randn() * z / model.grid.Lz * (1 + z / model.grid.Lz)
+zᶜʳⁱᵗ = -500
+fᶻ = dTdz * model.grid.Lz * 1e-6
+# Temperature profile
 Tᵢ(z) = ifelse(
-                z > -500, 
-                20 + dTdz * z + dTdz * model.grid.Lz * 1e-6 * Ξ(z), 
-                20 + dTdz * -500 + dTdz * model.grid.Lz * 1e-6 * Ξ(z),
+                z > zᶜʳⁱᵗ, 
+                20 + dTdz * z + fᶻ * Ξ(z), 
+                20 + dTdz * zᶜʳⁱᵗ + fᶻ * Ξ(z),
         )
 
 # We initialize the model with reasonable salinity and carbon/alkalinity/nutrient concentrations
 Sᵢ(z)   = 35.0  # psu
-##eᵢ(z)   = 1e-6  # m² s⁻¹``
 DICᵢ(z) = 2.1   # mol/m³ 
-ALKᵢ(z) = 2.25   # mol/m³ 
+ALKᵢ(z) = 2.35   # mol/m³ 
 PO₄ᵢ(z) = 2.5e-3 # mol/m³ 
 NO₃ᵢ(z) = 42e-3  # mol/m³ 
 DOPᵢ(z) = 0.0    # mol/m³ 
@@ -211,7 +221,6 @@ set!(
     model, 
     T   = Tᵢ,
     S   = Sᵢ,
-##    e   = eᵢ, 
     DIC = DICᵢ, 
     ALK = ALKᵢ, 
     PO₄ = PO₄ᵢ, 
@@ -223,20 +232,35 @@ set!(
 
 # ## A simulation of physical-biological interaction
 # We run the simulation for 30 days with a time-step of 10 minutes.
-simulation = Simulation(model, Δt=1minute, stop_time=48*365.25days)
+simulation = Simulation(
+    model, 
+    Δt=1minute, 
+    stop_time=48*365.25days
+    )
 
 # We add a `TimeStepWizard` callback to adapt the simulation's time-step...
-wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=60minutes)
-simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(10))
+wizard = TimeStepWizard(
+    cfl=0.2, 
+    max_change=1.1, 
+    max_Δt=60minutes
+    )
 
-# ...and we emit a message every 10 iterations with information on DIC, ALK, and CO₂ flux tendencies.
+simulation.callbacks[:wizard] = Callback(
+    wizard, 
+    IterationInterval(100),
+    )
+
+# ...and we emit a message with information on DIC, ALK, and CO₂ flux tendencies.
 DIC₀ = Field{Center, Center, Nothing}(grid)
 ALK₀ = Field{Center, Center, Nothing}(grid)
 """
 Function to print DIC, ALK, and CO₂ flux tendency during the simulation
 """
 function progress(simulation) 
-    @printf("Iteration: %d, time: %s\n", iteration(simulation), prettytime(simulation))
+    @printf("Iteration: %d, time: %s\n", 
+        iteration(simulation), 
+        prettytime(simulation),
+        )
     Nz = size(simulation.model.grid, 3)
 
     if iteration(simulation) == 1
@@ -244,14 +268,17 @@ function progress(simulation)
         DIC₀[1, 1, 1] = simulation.model.tracers.DIC[1, 1, Nz]
         ALK₀[1, 1, 1] = simulation.model.tracers.ALK[1, 1, Nz]
     else
-        @printf("Surface DIC (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
+        @printf("Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
             ((simulation.model.tracers.DIC[1, 1, grid.Nz]-
-                DIC₀[1, 1, 1])/simulation.model.timestepper.previous_Δt) * 1e7)
-        @printf("Surface ALK (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
+                DIC₀[1, 1, 1])/simulation.model.timestepper.previous_Δt
+                ) * 1e7)
+        @printf("Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
             ((simulation.model.tracers.ALK[1, 1, grid.Nz]-
-                ALK₀[1, 1, 1])/simulation.model.timestepper.previous_Δt) * 1e7)
+                ALK₀[1, 1, 1])/simulation.model.timestepper.previous_Δt
+                ) * 1e7)
         @printf("Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
-            simulation.model.tracers.DIC.boundary_conditions.top.condition[1,1] * 1e7)
+            (simulation.model.tracers.DIC.boundary_conditions.top.condition[1,1]
+            ) * 1e7)
 
         ## update the anomaly fields
         DIC₀[1, 1, 1] = simulation.model.tracers.DIC[1, 1, Nz]
@@ -259,26 +286,33 @@ function progress(simulation)
     end
 end
 
-simulation.callbacks[:progress] = Callback(progress, IterationInterval(100))
+simulation.callbacks[:progress] = Callback(
+    progress, 
+    IterationInterval(100),
+    )
 
 # Dont forget to add the callback to compute the CO₂ flux
 add_callback!(simulation, compute_co₂_flux!)
 
 # Output writer
 filename = "single_column_carbon_alkalinity_nutrients.jld2"
-fout=5days
-simulation.output_writers[:fields] = JLD2OutputWriter(model, model.tracers;
-                                                      filename,
-                                                      schedule = TimeInterval(fout),
-                                                      overwrite_existing = true)
+fout=10days
+simulation.output_writers[:fields] = JLD2OutputWriter(
+    model, model.tracers;
+    filename,
+    schedule = TimeInterval(fout),
+    overwrite_existing = true,
+    )
 
 filename_diags = "single_column_carbon_alkalinity_nutrients_co2flux.jld2"
 
 outputs = (; co₂_flux, ocean_co₂, atmos_co₂)
-simulation.output_writers[:jld2] = JLD2OutputWriter(model, outputs;
-                                                    filename = filename_diags,
-                                                    schedule = TimeInterval(fout),
-                                                    overwrite_existing = true)
+simulation.output_writers[:jld2] = JLD2OutputWriter(
+    model, outputs;
+    filename = filename_diags,
+    schedule = TimeInterval(fout),
+    overwrite_existing = true,
+    )
 
 # ## Run the example
 run!(simulation)
@@ -310,15 +344,37 @@ pCO₂_atmos_time_series = [apCO₂t[1, 1, 1, i] for i in 1:nt]
 fig = Figure(size=(1200, 1200))
 n = Observable(1)
 
-axb = Axis(fig[1:4, 1], xlabel="Temperature (K)", ylabel="z (m)")
-axC = Axis(fig[1:4, 2], xlabel="DIC/ALK Concentration (mol m⁻³)")
-axN = Axis(fig[1:4, 3], xlabel="Inorganic Nutrient concentration (mmol m⁻³)")
-axD = Axis(fig[1:4, 4], xlabel="Organic Nutrient concentration (mmol m⁻³)")
-axF = Axis(fig[5:6, 1:4], ylabel="Air-sea CO₂ fluxes (x1e7 mol m⁻² s⁻¹)", xlabel="Time (days)")
-axP = Axis(fig[5:6, 1:4], ylabel="pCO₂ (μatm)",yticklabelcolor = :red, yaxisposition = :right)
+axb = Axis(
+    fig[1:4, 1], 
+    xlabel="Temperature (K)", 
+    ylabel="z (m)",
+    )
+axC = Axis(
+    fig[1:4, 2], 
+    xlabel="DIC/ALK Concentration (mol m⁻³)",
+    )
+axN = Axis(
+    fig[1:4, 3], 
+    xlabel="Inorganic Nutrient concentration (mol m⁻³)",
+    )
+axD = Axis(
+    fig[1:4, 4], 
+    xlabel="Organic Nutrient concentration (mol m⁻³)",
+    )
+axF = Axis(
+    fig[5:6, 1:4], 
+    ylabel="Air-sea CO₂ fluxes (x1e7 mol m⁻² s⁻¹)", 
+    xlabel="Time (days)",
+    )
+axP = Axis(
+    fig[5:6, 1:4], 
+    ylabel="pCO₂ (μatm)",
+    yticklabelcolor = :red, 
+    yaxisposition = :right,
+    )
 
 xlims!(axb, 7, 21)
-xlims!(axC, 1.8, 3.0)
+xlims!(axC, 1.8, 2.6)
 xlims!(axN, -5, 45)
 xlims!(axD, -50, 2050)
 xlims!(axF, -1, 1+simulation.stop_time/days)
@@ -329,53 +385,100 @@ ylims!(axP, 0, 500)
 #slider = Slider(fig[2, 1:4], range=1:nt, startvalue=1)
 #n = slider.value
 
-title = @lift @sprintf("Convecting nutrients at t = %d days", tt[$n] / days)
+title = @lift @sprintf(
+    "Convecting nutrients at t = %d days", tt[$n] / days
+    )
 Label(fig[0, 1:4], title)
 
 Tn = @lift interior(Tt[$n], 1, 1, :)
 DICn = @lift interior(DICt[$n], 1, 1, :) 
 Alkn = @lift interior(Alkt[$n], 1, 1, :) 
-PO₄n = @lift interior(PO₄t[$n], 1, 1, :) * 10e3
+PO₄n = @lift interior(PO₄t[$n], 1, 1, :) * 16 * 1e3
 NO₃n = @lift interior(NO₃t[$n], 1, 1, :) * 1e3
 DOPn = @lift interior(DOPt[$n], 1, 1, :) * 1e6
 POPn = @lift interior(POPt[$n], 1, 1, :) * 1e6
-Fen  = @lift interior(Fet[$n],  1, 1, :) * 1e6
-CO₂_flux_points = Observable(Point2f[(tt[1], 
-                    (CO₂_flux_time_series[1] * 1e7))])
-pCO₂_ocean_points = Observable(Point2f[(tt[1], 
-                    (pCO₂_ocean_time_series[1] * 1e6))])
-pCO₂_atmos_points = Observable(Point2f[(tt[1], 
-                    (pCO₂_atmos_time_series[1] * 1e6))])
+Fen  = @lift interior(Fet[$n],  1, 1, :) * 1e7
+CO₂_flux_points = Observable(
+    Point2f[(tt[1], 
+    (CO₂_flux_time_series[1] * 1e7))]
+    )
+pCO₂_ocean_points = Observable(
+    Point2f[(tt[1], 
+    (pCO₂_ocean_time_series[1] * 1e6))]
+    )
+pCO₂_atmos_points = Observable(
+    Point2f[(tt[1], 
+    (pCO₂_atmos_time_series[1] * 1e6))]
+    )
 
 lines!(axb, Tn,   z)
 lines!(axC, DICn, z, label="DIC")
 lines!(axC, Alkn, z, label="ALK")
-lines!(axN, PO₄n, z, label="Phosphate (x10)")
-lines!(axN, NO₃n, z, label="Nitrate")
-lines!(axN, Fen,  z, label="Iron (x1e-6)")
+lines!(axN, PO₄n, z, label="Phosphate (x16e-3)")
+lines!(axN, NO₃n, z, label="Nitrate (x1e-3)")
+lines!(axN, Fen,  z, label="Iron (x1e-7)")
 lines!(axD, DOPn, z, label="DOP (x1e-6)")
 lines!(axD, POPn, z, label="POP (x1e-6)")
 
-scatter!(axP, pCO₂_ocean_points; marker = :circle, markersize = 4, color = :blue, label="ocean pCO₂")
-scatter!(axP, pCO₂_atmos_points; marker = :circle, markersize = 4, color = :red, label="atmos pCO₂")
-scatter!(axF, CO₂_flux_points;   marker = :circle, markersize = 4, color = :black)
+scatter!(axP, 
+    pCO₂_ocean_points; 
+    marker = :circle, 
+    markersize = 4, 
+    color = :blue, 
+    label="ocean pCO₂",
+    )
+scatter!(axP, 
+    pCO₂_atmos_points; 
+    marker = :circle, 
+    markersize = 4, 
+    color = :red, 
+    label="atmos pCO₂",
+    )
+scatter!(axF, 
+    CO₂_flux_points;
+    marker = :circle, 
+    markersize = 4, 
+    color = :black,
+    )
 
 axislegend(axC,position=:cb)
 axislegend(axN,position=:cb)
 axislegend(axD,position=:cb)
 axislegend(axP,position=:rt)
 
-record(fig, "single_column_carbon_alkalinity_nutrients.mp4", 1:nt, framerate=64) do nn
+record(fig, 
+    "single_column_carbon_alkalinity_nutrients.mp4", 
+    1:nt, 
+    framerate=64
+    ) do nn
     n[] = nn
-    new_point = Point2(tt[nn] / days, (CO₂_flux_time_series[nn] * 1e7))
-    CO₂_flux_points[]  = push!(CO₂_flux_points[], new_point)
+    new_point = Point2(
+        tt[nn] / days, 
+        (CO₂_flux_time_series[nn] * 1e7),
+        )
+    CO₂_flux_points[]  = push!(
+        CO₂_flux_points[], 
+        new_point,
+        )
 
-    new_point = Point2(tt[nn] / days, (pCO₂_ocean_time_series[nn] * 1e6))
-    pCO₂_ocean_points[]  = push!(pCO₂_ocean_points[], new_point)
+    new_point = Point2(
+        tt[nn] / days, 
+        (pCO₂_ocean_time_series[nn] * 1e6),
+        )
+    pCO₂_ocean_points[]  = push!(
+        pCO₂_ocean_points[], 
+        new_point,
+        )
 
-    new_point = Point2(tt[nn] / days, (pCO₂_atmos_time_series[nn] * 1e6))
-    pCO₂_atmos_points[]  = push!(pCO₂_atmos_points[], new_point)
+    new_point = Point2(
+        tt[nn] / days, 
+        (pCO₂_atmos_time_series[nn] * 1e6),
+        )
+    pCO₂_atmos_points[]  = push!(
+        pCO₂_atmos_points[], 
+        new_point,
+        )
 end
 nothing #hide
 fig
-# ![](carbon_alkalinity_nutrients.mp4)
+# ![](single_column_carbon_alkalinity_nutrients.mp4)

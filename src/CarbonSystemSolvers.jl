@@ -339,7 +339,7 @@ end
     FH⁺ᵢₙᵢ(Aᵀ, Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 
 Calculates the root for the 2nd order approximation of the
- Cᵀ-Bᵀ-Aᶜ equation for [H+] (reformulated as a cubic polynomial)
+ Cᵀ-Bᵀ-Aᶜ equation for H⁺ (reformulated as a cubic polynomial)
  around the local minimum, if it exists.
 
  Returns * 1e-03 if Aᶜ <= 0
