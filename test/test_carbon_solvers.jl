@@ -1,6 +1,5 @@
 using Test
 
-include("../src/carbon_chemistry_coefficients.jl")
 include("../src/CarbonSystemSolvers.jl")
 
 using .CarbonSystemSolvers
