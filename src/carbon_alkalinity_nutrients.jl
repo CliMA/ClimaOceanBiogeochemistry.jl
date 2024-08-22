@@ -91,7 +91,7 @@ Biogeochemical functions
 """
 function CarbonAlkalinityNutrients(; grid,
                                    reference_density                            = 1024.5,
-                                   maximum_net_community_production_rate        = 2.e-3 / 365.25days, # mol PO₄ m⁻³ s⁻¹
+                                   maximum_net_community_production_rate        = 4.e-3 / 365.25days, # mol PO₄ m⁻³ s⁻¹
                                    phosphate_half_saturation                    = 5.e-7 * reference_density, # mol PO₄ m⁻³
                                    nitrate_half_saturation                      = 7.e-6 * reference_density, # mol NO₃ m⁻³
                                    iron_half_saturation                         = 1.e-10 * reference_density, # mol Fe m⁻³
@@ -99,7 +99,7 @@ function CarbonAlkalinityNutrients(; grid,
                                    incident_PAR                                 = 700.0, # W m⁻²
                                    PAR_attenuation_scale                        = 25.0,  # m
                                    fraction_of_particulate_export               = 0.33,
-                                   dissolved_organic_phosphate_remin_timescale  = 6. / 365.25days, # s⁻¹
+                                   dissolved_organic_phosphate_remin_timescale  = 2. / 365.25days, # s⁻¹
                                    stoichoimetric_ratio_carbon_to_phosphate     = 117.0,
                                    stoichoimetric_ratio_nitrate_to_phosphate    = 16.0,
                                    stoichoimetric_ratio_phosphate_to_oxygen     = 170.0, 
@@ -109,7 +109,7 @@ function CarbonAlkalinityNutrients(; grid,
                                    stoichoimetric_ratio_carbon_to_iron          = 117. / 4.68e-4,
                                    stoichoimetric_ratio_silicate_to_phosphate   = 15.0,
                                    rain_ratio_inorganic_to_organic_carbon       = 1.e-2,
-                                   particulate_organic_phosphate_remin_timescale= 0.03 / day, 
+                                   particulate_organic_phosphate_remin_timescale= 2. / 365.25days, 
                                    iron_scavenging_rate                         = 0.2 / 365.25days, # s⁻¹
                                    ligand_concentration                         = 1e-9 * reference_density, # mol L m⁻³
                                    ligand_stability_coefficient                 = 1e8,
@@ -374,11 +374,14 @@ Tracer sources and sinks for alkalinity (ALK)
     DOP = @inbounds fields.DOP[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
     
-    return Rᴺᴾ * (
-         (1 - 2 * (Rᶜᴾ/Rᴺᴾ) * Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
-        dissolved_organic_phosphate_remin(γ, DOP) -
-        particulate_organic_phosphate_remin(r, POP)
-        ) + 2 * particulate_inorganic_carbon_remin()
+    return  2 * (
+                particulate_inorganic_carbon_remin() -
+                Rᶜᴾ * Rᶜᵃᶜᵒ³ * α * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
+            ) + Rᴺᴾ * (
+                net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
+                dissolved_organic_phosphate_remin(γ, DOP) -
+                particulate_organic_phosphate_remin(r, POP)
+            )
 end
 
 """
