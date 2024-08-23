@@ -191,8 +191,8 @@ model = HydrostaticFreeSurfaceModel(;
 
 # ## Initial conditions
 #
-## Temperature initial condition: a stable density gradient with random noise superposed.
-## Random noise damped at top and bottom
+# Temperature initial condition: a stable density gradient with random noise superposed.
+# Random noise damped at top and bottom
 # we also impose a temperature gradient `dTdz` 
 dTdz = 0.02 # K m⁻¹
 
