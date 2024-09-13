@@ -73,12 +73,12 @@ T_bcs = FieldBoundaryConditions(top = ValueBoundaryCondition(8e-4))
 
 model = HydrostaticFreeSurfaceModel(; grid,
                                     velocities = PrescribedVelocityFields(),
-                                    biogeochemistry = CarbonAlkalinityNutrients(; grid,
+                                    biogeochemistry = CarbonAlkalinityNutrients(; grid),
                                                                                 #maximum_net_community_production_rate  = 5e-2/day,
-                                                                                fraction_of_particulate_export  = 1,
+                                                                                # fraction_of_particulate_export  = 1,
                                                                                 #dissolved_organic_phosphorus_remin_timescale  = 3/365.25days,
                                                                                 #martin_curve_exponent = 0.84,
-                                                                                particulate_organic_phosphorus_sinking_velocity = -10/day),
+                                                                                # particulate_organic_phosphorus_sinking_velocity = -10/day),
                                     tracers = (:DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
                                     #boundary_conditions = (; POP=bottom_flux_bcs, PO₄=top_flux_bcs),#POP=bottom_flux_bcs, PO₄=top_flux_bcs), 
                                     tracer_advection = WENO(),
@@ -98,7 +98,7 @@ Dᵢ(z) = D₀ * (-z / 115).^-0.84
 # set!(model, DIC=2.1, ALK=2.35, NO₃=3.6e-2, PO₄=2e-3, DOP=5e-4, POP=1.5e-3, Fe = 1e-6) # mol PO₄ m⁻³
 set!(model, DIC=2.1, ALK=2.35, NO₃=1e-2, PO₄=Nᵢ, DOP=0, POP=Dᵢ, Fe = 1e-5) # mol PO₄ m⁻³
 
-simulation = Simulation(model, Δt=10minutes, stop_time=365.25days)
+simulation = Simulation(model, Δt=30minutes, stop_time=365.25*10days)
 
 function progress(sim)
     @printf("Iteration: %d, time: %s, total(P): %.2e \n",
@@ -138,7 +138,7 @@ ax2 = Axis(fig[1, 2], ylabel="z (m)", xlabel="[Organic P] (mol m⁻³)")
 # ax3 = Axis(fig[1, 3], ylabel="z (m)", xlabel="ln[POP] at end point")
 
 xlims!(ax1, -0.0001, 0.06)
-xlims!(ax2, 0, 0.001)
+xlims!(ax2, 0, 1e-5)
 # xlims!(ax3, -20, -7)
 ylims!(ax1, -1000, 0)
 ylims!(ax2, -1000, 0)
