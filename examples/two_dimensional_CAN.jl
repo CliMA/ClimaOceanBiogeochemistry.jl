@@ -75,6 +75,7 @@ model = HydrostaticFreeSurfaceModel(; grid,
                                     closure = (catke, background_diffusivity), #horizontal_closure),
                                     tracers = (:b, :e, :DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
                                     momentum_advection = WENO(),
+                                    tracer_advection = WENO(),
                                     boundary_conditions = (; v=v_bcs)) #, b=b_bcs))
 
 M² = 0         # 1e-7 s⁻², squared buoyancy frequency
@@ -112,7 +113,7 @@ outputs = (u = model.velocities.u,
 
 simulation.output_writers[:simple_output] =
     JLD2OutputWriter(model, outputs, 
-                     schedule = TimeInterval(30minutes), #1days
+                     schedule = TimeInterval(1days), #1days
                      filename = "Remin_2D",
                      overwrite_existing = true)
 
@@ -146,7 +147,7 @@ avg_POPₙ = @lift 1e3*interior(avg_POP_timeseries[$n], 1, 1, :)
 uₙ = @lift interior(u_timeseries[$n], :, 1, :)
 wₙ = @lift interior(w_timeseries[$n], :, 1, :)
 
-fig = Figure(size = (1500, 1200))
+fig = Figure(size = (1200, 1500))
 
 ax_u = Axis(fig[2, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
 hm_u = heatmap!(ax_u, xw, zw, uₙ; colorrange = (-1e-3, 1e-3), colormap = :balance) 
@@ -157,26 +158,26 @@ hm_w = heatmap!(ax_w, xw, zw, wₙ; colorrange = (-2e-6,2e-6), colormap = :balan
 Colorbar(fig[2, 4], hm_w; label = "w", flipaxis = false)
 
 ax_PO4 = Axis(fig[3, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_PO4 = heatmap!(ax_PO4, xw, zw, PO4ₙ; colormap = :hsv)#, colorrange = (-0.001, 0.05))
+hm_PO4 = heatmap!(ax_PO4, xw, zw, PO4ₙ; colorrange = (0,5),colormap = :hsv)
 Colorbar(fig[3, 2], hm_PO4; label = "[PO₄] (μM)", flipaxis = false)
 
 ax_POP = Axis(fig[3, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_POP = heatmap!(ax_POP, xw, zw, POPₙ; colormap = :hsv) #, colorrange = (0.014,0.016)) #-0.001, 0.01))
+hm_POP = heatmap!(ax_POP, xw, zw, POPₙ; colorrange = (1, 2),colormap = :hsv) 
 Colorbar(fig[3, 4], hm_POP; label = "[POP] (μM)", flipaxis = false)
 
 ax_avg_PO4 = Axis(fig[4, 1:2]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", yaxisposition = :right)
-# xlims!(ax_avg_PO4, 17.5,18.5)
+xlims!(ax_avg_PO4, 0, 5)
 lines!(ax_avg_PO4, avg_PO4ₙ, zi)
 
 ax_avg_POP = Axis(fig[4, 3:4]; xlabel = "[POP] (μM)", ylabel = "z (m)", yaxisposition = :right)
-# xlims!(ax_avg_POP, 4.85,5.05)
+xlims!(ax_avg_POP, 1, 2)
 lines!(ax_avg_POP, avg_POPₙ, zi)
 
 fig[1, 1:4] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "Remin_2D.mp4", frames, framerate=24) do i
+record(fig, "Remin2D_rz.mp4", frames, framerate=24) do i
     n[] = i
 end
 nothing #hide

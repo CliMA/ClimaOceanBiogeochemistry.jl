@@ -14,9 +14,9 @@ using CairoMakie
 #
 # We set up a single column grid with Nz m grid spacing that's H m deep:
 
-H = 1000
+H = 2000
 z = (-H, 0)
-Nz = 100
+Nz = 200
 
 grid = RectilinearGrid(size = Nz; z, topology = (Flat, Flat, Bounded))
 
@@ -25,7 +25,7 @@ grid = RectilinearGrid(size = Nz; z, topology = (Flat, Flat, Bounded))
 # We define a tracer diffusivity that mixes a lot near the surface
 # (in the top 50 m), and less down below.
 
-@inline κ(z, t) = 1e-4 + 1e-2 * exp(z / 25) + 1e-2 * exp(-(z + 1000) / 50)
+@inline κ(z, t) = 1e-4 + 1e-2 * exp(z / 50) + 1e-2 * exp(-(z + 2000) / 50)
 vertical_diffusion = VerticalScalarDiffusivity(; κ)
 
 # The following two lines should be later debugged in Oceananigans
@@ -39,32 +39,36 @@ validate_tracer_advection(tracer_advection::AbstractAdvectionScheme, ::SingleCol
 model = HydrostaticFreeSurfaceModel(; grid,
                                     velocities = PrescribedVelocityFields(),
                                     biogeochemistry = CarbonAlkalinityNutrients(; grid,
-                                                                                maximum_net_community_production_rate  = 2e-1/day,
-                                                                                dissolved_organic_phosphorus_remin_timescale  = 1/365.25days,
-                                                                                particulate_organic_phosphorus_sinking_velocity = -1/day),
-                                    tracers = (:DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
+                                                                                maximum_net_community_production_rate  = 5e-3/day,
+                                                                                option_of_particulate_remin = 2),
+                                    tracers = (:b, :DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
                                     tracer_advection = WENO(),
-                                    buoyancy = nothing,
+                                    buoyancy = BuoyancyTracer(),#nothing,
                                     closure = vertical_diffusion) 
 
 # ## Initial conditions
 #
 # We initialize the model with reasonable concentrations
 
-set!(model, DIC=2.1, ALK=2.35, NO₃=3.6e-2, PO₄=2e-3, DOP=5e-4, POP=1.5e-3, Fe = 1e-6) # mol PO₄ m⁻³
+N₀ = 1e-3 # Surface nutrient concentration = 1 uM
+D₀ = 1e-3 # Surface detritus concentration = 1 uM
 
-simulation = Simulation(model, Δt=30minutes, stop_time=1000days)
+Nᵢ(z) = N₀ * (-z / 115).^0.84
+Dᵢ(z) = D₀ * (-z / 115).^-0.84
 
-function progress(sim)
-    @printf("Iteration: %d, time: %s, total(P): %.2e \n",
-            iteration(sim), prettytime(sim),
-            sum(model.tracers.PO₄)+sum(model.tracers.DOP)+sum(model.tracers.POP))
-    return nothing
-end
+set!(model, b = 0, DIC=2.1, ALK=2.35, NO₃=1e-2, PO₄=Nᵢ, DOP=Dᵢ, POP=Dᵢ, Fe = 1e-5) # mol PO₄ m⁻³
 
-simulation.callbacks[:progress] = Callback(progress, IterationInterval(100))
+simulation = Simulation(model; Δt = 30minutes, stop_time=365.25*10days)
 
-filename = "po4_dop_pop.jld2"
+# function progress(sim)
+#     @printf("Iteration: %d, time: %s, total(P): %.2e \n",
+#             iteration(sim), prettytime(sim),
+#             sum(model.tracers.PO₄)+sum(model.tracers.DOP)+sum(model.tracers.POP))
+#     return nothing
+# end
+# simulation.callbacks[:progress] = Callback(progress, IterationInterval(200))
+
+filename = "test.jld2"
 
 simulation.output_writers[:fields] = JLD2OutputWriter(model, model.tracers;
                                                       filename,
@@ -77,7 +81,7 @@ run!(simulation)
 
 # All that's left is to visualize the results.
 PO4t = FieldTimeSeries(filename, "PO₄")
-DOPt = FieldTimeSeries(filename, "DOP")
+# DOPt = FieldTimeSeries(filename, "DOP")
 POPt = FieldTimeSeries(filename, "POP")
 
 t = PO4t.times
@@ -86,11 +90,11 @@ z = znodes(PO4t)
 
 fig = Figure(;size=(800, 600))#resolution=(1200, 600))
 
-ax1 = Axis(fig[1, 1], ylabel="z (m)", xlabel="[Inorganic PO₄] (mol m⁻³)")
-ax2 = Axis(fig[1, 2], ylabel="z (m)", xlabel="[Organic P] (mol m⁻³)")
+ax1 = Axis(fig[1, 1], ylabel="z (m)", xlabel="[Inorganic PO₄] (μM)")
+ax2 = Axis(fig[1, 2], ylabel="z (m)", xlabel="[Organic P] (μM)")
 
-xlims!(ax1, 0, 0.01)
-xlims!(ax2, 0, 0.005)
+xlims!(ax1, 0, 15)
+xlims!(ax2, 0, 0.1)
 
 slider = Slider(fig[2, 1:2], range=1:nt, startvalue=1)
 n = slider.value
@@ -98,9 +102,9 @@ n = slider.value
 title = @lift @sprintf("Equilibrium biogeochemistry at t = %d days", t[$n] / day)
 Label(fig[0, 1:2], title)
 
-PO4n = @lift interior(PO4t[$n], 1, 1, :)
-DOPn = @lift interior(DOPt[$n], 1, 1, :)
-POPn = @lift interior(POPt[$n], 1, 1, :)
+PO4n = @lift 1e3*interior(PO4t[$n], 1, 1, :)
+# DOPn = @lift interior(DOPt[$n], 1, 1, :)
+POPn = @lift 1e3*interior(POPt[$n], 1, 1, :)
 
 # martin = [NaN for i in 1:length(z)]
 # for i in 1:length(z)
@@ -109,12 +113,12 @@ POPn = @lift interior(POPt[$n], 1, 1, :)
 #     end
 # end
 
-lines!(ax1, PO4n, z)
-lines!(ax2, DOPn, z, label = "DOP")
+lines!(ax1, PO4n, z, label = "PO₄")
+# lines!(ax2, DOPn, z, label = "DOP")
 lines!(ax2, POPn, z, label = "POP")
 axislegend(ax2, position = :rb)
 
-record(fig, "po4_dop_pop.mp4", 1:nt, framerate=24) do nn
+record(fig, "test.mp4", 1:nt, framerate=24) do nn
     n[] = nn
 end
 nothing
