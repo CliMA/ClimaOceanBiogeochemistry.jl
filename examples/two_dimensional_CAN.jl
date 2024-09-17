@@ -61,18 +61,16 @@ v_bcs = FieldBoundaryConditions(top=y_wind_stress)
 
 #################################### Model ####################################
 
-background_diffusivity = ScalarDiffusivity(ν=1e-4, κ=1e-4)
-catke = CATKEVerticalDiffusivity()
-# horizontal_closure = HorizontalScalarDiffusivity(ν=1e3, κ=1e3)
+mixing_length = CATKEMixingLength(Cᵇ = 0.001)
+catke = CATKEVerticalDiffusivity(; mixing_length, tke_time_step = 10minutes)
 
 # Model
 model = HydrostaticFreeSurfaceModel(; grid,
                                     buoyancy = BuoyancyTracer(),
                                     biogeochemistry = CarbonAlkalinityNutrients(; grid,
                                                                         maximum_net_community_production_rate  = 5e-3/day),
-                                                                        # fraction_of_particulate_export = 1),
                                     coriolis = FPlane(; f=1e-4),
-                                    closure = (catke, background_diffusivity), #horizontal_closure),
+                                    closure = (catke), 
                                     tracers = (:b, :e, :DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
                                     momentum_advection = WENO(),
                                     tracer_advection = WENO(),
@@ -100,7 +98,7 @@ progress(sim) = @printf("Iteration: %d, time: %s, total(P): %.2e\n",
 #                         iteration(sim), prettytime(sim),
 #                         maximum(model.velocities.u), maximum(model.velocities.w))
 
-add_callback!(simulation, progress, IterationInterval(200))
+add_callback!(simulation, progress, IterationInterval(500))
 
 outputs = (u = model.velocities.u,
             w = model.velocities.w,
@@ -120,7 +118,7 @@ simulation.output_writers[:simple_output] =
 run!(simulation)
 
 ############################ Visualizing the solution ############################
-
+#=
 filepath = simulation.output_writers[:simple_output].filepath
 
 u_timeseries = FieldTimeSeries(filepath, "u")
@@ -181,7 +179,7 @@ record(fig, "Remin2D_rz.mp4", frames, framerate=24) do i
     n[] = i
 end
 nothing #hide
-
+=#
 ################################## Plot the last frame ##################################
 
 #=

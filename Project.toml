@@ -12,7 +12,7 @@ RootSolvers = "7181ea78-2dcb-4de3-ab41-2b8ab5a31e74"
 StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 
 [compat]
-Oceananigans = "0.90.11"
+Oceananigans = "0.91.13"
 RootSolvers = "0.3"
 
 [extras]
