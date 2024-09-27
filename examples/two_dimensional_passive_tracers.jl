@@ -24,20 +24,29 @@ grid = RectilinearGrid(size = (Nx, Nz),
 #################################### Boundary conditions ####################################
 
 # Wind stress boundary condition
-# τ₀ = 1e-5           # m² s⁻²
-@inline function τy(x, t, p)
-    return  p.τ₀ * (sinpi(x/p.Lx/0.8-0.5)+1)*(-tanh(x/p.Lx*pi/0.1-9*pi)+1)
+τ₀ = 5e-5           # m² s⁻²
+# @inline τy(x, t, p) = p.τ₀ * sinpi(0.5*(x/p.Lx+0.2))# * x/p.Lx
+function τy(x, t, p)
+    if x/p.Lx < 0.8
+        return p.τ₀ * sinpi(x/p.Lx / 1.6)
+    elseif x/p.Lx >=0.8
+        return p.τ₀ * sinpi((1 - x/p.Lx) / 0.4)
+    end
 end
-τ₀ = 0.0125 / 1e3
+
+# @inline function τy(x, t, p)
+#     return  p.τ₀ * (sinpi(x/p.Lx/0.8-0.5)+1) #(-tanh(x/p.Lx*pi/0.1-9*pi)+1) * 
+# end
+# τ₀ = 0.0125 / 1e3
 y_wind_stress = FluxBoundaryCondition(τy, parameters=(; τ₀, Lx)) 
 v_bcs = FieldBoundaryConditions(top=y_wind_stress)
 
 #################################### Model ####################################
 
-background_diffusivity = VerticalScalarDiffusivity(ν=1e-4, κ=1e-5) 
+# background_diffusivity = VerticalScalarDiffusivity(ν=1e-4, κ=1e-5) 
 mixing_length = CATKEMixingLength(Cᵇ = 0.001)
 catke = CATKEVerticalDiffusivity(; mixing_length, tke_time_step = 10minutes)
-# horizontal_closure = HorizontalScalarDiffusivity(ν=1e-4, κ=1e-4)
+# horizontal_closure = HorizontalScalarDiffusivity(ν=1, κ=1)
 
 # Model
 model = HydrostaticFreeSurfaceModel(; grid,
@@ -58,20 +67,17 @@ T1ᵢ(x, z) = floor(Int, -z / 400) % 2
 
 T2ᵢ(x, z) =  floor(Int, x / 200kilometers) % 2
 
-# function create_tracer(Nx, Nz) # 100, 200
-#     # Create the tracer field initialized with zeros
-#     tracer = zeros(Nx, 1, Nz)
-
-#     # Set the tracer value to 1 at the specified locations
-#     tracer[45:55,1,190:200] .= 1
-#     tracer[80:90,1,95:105] .= 1
-
-#     return tracer
-# end
-
 set!(model, b=bᵢ, T1 = T1ᵢ, T2 = T2ᵢ) 
 
-simulation = Simulation(model; Δt = 30minutes, stop_time=365.25days)
+simulation = Simulation(model; Δt = 5minutes, stop_time=365.25days)
+# We add a `TimeStepWizard` callback to adapt the simulation's time-step,
+wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=20minutes)
+simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(20))
+
+progress(sim) = @printf("Iteration: %d, time: %s\n", 
+                        iteration(sim), prettytime(sim)) 
+
+add_callback!(simulation, progress, IterationInterval(200))
 
 outputs = (u = model.velocities.u,
             w = model.velocities.w,
@@ -80,8 +86,8 @@ outputs = (u = model.velocities.u,
 
 simulation.output_writers[:simple_output] =
     JLD2OutputWriter(model, outputs, 
-                     schedule = TimeInterval(1day), #30minutes
-                     filename = "PassiveTracer_100d",
+                     schedule = TimeInterval(1day), 
+                     filename = "TwoSine_longerCATKEml_tauy",
                      overwrite_existing = true)
 
 run!(simulation)
@@ -102,37 +108,50 @@ T2_timeseries = FieldTimeSeries(filepath, "T2")
 n = Observable(1)
 title = @lift @sprintf("t = %d days", times[$n] / day) 
 
-uₙ = @lift interior(u_timeseries[$n], :, 1, :)
-wₙ = @lift interior(w_timeseries[$n], :, 1, :)
+uₙ = @lift 100*interior(u_timeseries[$n], :, 1, :)
+wₙ = @lift 100*interior(w_timeseries[$n], :, 1, :)
 T1ₙ = @lift interior(T1_timeseries[$n], :, 1, :)
 T2ₙ = @lift interior(T2_timeseries[$n], :, 1, :)
 
-fig = Figure(size = (1200, 1200))
+fig = Figure(size = (1200, 1300))
 
-ax_u = Axis(fig[2, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_u = heatmap!(ax_u, xw, zw, uₙ; colorrange = (-1e-3, 1e-3), colormap = :balance) 
-Colorbar(fig[2, 2], hm_u; label = "u", flipaxis = false)
+ax_wind = Axis(fig[2, 3]; xlabel = "x (m)", ylabel = "τy (m² s⁻²)", aspect = 1)
+#y = τ₀ .* sinpi.((xw/Lx .- 0.5)./0.6) #(-tanh.(xw/Lx*pi/0.1.-9*pi).+1) #(sinpi.(xw/Lx/0.8 .-0.5) .+1) 
+function y_wind(x,Lx)
+    if x/Lx < 0.8
+        return sinpi(x/Lx / 1.6)
+    elseif x/Lx >=0.8
+        return sinpi((1 - x/Lx) / 0.4)
+    end
+end
+lines!(ax_wind, xw, τ₀ .* y_wind.(xw,Lx))
+# display(fig)
 
-ax_w = Axis(fig[2, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_w = heatmap!(ax_w, xw, zw, wₙ; colorrange = (-2e-6,2e-6), colormap = :balance) 
-Colorbar(fig[2, 4], hm_w; label = "w", flipaxis = false)
+ax_u = Axis(fig[3, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
+hm_u = heatmap!(ax_u, xw, zw, uₙ; colorrange = (-0.1, 0.1), colormap = :balance) 
+Colorbar(fig[3, 2], hm_u; label = "u (cm/s)", flipaxis = false)
 
-ax_T1 = Axis(fig[3, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
+ax_w = Axis(fig[3, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
+hm_w = heatmap!(ax_w, xw, zw, wₙ; colorrange = (-3e-4,3e-4), colormap = :balance) 
+Colorbar(fig[3, 4], hm_w; label = "w (cm/s)", flipaxis = false)
+
+ax_T1 = Axis(fig[4, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
 hm_T1 = heatmap!(ax_T1, xt, zt, T1ₙ; colorrange = (0,1), colormap = :rainbow1) 
-Colorbar(fig[3, 4], hm_T1; label = "Passive tracer (top-down)", flipaxis = false)
+Colorbar(fig[4, 4], hm_T1; label = "Passive tracer (top-down)", flipaxis = false)
 
-ax_T2 = Axis(fig[3, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
+ax_T2 = Axis(fig[4, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
 hm_T2 = heatmap!(ax_T2, xt, zt, T2ₙ; colorrange = (0, 1), colormap = :rainbow1) 
-Colorbar(fig[3, 2], hm_T2; label = "Passive tracer (two blocks)", flipaxis = false)
+Colorbar(fig[4, 2], hm_T2; label = "Passive tracer (two blocks)", flipaxis = false)
 
 fig[1, 1:4] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "PassiveTracer_100d.mp4", frames, framerate=24) do i
+record(fig, "TwoSine_longerCATKEml_tauy.mp4", frames, framerate=24) do i
     n[] = i
 end
 nothing #hide
+
 
 # fig2 = Figure(size = (500, 500))
 # t2ₙ = @lift interior(T2_timeseries[$n], 38:59, 1, 180:200)
