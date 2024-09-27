@@ -175,7 +175,33 @@ end
 const CAN = CarbonAlkalinityNutrients
 
 Adapt.adapt_structure(to, bgc::CarbonAlkalinityNutrients) = 
-    CarbonAlkalinityNutrients(adapt(to, bgc.particulate_organic_phosphorus_sinking_velocity))
+    CarbonAlkalinityNutrients(adapt(to, bgc.reference_density),
+                            adapt(to, bgc.maximum_net_community_production_rate),
+                            adapt(to, bgc.phosphate_half_saturation),
+                            adapt(to, bgc.nitrate_half_saturation),
+                            adapt(to, bgc.iron_half_saturation),
+                            adapt(to, bgc.incident_PAR),
+                            adapt(to, bgc.PAR_half_saturation),
+                            adapt(to, bgc.PAR_attenuation_scale),
+                            adapt(to, bgc.PAR_percent),
+                            adapt(to, bgc.fraction_of_particulate_export),
+                            adapt(to, bgc.dissolved_organic_phosphorus_remin_timescale),
+                            adapt(to, bgc.stoichoimetric_ratio_carbon_to_phosphate),
+                            adapt(to, bgc.stoichoimetric_ratio_nitrate_to_phosphate),
+                            adapt(to, bgc.stoichoimetric_ratio_phosphate_to_oxygen),
+                            adapt(to, bgc.stoichoimetric_ratio_phosphate_to_iron),
+                            adapt(to, bgc.stoichoimetric_ratio_carbon_to_nitrate),
+                            adapt(to, bgc.stoichoimetric_ratio_carbon_to_oxygen),
+                            adapt(to, bgc.stoichoimetric_ratio_carbon_to_iron),
+                            adapt(to, bgc.stoichoimetric_ratio_silicate_to_phosphate),
+                            adapt(to, bgc.rain_ratio_inorganic_to_organic_carbon),
+                            adapt(to, bgc.option_of_particulate_remin),
+                            adapt(to, bgc.particulate_organic_phosphate_remin_timescale), 
+                            adapt(to, bgc.iron_scavenging_rate),
+                            adapt(to, bgc.ligand_concentration),
+                            adapt(to, bgc.ligand_stability_coefficient),
+                            adapt(to, bgc.martin_curve_exponent),
+                            adapt(to, bgc.particulate_organic_phosphorus_sinking_velocity))
 
 @inline required_biogeochemical_tracers(::CAN) = (:DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe)
 

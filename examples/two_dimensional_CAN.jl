@@ -3,7 +3,7 @@
 # The BGC tracers in our model are advected, diffuse, precipitate, and dissolve 
 
 using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
-using GLMakie
+# using GLMakie
 using CUDA
 using Printf
 using Statistics
@@ -20,7 +20,7 @@ Lx = 1000kilometers   # m
 Lz = 2000           # m
 
 # We use a two-dimensional grid, with a `Flat` `y`-direction:
-grid = RectilinearGrid(#GPU(),
+grid = RectilinearGrid(GPU(),
                        size = (Nx, Nz),
                        x = (0, Lx),
                        z = (-Lz, 0),
