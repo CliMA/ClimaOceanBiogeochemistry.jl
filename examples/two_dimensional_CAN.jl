@@ -47,7 +47,7 @@ grid = RectilinearGrid(GPU(),
 # end
 # τ₀ = 0.0125 / 1e3
 
-τ₀ = 5e-5           # m² s⁻²
+const τ₀ = 5e-5           # m² s⁻²
 function τy(x, t, p)
     if x/p.Lx < 0.8
         return p.τ₀ * sinpi(x/p.Lx / 1.6)
