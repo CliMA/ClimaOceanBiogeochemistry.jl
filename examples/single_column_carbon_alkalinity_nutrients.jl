@@ -8,7 +8,7 @@ using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 using Oceananigans
 using Oceananigans.Units
 using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
-using CUDA
+# using CUDA
 
 using Printf
 using CairoMakie
