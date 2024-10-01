@@ -231,7 +231,7 @@ Calculate the remineralization of dissolved organic phosphorus.
         max(0, remineralization_rate * dissolved_organic_phosphorus_concentration)
 
 # Martin Curve
-@inline particulate_organic_phosphorus_remin() = 0.0
+@inline particulate_organic_phosphorus_remin() = 0
 
 # exponential remineralization or below the lysocline
 @inline particulate_inorganic_carbon_remin() = 0.0
