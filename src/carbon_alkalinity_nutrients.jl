@@ -222,16 +222,16 @@ end
 end
 
 """
-    dissolved_organic_phosphate_remin(remineralization_rate, 
+    dissolved_organic_phosphorus_remin(remineralization_rate, 
                                       dissolved_organic_phosphorus_concentration)
-Calculate the remineralization of dissolved organic phosphate.
+Calculate the remineralization of dissolved organic phosphorus.
 """
-@inline dissolved_organic_phosphate_remin(remineralization_rate, 
+@inline dissolved_organic_phosphorus_remin(remineralization_rate, 
                                           dissolved_organic_phosphorus_concentration) = 
         max(0, remineralization_rate * dissolved_organic_phosphorus_concentration)
 
 # Martin Curve
-@inline particulate_organic_phosphate_remin() = 0.0
+@inline particulate_organic_phosphorus_remin() = 0.0
 
 # exponential remineralization or below the lysocline
 @inline particulate_inorganic_carbon_remin() = 0.0
@@ -288,7 +288,7 @@ Tracer sources and sinks for dissolved inorganic carbon (DIC)
     kᴵ = bgc.PAR_half_saturation
     I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
-    γ = bgc.dissolved_organic_phosphate_remin_timescale
+    γ = bgc.dissolved_organic_phosphorus_remin_timescale
     α = bgc.fraction_of_particulate_export
     Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
     Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
@@ -307,9 +307,9 @@ Tracer sources and sinks for dissolved inorganic carbon (DIC)
     F = @inbounds fields.Fe[i, j, k]
     D = @inbounds fields.DOP[i, j, k]
     
-    return Rᶜᴾ * (dissolved_organic_phosphate_remin(γ, D) -
+    return Rᶜᴾ * (dissolved_organic_phosphorus_remin(γ, D) -
                  (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-                  particulate_organic_phosphate_remin()) +
+                  particulate_organic_phosphorus_remin()) +
            particulate_inorganic_carbon_remin() -
            air_sea_flux_co2() -
            freshwater_virtual_flux()
@@ -326,7 +326,7 @@ Tracer sources and sinks for alkalinity (ALK)
     kᴵ = bgc.PAR_half_saturation
     I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
-    γ = bgc.dissolved_organic_phosphate_remin_timescale
+    γ = bgc.dissolved_organic_phosphorus_remin_timescale
     α = bgc.fraction_of_particulate_export
     Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
     Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
@@ -347,8 +347,8 @@ Tracer sources and sinks for alkalinity (ALK)
     
     return -Rᴺᴾ * (
         - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-        dissolved_organic_phosphate_remin(γ, D) +
-        particulate_organic_phosphate_remin()
+        dissolved_organic_phosphorus_remin(γ, D) +
+        particulate_organic_phosphorus_remin()
         ) + 2 * particulate_inorganic_carbon_remin()
 end
 
@@ -363,7 +363,7 @@ Tracer sources and sinks for phosphate (PO₄)
     kᴵ = bgc.PAR_half_saturation
     I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
-    γ = bgc.dissolved_organic_phosphate_remin_timescale
+    γ = bgc.dissolved_organic_phosphorus_remin_timescale
     α = bgc.fraction_of_particulate_export
     Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
     Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
@@ -383,8 +383,8 @@ Tracer sources and sinks for phosphate (PO₄)
     D = @inbounds fields.DOP[i, j, k]
 
     return - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-           dissolved_organic_phosphate_remin(γ, D) +
-           particulate_organic_phosphate_remin()
+           dissolved_organic_phosphorus_remin(γ, D) +
+           particulate_organic_phosphorus_remin()
 end
 
 """
@@ -398,7 +398,7 @@ Tracer sources and sinks for nitrate (NO₃)
     kᴵ = bgc.PAR_half_saturation
     I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
-    γ = bgc.dissolved_organic_phosphate_remin_timescale
+    γ = bgc.dissolved_organic_phosphorus_remin_timescale
     α = bgc.fraction_of_particulate_export
     Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
     Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
@@ -419,8 +419,8 @@ Tracer sources and sinks for nitrate (NO₃)
 
     return Rᴺᴾ * (
            - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-           dissolved_organic_phosphate_remin(γ, D) +
-           particulate_organic_phosphate_remin())
+           dissolved_organic_phosphorus_remin(γ, D) +
+           particulate_organic_phosphorus_remin())
 end
 
 """
@@ -434,7 +434,7 @@ Tracer sources and sinks for dissolved iron (FeT)
     kᴵ = bgc.PAR_half_saturation
     I₀ = bgc.incident_PAR
     λ  = bgc.PAR_attenuation_scale
-    γ  = bgc.dissolved_organic_phosphate_remin_timescale
+    γ  = bgc.dissolved_organic_phosphorus_remin_timescale
     α  = bgc.fraction_of_particulate_export
     Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
     Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
@@ -458,8 +458,8 @@ Tracer sources and sinks for dissolved iron (FeT)
 
     return Rᶠᴾ * (
                 - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-                  dissolved_organic_phosphate_remin(γ, D) + 
-                  particulate_organic_phosphate_remin()
+                  dissolved_organic_phosphorus_remin(γ, D) + 
+                  particulate_organic_phosphorus_remin()
                  ) + 
                  iron_sources() -
                  iron_scavenging(kˢᶜᵃᵛ, F, Lᶠᵉ, β)
@@ -477,7 +477,7 @@ Tracer sources and sinks for dissolved organic phosphorus (DOP)
     kᴵ = bgc.PAR_half_saturation
     I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
-    γ = bgc.dissolved_organic_phosphate_remin_timescale
+    γ = bgc.dissolved_organic_phosphorus_remin_timescale
     α = bgc.fraction_of_particulate_export     
 
     # Available photosynthetic radiation
@@ -489,6 +489,6 @@ Tracer sources and sinks for dissolved organic phosphorus (DOP)
     F = @inbounds fields.Fe[i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
-    return - dissolved_organic_phosphate_remin(γ, D) +
+    return - dissolved_organic_phosphorus_remin(γ, D) +
              (1 - α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F)
 end
