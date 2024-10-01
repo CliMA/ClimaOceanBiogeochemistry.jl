@@ -223,11 +223,11 @@ end
 Calculate the photosynthetically active radiation (PAR) at a given depth due to attenuation.
 """
 @inline function PAR(surface_photosynthetically_active_ratiation, 
-                     photosynthetically_active_ratiation_attenuation_scale, 
+                     photosynthetically_active_radiation_attenuation_scale, 
                      depth)
 
     I₀ = surface_photosynthetically_active_ratiation
-    λ  = photosynthetically_active_ratiation_attenuation_scale
+    λ  = photosynthetically_active_radiation_attenuation_scale
     z  = depth
     return I₀ * exp(z / λ)
 end

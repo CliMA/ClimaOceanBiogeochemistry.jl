@@ -10,10 +10,10 @@ using Oceananigans.Units
 
 #################################### Grid ####################################
 # Parameters
-Nx = 100 
-Nz = 200
-Lx = 1000kilometers   # m
-Lz = 2000           # m
+const Nx = 100 
+const Nz = 200
+const Lx = 1000kilometers   # m
+const Lz = 2000           # m
 
 # We use a two-dimensional grid, with a `Flat` `y`-direction:
 grid = RectilinearGrid(size = (Nx, Nz),
@@ -24,7 +24,7 @@ grid = RectilinearGrid(size = (Nx, Nz),
 #################################### Boundary conditions ####################################
 
 # Wind stress boundary condition
-τ₀ = 5e-5           # m² s⁻²
+const τ₀ = 5e-5           # m² s⁻²
 # @inline τy(x, t, p) = p.τ₀ * sinpi(0.5*(x/p.Lx+0.2))# * x/p.Lx
 function τy(x, t, p)
     if x/p.Lx < 0.8
@@ -43,16 +43,16 @@ v_bcs = FieldBoundaryConditions(top=y_wind_stress)
 
 #################################### Model ####################################
 
-# background_diffusivity = VerticalScalarDiffusivity(ν=1e-4, κ=1e-5) 
 mixing_length = CATKEMixingLength(Cᵇ = 0.001)
 catke = CATKEVerticalDiffusivity(; mixing_length, tke_time_step = 10minutes)
-# horizontal_closure = HorizontalScalarDiffusivity(ν=1, κ=1)
+vertical_closure = VerticalScalarDiffusivity(ν=1e-4, κ=1e-5)
+horizontal_closure = HorizontalScalarDiffusivity(ν=1e3)
 
 # Model
 model = HydrostaticFreeSurfaceModel(; grid,
                                     buoyancy = BuoyancyTracer(),
                                     coriolis = FPlane(; f=1e-4),
-                                    closure = (catke),
+                                    closure = (vertical_closure, horizontal_closure),
                                     tracers = (:b, :e, :T1, :T2),
                                     momentum_advection = WENO(),
                                     tracer_advection = WENO(),
@@ -69,9 +69,9 @@ T2ᵢ(x, z) =  floor(Int, x / 200kilometers) % 2
 
 set!(model, b=bᵢ, T1 = T1ᵢ, T2 = T2ᵢ) 
 
-simulation = Simulation(model; Δt = 5minutes, stop_time=365.25days)
+simulation = Simulation(model; Δt = 1minutes, stop_time=365.25days)
 # We add a `TimeStepWizard` callback to adapt the simulation's time-step,
-wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=20minutes)
+wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=5minutes)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(20))
 
 progress(sim) = @printf("Iteration: %d, time: %s\n", 
@@ -87,7 +87,7 @@ outputs = (u = model.velocities.u,
 simulation.output_writers[:simple_output] =
     JLD2OutputWriter(model, outputs, 
                      schedule = TimeInterval(1day), 
-                     filename = "TwoSine_longerCATKEml_tauy",
+                     filename = "CATKE_Hv1e3_test",
                      overwrite_existing = true)
 
 run!(simulation)
@@ -147,7 +147,7 @@ fig[1, 1:4] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "TwoSine_longerCATKEml_tauy.mp4", frames, framerate=24) do i
+record(fig, "CATKE_Hv1e3_test.mp4", frames, framerate=24) do i
     n[] = i
 end
 nothing #hide

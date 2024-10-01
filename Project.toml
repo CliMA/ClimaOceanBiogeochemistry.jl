@@ -16,7 +16,7 @@ StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 UpdateJulia = "770da0de-323d-4d28-9202-0e205c1e0aff"
 
 [compat]
-Oceananigans = "0.91.13"
+Oceananigans = "0.92.0"
 RootSolvers = "0.3"
 
 [extras]

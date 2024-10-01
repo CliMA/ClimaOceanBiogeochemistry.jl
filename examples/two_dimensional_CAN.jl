@@ -3,8 +3,8 @@
 # The BGC tracers in our model are advected, diffuse, precipitate, and dissolve 
 
 using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
-# using GLMakie
-using CUDA
+using GLMakie
+# using CUDA
 using Printf
 using Statistics
 
@@ -20,7 +20,7 @@ Lx = 1000kilometers   # m
 Lz = 2000           # m
 
 # We use a two-dimensional grid, with a `Flat` `y`-direction:
-grid = RectilinearGrid(GPU(),
+grid = RectilinearGrid(#GPU(),
                        size = (Nx, Nz),
                        x = (0, Lx),
                        z = (-Lz, 0),
@@ -47,7 +47,7 @@ grid = RectilinearGrid(GPU(),
 # end
 # τ₀ = 0.0125 / 1e3
 
-const τ₀ = 5e-5           # m² s⁻²
+τ₀ = 5e-5           # m² s⁻²
 function τy(x, t, p)
     if x/p.Lx < 0.8
         return p.τ₀ * sinpi(x/p.Lx / 1.6)
@@ -88,7 +88,7 @@ bᵢ(x, z) = N² * z + M² * x
 
 set!(model, b=bᵢ, DIC=2.1, ALK=2.35, NO₃=3e-2, PO₄=2e-3, DOP=0, POP=0, Fe = 1e-6) # mol PO₄ m⁻³
 
-simulation = Simulation(model; Δt = 5minutes, stop_time=10days) 
+simulation = Simulation(model; Δt = 5minutes, stop_time=3days) 
 
 # We add a `TimeStepWizard` callback to adapt the simulation's time-step,
 wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=10minutes)
@@ -101,6 +101,20 @@ progress(sim) = @printf("Iteration: %d, time: %s\n", #, total(P): %.2e
 
 add_callback!(simulation, progress, IterationInterval(500))
 
+P = model.tracers.PO₄
+N = model.tracers.NO₃
+F = model.tracers.Fe
+
+μᵖ= model.biogeochemistry.maximum_net_community_production_rate
+kᴵ= model.biogeochemistry.PAR_half_saturation
+kᴾ= model.biogeochemistry.phosphate_half_saturation
+kᴺ= model.biogeochemistry.nitrate_half_saturation
+kᶠ= model.biogeochemistry.iron_half_saturation
+λ = model.biogeochemistry.PAR_attenuation_scale
+I(x,z) = model.biogeochemistry.incident_PAR .* exp.(z ./ λ)
+
+NCP = max.(0, μᵖ .* (I ./ (I .+ kᴵ)) .* min.((P ./ (P .+ kᴾ)), (N ./ (N .+ kᴺ)), (F ./ (F .+ kᶠ))))
+   
 # outputs = merge(model.velocities, model.tracers)
 outputs = (u = model.velocities.u,
             w = model.velocities.w,
@@ -109,6 +123,7 @@ outputs = (u = model.velocities.u,
             POP = model.tracers.POP,
             NO₃ = model.tracers.NO₃,
             Fe = model.tracers.Fe,
+            # NCP = NCP,
             avg_PO₄ = Average(model.tracers.PO₄, dims=(1, 2)),
             avg_DOP = Average(model.tracers.DOP, dims=(1, 2)),
             avg_POP = Average(model.tracers.POP, dims=(1, 2)))
@@ -127,7 +142,7 @@ simulation.output_writers[:simple_output] =
 run!(simulation) #, pickup = true)
 
 ############################ Visualizing the solution ############################
-#=
+
 filepath = simulation.output_writers[:simple_output].filepath
 
 u_timeseries = FieldTimeSeries(filepath, "u")
@@ -185,12 +200,11 @@ fig[1, 1:4] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "CAN_MadeWind_highres_NCP1e_2_10y.mp4", frames, framerate=24) do i
+record(fig, "random_test.mp4", frames, framerate=24) do i
     n[] = i
 end
 nothing #hide
 
-=#
 ################################## Plot prod/remin rates ##################################
 #=
 filepath = "./CAN_MadeWind_NCP1e_2_20y.jld2"
