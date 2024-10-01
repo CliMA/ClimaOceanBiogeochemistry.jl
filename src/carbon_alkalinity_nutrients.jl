@@ -2,7 +2,8 @@ using Oceananigans.Units: day
 using Oceananigans.Grids: znode, Center
 using Oceananigans.Fields: ZeroField, ConstantField
 using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
-
+using Adapt
+import Adapt: adapt_structure, adapt
 import Oceananigans.Biogeochemistry: required_biogeochemical_tracers, biogeochemical_drift_velocity
 
 const c = Center()
@@ -16,7 +17,7 @@ struct CarbonAlkalinityNutrients{FT} <: AbstractBiogeochemistry
     PAR_half_saturation                        :: FT  # W m⁻²
     PAR_attenuation_scale                      :: FT  # m
     fraction_of_particulate_export             :: FT
-    dissolved_organic_phosphate_remin_timescale:: FT # s⁻¹
+    dissolved_organic_phosphorus_remin_timescale:: FT # s⁻¹
     stoichoimetric_ratio_carbon_to_phosphate   :: FT 
     stoichoimetric_ratio_nitrate_to_phosphate  :: FT 
     stoichoimetric_ratio_phosphate_to_oxygen   :: FT 
@@ -42,7 +43,7 @@ end
                                 PAR_half_saturation                         = 10.0,
                                 PAR_attenuation_scale                       = 25.0,
                                 fraction_of_particulate_export              = 0.33
-                                dissolved_organic_phosphate_remin_timescale = 1 / 30day,
+                                dissolved_organic_phosphorus_remin_timescale = 1 / 30day,
                                 stoichoimetric_ratio_carbon_to_phosphate    = 106.0
                                 stoichoimetric_ratio_nitrate_to_phosphate   = 16.0
                                 stoichoimetric_ratio_phosphate_to_oxygen    = 170.0,
@@ -92,7 +93,7 @@ function CarbonAlkalinityNutrients(; reference_density = 1024,
                                    PAR_half_saturation                        = 10.0,  # W m⁻²
                                    PAR_attenuation_scale                      = 25.0,  # m
                                    fraction_of_particulate_export             = 0.33,
-                                   dissolved_organic_phosphate_remin_timescale= 1 / 30day, # s⁻¹
+                                   dissolved_organic_phosphorus_remin_timescale= 1 / 30day, # s⁻¹
                                    stoichoimetric_ratio_carbon_to_phosphate   = 106.0,
                                    stoichoimetric_ratio_nitrate_to_phosphate  = 16.0,
                                    stoichoimetric_ratio_phosphate_to_oxygen   = 170.0, 
@@ -115,7 +116,7 @@ function CarbonAlkalinityNutrients(; reference_density = 1024,
                                      PAR_half_saturation,
                                      PAR_attenuation_scale,
                                      fraction_of_particulate_export,
-                                     dissolved_organic_phosphate_remin_timescale,
+                                     dissolved_organic_phosphorus_remin_timescale,
                                      stoichoimetric_ratio_carbon_to_phosphate,
                                      stoichoimetric_ratio_nitrate_to_phosphate,
                                      stoichoimetric_ratio_phosphate_to_oxygen,
@@ -130,6 +131,31 @@ function CarbonAlkalinityNutrients(; reference_density = 1024,
                                      ligand_concentration,
                                      ligand_stability_coefficient)
 end
+
+Adapt.adapt_structure(to, bgc::CarbonAlkalinityNutrients) = 
+    CarbonAlkalinityNutrients(adapt(to, bgc.reference_density),
+                            adapt(to, bgc.maximum_net_community_production_rate),
+                            adapt(to, bgc.phosphate_half_saturation),
+                            adapt(to, bgc.nitrate_half_saturation),
+                            adapt(to, bgc.iron_half_saturation),
+                            adapt(to, bgc.incident_PAR),
+                            adapt(to, bgc.PAR_half_saturation),
+                            adapt(to, bgc.PAR_attenuation_scale),
+                            adapt(to, bgc.fraction_of_particulate_export),
+                            adapt(to, bgc.dissolved_organic_phosphorus_remin_timescale),
+                            adapt(to, bgc.stoichoimetric_ratio_carbon_to_phosphate),
+                            adapt(to, bgc.stoichoimetric_ratio_nitrate_to_phosphate),
+                            adapt(to, bgc.stoichoimetric_ratio_phosphate_to_oxygen),
+                            adapt(to, bgc.stoichoimetric_ratio_iron_to_phosphate),
+                            adapt(to, bgc.stoichoimetric_ratio_carbon_to_nitrate),
+                            adapt(to, bgc.stoichoimetric_ratio_carbon_to_oxygen),
+                            adapt(to, bgc.stoichoimetric_ratio_carbon_to_iron),
+                            adapt(to, bgc.stoichoimetric_ratio_silicate_to_phosphate),
+                            adapt(to, bgc.rain_ratio_inorganic_to_organic_carbon),
+                            adapt(to, bgc.martin_curve_exponent),
+                            adapt(to, bgc.iron_scavenging_rate),
+                            adapt(to, bgc.ligand_concentration),
+                            adapt(to, bgc.ligand_stability_coefficient))
 
 const CAN = CarbonAlkalinityNutrients
 
@@ -196,16 +222,16 @@ end
 end
 
 """
-    dissolved_organic_phosphate_remin(remineralization_rate, 
+    dissolved_organic_phosphorus_remin(remineralization_rate, 
                                       dissolved_organic_phosphorus_concentration)
-Calculate the remineralization of dissolved organic phosphate.
+Calculate the remineralization of dissolved organic phosphorus.
 """
-@inline dissolved_organic_phosphate_remin(remineralization_rate, 
+@inline dissolved_organic_phosphorus_remin(remineralization_rate, 
                                           dissolved_organic_phosphorus_concentration) = 
         max(0, remineralization_rate * dissolved_organic_phosphorus_concentration)
 
 # Martin Curve
-@inline particulate_organic_phosphate_remin() = 0.0
+@inline particulate_organic_phosphorus_remin() = 0
 
 # exponential remineralization or below the lysocline
 @inline particulate_inorganic_carbon_remin() = 0.0
@@ -262,7 +288,7 @@ Tracer sources and sinks for dissolved inorganic carbon (DIC)
     kᴵ = bgc.PAR_half_saturation
     I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
-    γ = bgc.dissolved_organic_phosphate_remin_timescale
+    γ = bgc.dissolved_organic_phosphorus_remin_timescale
     α = bgc.fraction_of_particulate_export
     Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
     Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
@@ -281,9 +307,9 @@ Tracer sources and sinks for dissolved inorganic carbon (DIC)
     F = @inbounds fields.Fe[i, j, k]
     D = @inbounds fields.DOP[i, j, k]
     
-    return Rᶜᴾ * (dissolved_organic_phosphate_remin(γ, D) -
+    return Rᶜᴾ * (dissolved_organic_phosphorus_remin(γ, D) -
                  (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-                  particulate_organic_phosphate_remin()) +
+                  particulate_organic_phosphorus_remin()) +
            particulate_inorganic_carbon_remin() -
            air_sea_flux_co2() -
            freshwater_virtual_flux()
@@ -300,7 +326,7 @@ Tracer sources and sinks for alkalinity (ALK)
     kᴵ = bgc.PAR_half_saturation
     I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
-    γ = bgc.dissolved_organic_phosphate_remin_timescale
+    γ = bgc.dissolved_organic_phosphorus_remin_timescale
     α = bgc.fraction_of_particulate_export
     Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
     Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
@@ -321,8 +347,8 @@ Tracer sources and sinks for alkalinity (ALK)
     
     return -Rᴺᴾ * (
         - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-        dissolved_organic_phosphate_remin(γ, D) +
-        particulate_organic_phosphate_remin()
+        dissolved_organic_phosphorus_remin(γ, D) +
+        particulate_organic_phosphorus_remin()
         ) + 2 * particulate_inorganic_carbon_remin()
 end
 
@@ -337,7 +363,7 @@ Tracer sources and sinks for phosphate (PO₄)
     kᴵ = bgc.PAR_half_saturation
     I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
-    γ = bgc.dissolved_organic_phosphate_remin_timescale
+    γ = bgc.dissolved_organic_phosphorus_remin_timescale
     α = bgc.fraction_of_particulate_export
     Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
     Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
@@ -357,8 +383,8 @@ Tracer sources and sinks for phosphate (PO₄)
     D = @inbounds fields.DOP[i, j, k]
 
     return - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-           dissolved_organic_phosphate_remin(γ, D) +
-           particulate_organic_phosphate_remin()
+           dissolved_organic_phosphorus_remin(γ, D) +
+           particulate_organic_phosphorus_remin()
 end
 
 """
@@ -372,7 +398,7 @@ Tracer sources and sinks for nitrate (NO₃)
     kᴵ = bgc.PAR_half_saturation
     I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
-    γ = bgc.dissolved_organic_phosphate_remin_timescale
+    γ = bgc.dissolved_organic_phosphorus_remin_timescale
     α = bgc.fraction_of_particulate_export
     Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
     Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
@@ -393,8 +419,8 @@ Tracer sources and sinks for nitrate (NO₃)
 
     return Rᴺᴾ * (
            - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-           dissolved_organic_phosphate_remin(γ, D) +
-           particulate_organic_phosphate_remin())
+           dissolved_organic_phosphorus_remin(γ, D) +
+           particulate_organic_phosphorus_remin())
 end
 
 """
@@ -408,7 +434,7 @@ Tracer sources and sinks for dissolved iron (FeT)
     kᴵ = bgc.PAR_half_saturation
     I₀ = bgc.incident_PAR
     λ  = bgc.PAR_attenuation_scale
-    γ  = bgc.dissolved_organic_phosphate_remin_timescale
+    γ  = bgc.dissolved_organic_phosphorus_remin_timescale
     α  = bgc.fraction_of_particulate_export
     Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate   
     Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
@@ -432,8 +458,8 @@ Tracer sources and sinks for dissolved iron (FeT)
 
     return Rᶠᴾ * (
                 - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F) +
-                  dissolved_organic_phosphate_remin(γ, D) + 
-                  particulate_organic_phosphate_remin()
+                  dissolved_organic_phosphorus_remin(γ, D) + 
+                  particulate_organic_phosphorus_remin()
                  ) + 
                  iron_sources() -
                  iron_scavenging(kˢᶜᵃᵛ, F, Lᶠᵉ, β)
@@ -451,7 +477,7 @@ Tracer sources and sinks for dissolved organic phosphorus (DOP)
     kᴵ = bgc.PAR_half_saturation
     I₀ = bgc.incident_PAR
     λ = bgc.PAR_attenuation_scale
-    γ = bgc.dissolved_organic_phosphate_remin_timescale
+    γ = bgc.dissolved_organic_phosphorus_remin_timescale
     α = bgc.fraction_of_particulate_export     
 
     # Available photosynthetic radiation
@@ -463,6 +489,6 @@ Tracer sources and sinks for dissolved organic phosphorus (DOP)
     F = @inbounds fields.Fe[i, j, k]
     D = @inbounds fields.DOP[i, j, k]
 
-    return - dissolved_organic_phosphate_remin(γ, D) +
+    return - dissolved_organic_phosphorus_remin(γ, D) +
              (1 - α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, P, N, F)
 end

@@ -8,6 +8,7 @@ using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 using Oceananigans
 using Oceananigans.Units
 using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
+# using CUDA
 
 using Printf
 using CairoMakie
@@ -16,7 +17,8 @@ using CairoMakie
 #
 # We set up a single column grid with 4 m grid spacing that's 256 m deep:
 
-grid = RectilinearGrid(size = 64,
+grid = RectilinearGrid(#GPU(),
+                       size = 64,
                        z = (-256meters, 0),
                        topology = (Flat, Flat, Bounded))
 
