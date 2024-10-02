@@ -3,8 +3,8 @@
 # The BGC tracers in our model are advected, diffuse, precipitate, and dissolve 
 
 using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
-using GLMakie
-# using CUDA
+# using GLMakie
+using CUDA
 using Printf
 using Statistics
 
@@ -20,7 +20,7 @@ Lx = 1000kilometers   # m
 Lz = 2000           # m
 
 # We use a two-dimensional grid, with a `Flat` `y`-direction:
-grid = RectilinearGrid(#GPU(),
+grid = RectilinearGrid(GPU(),
                        size = (Nx, Nz),
                        x = (0, Lx),
                        z = (-Lz, 0),
@@ -28,26 +28,7 @@ grid = RectilinearGrid(#GPU(),
 
 #################################### Boundary conditions ####################################
 
-# Compute piston velocity `wp` from restoring time-scale τ★
-# Δz = zspacings(grid, Center())
-# τ★ = 1days  
-# wp = Δz / τ★ # piston velocity = 10 m/day
-
-# Compute buoyancy flux Jᵇ
-# @inline function Jᵇ(x, t, b, p)
-#     b★ = p.M² * x   # m s⁻², reference buoyancy
-#     return p.wp * (b★ - b) # m² s⁻³
-# end
-# top_buoyancy_bc = FluxBoundaryCondition(Jᵇ, field_dependencies=:b, parameters=(; M², wp))
-# b_bcs = FieldBoundaryConditions(top=top_buoyancy_bc)
-
-# Wind stress boundary condition
-# @inline function τy(x, t, p)
-#     return  p.τ₀ * (sinpi(x/p.Lx/0.8-0.5)+1)*(-tanh(x/p.Lx*pi/0.1-9*pi)+1)
-# end
-# τ₀ = 0.0125 / 1e3
-
-τ₀ = 5e-5           # m² s⁻²
+const τ₀ = 1e-4           # m² s⁻²
 function τy(x, t, p)
     if x/p.Lx < 0.8
         return p.τ₀ * sinpi(x/p.Lx / 1.6)
@@ -62,6 +43,7 @@ v_bcs = FieldBoundaryConditions(top=y_wind_stress)
 
 mixing_length = CATKEMixingLength(Cᵇ = 0.001)
 catke = CATKEVerticalDiffusivity(; mixing_length, tke_time_step = 10minutes)
+horizontal_closure = HorizontalScalarDiffusivity(ν=1e3)
 
 # Model
 model = HydrostaticFreeSurfaceModel(; grid,
@@ -69,11 +51,11 @@ model = HydrostaticFreeSurfaceModel(; grid,
                                     biogeochemistry = CarbonAlkalinityNutrients(; grid,
                                                                         maximum_net_community_production_rate  = 1e-2/day),
                                     coriolis = FPlane(; f=1e-4),
-                                    closure = (catke), 
+                                    closure = (catke, horizontal_closure), 
                                     tracers = (:b, :e, :DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
                                     momentum_advection = WENO(),
                                     tracer_advection = WENO(),
-                                    boundary_conditions = (; v=v_bcs)) #, b=b_bcs))
+                                    boundary_conditions = (; v=v_bcs)) 
 
 M² = 0         # 1e-7 s⁻², squared buoyancy frequency
 N² = 0         # 1e-5 s⁻²
@@ -88,19 +70,19 @@ bᵢ(x, z) = N² * z + M² * x
 
 set!(model, b=bᵢ, DIC=2.1, ALK=2.35, NO₃=3e-2, PO₄=2e-3, DOP=0, POP=0, Fe = 1e-6) # mol PO₄ m⁻³
 
-simulation = Simulation(model; Δt = 5minutes, stop_time=3days) 
+simulation = Simulation(model; Δt = 5minutes, stop_time=365.25*50days) 
 
 # We add a `TimeStepWizard` callback to adapt the simulation's time-step,
-wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=10minutes)
-simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(100))
+wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=30minutes)
+simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(50))
 
 # Print the progress 
 progress(sim) = @printf("Iteration: %d, time: %s\n", #, total(P): %.2e
                         iteration(sim), prettytime(sim)) 
-                        # sum(model.tracers.PO₄)+sum(model.tracers.DOP)+sum(model.tracers.POP))
 
 add_callback!(simulation, progress, IterationInterval(500))
 
+#=
 P = model.tracers.PO₄
 N = model.tracers.NO₃
 F = model.tracers.Fe
@@ -114,35 +96,38 @@ kᶠ= model.biogeochemistry.iron_half_saturation
 I(x,z) = model.biogeochemistry.incident_PAR .* exp.(z ./ λ)
 
 NCP = max.(0, μᵖ .* (I ./ (I .+ kᴵ)) .* min.((P ./ (P .+ kᴾ)), (N ./ (N .+ kᴺ)), (F ./ (F .+ kᶠ))))
-   
+=#
+
 # outputs = merge(model.velocities, model.tracers)
 outputs = (u = model.velocities.u,
+            v = model.velocities.v,
             w = model.velocities.w,
             PO₄= model.tracers.PO₄,
             DOP = model.tracers.DOP,
             POP = model.tracers.POP,
             NO₃ = model.tracers.NO₃,
             Fe = model.tracers.Fe,
-            # NCP = NCP,
+            DIC = model.tracers.DIC,
+            ALK = model.tracers.ALK,
             avg_PO₄ = Average(model.tracers.PO₄, dims=(1, 2)),
             avg_DOP = Average(model.tracers.DOP, dims=(1, 2)),
             avg_POP = Average(model.tracers.POP, dims=(1, 2)))
 
 simulation.output_writers[:simple_output] =
     JLD2OutputWriter(model, outputs, 
-                     schedule = TimeInterval(1days), #1days
-                     filename = "random_test",
+                     schedule = TimeInterval(1days), 
+                     filename = "CAN_2D_50y",
                      overwrite_existing = true)
 
-# simulation.output_writers[:checkpointer] = Checkpointer(model,
-#     schedule = TimeInterval(50days),
-#     prefix = "CAN_2D_checkpoint",
-#     overwrite_existing = false)
+simulation.output_writers[:checkpointer] = Checkpointer(model,
+                    schedule = TimeInterval(100days),
+                    prefix = "CAN_2D_checkpoint",
+                    overwrite_existing = true)
 
-run!(simulation) #, pickup = true)
+run!(simulation, pickup = true)
 
 ############################ Visualizing the solution ############################
-
+#=
 filepath = simulation.output_writers[:simple_output].filepath
 
 u_timeseries = FieldTimeSeries(filepath, "u")
@@ -204,7 +189,7 @@ record(fig, "random_test.mp4", frames, framerate=24) do i
     n[] = i
 end
 nothing #hide
-
+=#
 ################################## Plot prod/remin rates ##################################
 #=
 filepath = "./CAN_MadeWind_NCP1e_2_20y.jld2"

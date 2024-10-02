@@ -24,7 +24,7 @@ grid = RectilinearGrid(size = (Nx, Nz),
 #################################### Boundary conditions ####################################
 
 # Wind stress boundary condition
-const τ₀ = 5e-5           # m² s⁻²
+const τ₀ = 5e-4           # m² s⁻² = x 1e3 N m⁻²
 # @inline τy(x, t, p) = p.τ₀ * sinpi(0.5*(x/p.Lx+0.2))# * x/p.Lx
 function τy(x, t, p)
     if x/p.Lx < 0.8
@@ -45,14 +45,14 @@ v_bcs = FieldBoundaryConditions(top=y_wind_stress)
 
 mixing_length = CATKEMixingLength(Cᵇ = 0.001)
 catke = CATKEVerticalDiffusivity(; mixing_length, tke_time_step = 10minutes)
-vertical_closure = VerticalScalarDiffusivity(ν=1e-4, κ=1e-5)
+# vertical_closure = VerticalScalarDiffusivity(ν=1e-4, κ=1e-5)
 horizontal_closure = HorizontalScalarDiffusivity(ν=1e3)
 
 # Model
 model = HydrostaticFreeSurfaceModel(; grid,
                                     buoyancy = BuoyancyTracer(),
                                     coriolis = FPlane(; f=1e-4),
-                                    closure = (vertical_closure, horizontal_closure),
+                                    closure = (catke, horizontal_closure),
                                     tracers = (:b, :e, :T1, :T2),
                                     momentum_advection = WENO(),
                                     tracer_advection = WENO(),
@@ -69,9 +69,9 @@ T2ᵢ(x, z) =  floor(Int, x / 200kilometers) % 2
 
 set!(model, b=bᵢ, T1 = T1ᵢ, T2 = T2ᵢ) 
 
-simulation = Simulation(model; Δt = 1minutes, stop_time=365.25days)
+simulation = Simulation(model; Δt = 5minutes, stop_time=365.25days)
 # We add a `TimeStepWizard` callback to adapt the simulation's time-step,
-wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=5minutes)
+wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=30minutes)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(20))
 
 progress(sim) = @printf("Iteration: %d, time: %s\n", 
@@ -87,7 +87,7 @@ outputs = (u = model.velocities.u,
 simulation.output_writers[:simple_output] =
     JLD2OutputWriter(model, outputs, 
                      schedule = TimeInterval(1day), 
-                     filename = "CATKE_Hv1e3_test",
+                     filename = "wind05Nm2_test",
                      overwrite_existing = true)
 
 run!(simulation)
@@ -115,7 +115,7 @@ T2ₙ = @lift interior(T2_timeseries[$n], :, 1, :)
 
 fig = Figure(size = (1200, 1300))
 
-ax_wind = Axis(fig[2, 3]; xlabel = "x (m)", ylabel = "τy (m² s⁻²)", aspect = 1)
+ax_wind = Axis(fig[2, 3]; xlabel = "x (m)", ylabel = "τy (N m⁻²)", aspect = 1)
 #y = τ₀ .* sinpi.((xw/Lx .- 0.5)./0.6) #(-tanh.(xw/Lx*pi/0.1.-9*pi).+1) #(sinpi.(xw/Lx/0.8 .-0.5) .+1) 
 function y_wind(x,Lx)
     if x/Lx < 0.8
@@ -124,15 +124,15 @@ function y_wind(x,Lx)
         return sinpi((1 - x/Lx) / 0.4)
     end
 end
-lines!(ax_wind, xw, τ₀ .* y_wind.(xw,Lx))
+lines!(ax_wind, xw, 1000 .* τ₀ .* y_wind.(xw,Lx))
 # display(fig)
 
 ax_u = Axis(fig[3, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_u = heatmap!(ax_u, xw, zw, uₙ; colorrange = (-0.1, 0.1), colormap = :balance) 
+hm_u = heatmap!(ax_u, xw, zw, uₙ; colorrange = (-1, 1), colormap = :balance) 
 Colorbar(fig[3, 2], hm_u; label = "u (cm/s)", flipaxis = false)
 
 ax_w = Axis(fig[3, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_w = heatmap!(ax_w, xw, zw, wₙ; colorrange = (-3e-4,3e-4), colormap = :balance) 
+hm_w = heatmap!(ax_w, xw, zw, wₙ; colorrange = (-3e-3,3e-3), colormap = :balance) 
 Colorbar(fig[3, 4], hm_w; label = "w (cm/s)", flipaxis = false)
 
 ax_T1 = Axis(fig[4, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
@@ -141,13 +141,13 @@ Colorbar(fig[4, 4], hm_T1; label = "Passive tracer (top-down)", flipaxis = false
 
 ax_T2 = Axis(fig[4, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
 hm_T2 = heatmap!(ax_T2, xt, zt, T2ₙ; colorrange = (0, 1), colormap = :rainbow1) 
-Colorbar(fig[4, 2], hm_T2; label = "Passive tracer (two blocks)", flipaxis = false)
+Colorbar(fig[4, 2], hm_T2; label = "Passive tracer (west-east)", flipaxis = false)
 
 fig[1, 1:4] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "CATKE_Hv1e3_test.mp4", frames, framerate=24) do i
+record(fig, "wind05Nm2_test.mp4", frames, framerate=24) do i
     n[] = i
 end
 nothing #hide
