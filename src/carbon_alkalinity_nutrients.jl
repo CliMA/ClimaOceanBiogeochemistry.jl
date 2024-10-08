@@ -6,7 +6,7 @@ using Adapt
 import Adapt: adapt_structure, adapt
 using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
 using Oceananigans.BoundaryConditions: ImpenetrableBoundaryCondition, fill_halo_regions!
-using Oceananigans.Fields: ConstantField, ZeroField
+using Oceananigans.Fields: ConstantField, ZeroField, AbstractField
 using Oceananigans.Grids: Center, znode
 using Oceananigans.Units: days
 
@@ -100,7 +100,7 @@ Biogeochemical functions
 """
 function CarbonAlkalinityNutrients(; grid,
                                    reference_density                            = 1024.5,
-                                   maximum_net_community_production_rate        = 1 / day, # mol PO₄ m⁻³ s⁻¹
+                                   maximum_net_community_production_rate        = 1 / day, 
                                    phosphate_half_saturation                    = 1e-7 * reference_density, # mol PO₄ m⁻³
                                    nitrate_half_saturation                      = 1.6e-6 * reference_density, # mol NO₃ m⁻³
                                    iron_half_saturation                         = 1.e-10 * reference_density, # mol Fe m⁻³
@@ -214,6 +214,8 @@ Add a vertical sinking "drift velocity" for the particulate organic phosphorus (
     w = bgc.particulate_organic_phosphorus_sinking_velocity
     return (; u, v, w)
 end
+
+adapt_structure(to, velocities::NamedTuple{(:u, :v, :w), Tuple{AbstractField, AbstractField, AbstractField}}) = NamedTuple{(:u, :v, :w)}(adapt.(to, values(velocities)))
 
 """
     PAR(surface_photosynthetically_active_ratiation, 
