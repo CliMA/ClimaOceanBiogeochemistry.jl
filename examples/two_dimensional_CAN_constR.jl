@@ -49,8 +49,10 @@ horizontal_closure = HorizontalScalarDiffusivity(ν=1e3)
 model = HydrostaticFreeSurfaceModel(; grid,
                                     buoyancy = BuoyancyTracer(),
                                     biogeochemistry = CarbonAlkalinityNutrients(; grid,
-                                                                        maximum_net_community_production_rate  = 1e-2/day,
-                                                                        iron_scavenging_rate = 0),
+                                                                        maximum_net_community_production_rate  = 2e-3/day,
+                                                                        iron_scavenging_rate = 0,
+                                                                        option_of_particulate_remin = 2,
+                                                                        particulate_organic_phosphorus_remin_timescale = 0.01/day),
                                     coriolis = FPlane(; f=1e-4),
                                     closure = (vertical_closure, horizontal_closure), 
                                     tracers = (:b, :e, :DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
@@ -71,7 +73,7 @@ bᵢ(x, z) = N² * z + M² * x
 
 set!(model, b=bᵢ, DIC=2.1, ALK=2.35, NO₃=3e-2, PO₄=2e-3, DOP=0, POP=0, Fe = 1e-6) # mol PO₄ m⁻³
 
-simulation = Simulation(model; Δt = 5minutes, stop_time=10days) 
+simulation = Simulation(model; Δt = 5minutes, stop_time=365.25*100days) 
 
 # We add a `TimeStepWizard` callback to adapt the simulation's time-step,
 wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=30minutes)
@@ -101,21 +103,20 @@ outputs = (u = model.velocities.u,
 simulation.output_writers[:simple_output] =
     JLD2OutputWriter(model, outputs, 
                      schedule = TimeInterval(7days), 
-                     filename = "CAN_2D_Rz2",
+                     filename = "sen_constR_001",
                      overwrite_existing = true)
 
 simulation.output_writers[:checkpointer] = Checkpointer(model,
-                    schedule = TimeInterval(365.25*10days),
-                    prefix = "CAN_2D_Rz_checkpoint",
+                    schedule = TimeInterval(365.25*20days),
+                    prefix = "sen_constR_001_cp",
                     overwrite_existing = true)
 
 run!(simulation, pickup = false)
 
 ############################ Visualizing the solution ############################
-#=
-# filepath = simulation.output_writers[:simple_output].filepath
-filepath = "./CAN_2D_Rz3.jld2"
 
+# filepath = simulation.output_writers[:simple_output].filepath
+#=
 u_timeseries = FieldTimeSeries(filepath, "u")
 w_timeseries = FieldTimeSeries(filepath, "w")
 times = w_timeseries.times
@@ -167,23 +168,31 @@ hm_POP = heatmap!(ax_POP, xw, zw, POPₙ; colorrange = (0,0.3),colormap = :matte
 Colorbar(fig[3, 4], hm_POP; flipaxis = false)
 
 ax_avg_PO4 = Axis(fig[4, 1:2]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", title = "Average [PO₄] (μM)", yaxisposition = :right)
-xlims!(ax_avg_PO4, 0, 5)
+xlims!(ax_avg_PO4, 0, 10)
 lines!(ax_avg_PO4, avg_PO4ₙ, zi)
 
 ax_avg_POP = Axis(fig[4, 3:4]; xlabel = "[POP] (μM)", ylabel = "z (m)", title = "Average [POP] (μM)",yaxisposition = :right)
-xlims!(ax_avg_POP, 0, 0.15)
+xlims!(ax_avg_POP, 0, 0.3)
 lines!(ax_avg_POP, avg_POPₙ, zi)
 
 fig[1, 1:4] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "CAN_2D_Rz3.mp4", frames, framerate=50) do i
+record(fig, "CAN_2D_constR2.mp4", frames, framerate=50) do i
     n[] = i
 end
 nothing #hide
 =#
 ################################## Plot all BGC tracers ##################################
+
+# PO4_timeseries = FieldTimeSeries(filepath, "PO₄")
+# POP_timeseries = FieldTimeSeries(filepath, "POP")
+# DOP_timeseries = FieldTimeSeries(filepath, "DOP")
+# DIC_timeseries = FieldTimeSeries(filepath, "DIC")
+# ALK_timeseries = FieldTimeSeries(filepath, "ALK")
+# Fe_timeseries = FieldTimeSeries(filepath, "Fe")
+# NO3_timeseries = FieldTimeSeries(filepath, "NO₃")
 #=
 PO4_final = 1e3*interior(PO4_timeseries[end], :, 1, :)
 POP_final = 1e3*interior(POP_timeseries[end], :, 1, :)
@@ -195,40 +204,40 @@ NO3_final = 1e3*interior(NO3_timeseries[end], :, 1, :)
 
 fig_can = Figure(size = (1000, 1000))
 
-ax_PO4 = Axis(fig_can[1, 1]; xlabel = "x (m)", ylabel = "z (m)", title = "[PO₄] (μM)", aspect = 1)
-hm_PO4 = heatmap!(ax_PO4, xw, zw, PO4_final; colorrange = (0,3),colormap = :matter) 
-Colorbar(fig_can[1, 2], hm_PO4; flipaxis = false)
+ax_PO4 = Axis(fig_can[2, 1]; xlabel = "x (m)", ylabel = "z (m)", title = "[PO₄] (μM)", aspect = 1)
+hm_PO4 = heatmap!(ax_PO4, xw, zw, PO4_final; colorrange = (0,5),colormap = :matter) 
+Colorbar(fig_can[2, 2], hm_PO4; flipaxis = false)
 
-ax_POP = Axis(fig_can[1, 3]; xlabel = "x (m)", ylabel = "z (m)", title = "[POP] (μM)", aspect = 1)
-hm_POP = heatmap!(ax_POP, xw, zw, POP_final; colorrange = (0,0.5),colormap = :matter) 
-Colorbar(fig_can[1, 4], hm_POP; flipaxis = false)
+ax_POP = Axis(fig_can[2, 3]; xlabel = "x (m)", ylabel = "z (m)", title = "[POP] (μM)", aspect = 1)
+hm_POP = heatmap!(ax_POP, xw, zw, POP_final; colorrange = (0,1),colormap = :matter) 
+Colorbar(fig_can[2, 4], hm_POP; flipaxis = false)
 
-ax_DOP = Axis(fig_can[1, 5]; xlabel = "x (m)", ylabel = "z (m)", title = "[DOP] (μM)", aspect = 1)
-hm_DOP = heatmap!(ax_DOP, xw, zw, DOP_final; colorrange = (0,0.5),colormap = :matter) 
-Colorbar(fig_can[1, 6], hm_DOP; flipaxis = false)
+ax_DOP = Axis(fig_can[2, 5]; xlabel = "x (m)", ylabel = "z (m)", title = "[DOP] (μM)", aspect = 1)
+hm_DOP = heatmap!(ax_DOP, xw, zw, DOP_final; colorrange = (0,1),colormap = :matter) 
+Colorbar(fig_can[2, 6], hm_DOP; flipaxis = false)
 
-ax_NO3 = Axis(fig_can[1, 1]; xlabel = "x (m)", ylabel = "z (m)", title = "[NO₃] (μM)", aspect = 1)
-hm_NO3 = heatmap!(ax_NO3, xw, zw, NO3_final; colorrange = (0,30), colormap = :matter) 
-Colorbar(fig_can[1, 2], hm_NO3; flipaxis = false)
+ax_NO3 = Axis(fig_can[3, 1]; xlabel = "x (m)", ylabel = "z (m)", title = "[NO₃] (μM)", aspect = 1)
+hm_NO3 = heatmap!(ax_NO3, xw, zw, NO3_final; colorrange = (0,50), colormap = :matter) 
+Colorbar(fig_can[3, 2], hm_NO3; flipaxis = false)
 
-ax_Fe = Axis(fig_can[2, 3]; xlabel = "x (m)", ylabel = "z (m)", title = "[Fe] (nM)", aspect = 1)
-hm_Fe = heatmap!(ax_Fe, xw, zw, Fe_final; colorrange = (0,2), colormap = :matter) 
-Colorbar(fig_can[2, 4], hm_Fe; flipaxis = false)
+ax_Fe = Axis(fig_can[3, 3]; xlabel = "x (m)", ylabel = "z (m)", title = "[Fe] (nM)", aspect = 1)
+hm_Fe = heatmap!(ax_Fe, xw, zw, Fe_final; colorrange = (0,5), colormap = :matter) 
+Colorbar(fig_can[3, 4], hm_Fe; flipaxis = false)
 
-ax_DIC = Axis(fig_can[3, 1]; xlabel = "x (m)", ylabel = "z (m)", title = "[DIC] (μM)", aspect = 1)
-hm_DIC = heatmap!(ax_DIC, xw, zw, DIC_final; colorrange = (1600,2000), colormap = :matter) 
-Colorbar(fig_can[3, 2], hm_DIC; flipaxis = false)
+ax_DIC = Axis(fig_can[4, 1]; xlabel = "x (m)", ylabel = "z (m)", title = "[DIC] (μM)", aspect = 1)
+hm_DIC = heatmap!(ax_DIC, xw, zw, DIC_final; colorrange = (2100,2400), colormap = :matter) 
+Colorbar(fig_can[4, 2], hm_DIC; flipaxis = false)
 
-ax_ALK = Axis(fig_can[3, 3]; xlabel = "x (m)", ylabel = "z (m)", title = "[ALK] (μM)", aspect = 1)
-hm_ALK = heatmap!(ax_ALK, xw, zw, ALK_final; colorrange = (2400,2450), colormap = :matter) 
-Colorbar(fig_can[3, 4], hm_ALK; flipaxis = false)
+ax_ALK = Axis(fig_can[4, 3]; xlabel = "x (m)", ylabel = "z (m)", title = "[ALK] (μM)", aspect = 1)
+hm_ALK = heatmap!(ax_ALK, xw, zw, ALK_final; colorrange = (2300,2500), colormap = :matter) 
+Colorbar(fig_can[4, 4], hm_ALK; flipaxis = false)
 
 display(fig_can)
 =#
 ################################## Plot prod/remin rates ##################################
 #=
 z_matrix = repeat(zi, 1, 100)
-μᵖ= 0.002 # /day
+μᵖ= 0.01 # /day
 kᴵ=10
 kᴾ=1e-7*1024.5 * 1e3 # unit conversion 1e3
 kᴺ=1.6e-6*1024.5 * 1e3 # unit conversion 1e3
@@ -246,21 +255,21 @@ f_lim = (F ./ (F .+ kᶠ))
 NCP_final = max.(0, μᵖ .* light_lim .* min.(p_lim, n_lim, f_lim))
    
 z₀ = log(0.01)*25 
-Remin_final = -0.84 .* 10 ./(z_matrix' .+ z₀) .* POP_final
-# Remin_final = 0.012 .* POP_final
+# Remin_final = -0.84 .* 10 ./(z_matrix' .+ z₀) .* POP_final
+Remin_final = 0.012 .* POP_final
 
-fig_rate = Figure(size = (800, 1000))
+fig_rate = Figure(size = (1200, 1200))
 
 ax_NCP = Axis(fig_rate[1, 1]; xlabel = "x (m)", ylabel = "z (m)",title = "NCP (mmol m⁻³ d⁻¹)", aspect = 1)
-hm_NCP = heatmap!(ax_NCP, xw, zw, 1000*NCP_final; colorrange = (0,0.3),colormap = :matter) 
+hm_NCP = heatmap!(ax_NCP, xw, zw, 1000*NCP_final; colorrange = (0,0.5),colormap = :matter) 
 Colorbar(fig_rate[1, 2], hm_NCP; flipaxis = false)
 
 ax_remin = Axis(fig_rate[1, 3]; xlabel = "x (m)", ylabel = "z (m)",title = "Remin (mmol m⁻³ d⁻¹)", aspect = 1)
-hm_remin = heatmap!(ax_remin, xw, zw, 1000*Remin_final; colorrange = (0,4),colormap = :matter) 
+hm_remin = heatmap!(ax_remin, xw, zw, 1000*Remin_final; colorrange = (0,3),colormap = :matter) 
 Colorbar(fig_rate[1, 4], hm_remin; flipaxis = false)
 
 ax_logNCP = Axis(fig_rate[2, 1]; xlabel = "x (m)", ylabel = "z (m)",title = "Log(NCP) (mmol m⁻³ d⁻¹)", aspect = 1)
-hm_logNCP = heatmap!(ax_logNCP, xw, zw[170:200], log.(abs.(1000*NCP_final[:,170:200])); colorrange = (-4,1),colormap = :matter) 
+hm_logNCP = heatmap!(ax_logNCP, xw, zw[170:200], log.(abs.(1000*NCP_final[:,170:200])); colorrange = (-5,2),colormap = :matter) 
 Colorbar(fig_rate[2, 2], hm_logNCP; flipaxis = false)
 
 ax_logremin = Axis(fig_rate[2, 3]; xlabel = "x (m)", ylabel = "z (m)",title = "Log(Remin) (mmol m⁻³ d⁻¹)", aspect = 1)
@@ -269,12 +278,12 @@ Colorbar(fig_rate[2, 4], hm_logremin; flipaxis = false)
 
 avg_NCP = mean(1000*NCP_final; dims = 1)
 ax_avg_NCP = Axis(fig_rate[3, 1:2]; xlabel = "Rate (mmol m⁻³ d⁻¹)", ylabel = "z (m)", title = "Ave. NCP", yaxisposition = :right)
-xlims!(ax_avg_NCP, -0.001, 0.1)
+xlims!(ax_avg_NCP, -0.001, 0.3)
 lines!(ax_avg_NCP, vec(avg_NCP),zi)
 
 avg_R = mean(1000*Remin_final; dims = 1)
 ax_avg_R = Axis(fig_rate[3, 3:4]; xlabel = "Rate (mmol m⁻³ d⁻¹)", ylabel = "z (m)", title = "Ave. Remin", yaxisposition = :right)
-xlims!(ax_avg_R, 0, 3)
+xlims!(ax_avg_R, 0, 3.5)
 lines!(ax_avg_R, vec(avg_R),zi)
 display(fig_rate)
 
@@ -301,11 +310,11 @@ display(fig_lim)
 
 # compare to Martin curve
 Remin_flux = vec(mean(10 .* POP_final; dims = 1))
-Martin_flux = Remin_flux[180]*((zi[180]+z₀)./(zi.+z₀)).^0.84
+Martin_flux = Remin_flux[177]*((zi[177]+z₀)./(zi.+z₀)).^0.84
 
 fig_flux = Figure(size = (500, 500))
 ax_flux = Axis(fig_flux[1, 1]; xlabel = "POP flux (mmol m⁻² d⁻¹)", ylabel = "z (m)", title = "Flux comparison", yaxisposition = :right)
-xlims!(ax_flux, 0, 1.5)
+xlims!(ax_flux, 0, 4)
 lines!(ax_flux, Remin_flux, zi, label = "Model")
 lines!(ax_flux, Martin_flux, zi, label = "Martin curve")
 axislegend(ax_flux, position = :rb)

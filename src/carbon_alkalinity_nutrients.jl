@@ -34,7 +34,7 @@ struct CarbonAlkalinityNutrients{FT, W} <: AbstractBiogeochemistry
     stoichoimetric_ratio_silicate_to_phosphate    :: FT
     rain_ratio_inorganic_to_organic_carbon        :: FT 
     option_of_particulate_remin                   :: FT 
-    particulate_organic_phosphate_remin_timescale :: FT
+    particulate_organic_phosphorus_remin_timescale :: FT
     iron_scavenging_rate                          :: FT # s⁻¹
     ligand_concentration                          :: FT # mol L m⁻³
     ligand_stability_coefficient                  :: FT
@@ -64,6 +64,7 @@ end
                                 stoichoimetric_ratio_silicate_to_phosphate    = 15.0,
                                 rain_ratio_inorganic_to_organic_carbon        = 1e-1,
                                 option_of_particulate_remin                   = 1, 
+                                particulate_organic_phosphorus_remin_timescale = 0.03/day,
                                 iron_scavenging_rate                          = 5e-4 / day,
                                 ligand_concentration                          = 1e-9 * reference_density,
                                 ligand_stability_coefficient                  = 1e8,
@@ -120,7 +121,7 @@ function CarbonAlkalinityNutrients(; grid,
                                    stoichoimetric_ratio_silicate_to_phosphate   = 15.0,
                                    rain_ratio_inorganic_to_organic_carbon       = 1e-1,
                                    option_of_particulate_remin                  = 1, # r decrease with depth = 1; "power law" function = 2
-                                   particulate_organic_phosphate_remin_timescale= 0.03 / day, 
+                                   particulate_organic_phosphorus_remin_timescale= 0.03 / day, 
                                    iron_scavenging_rate                         = 5e-4/days, # s⁻¹
                                    ligand_concentration                         = 1e-9 * reference_density, # mol L m⁻³
                                    ligand_stability_coefficient                 = 1e8,
@@ -131,7 +132,8 @@ function CarbonAlkalinityNutrients(; grid,
             w₀ = particulate_organic_phosphorus_sinking_velocity
             no_penetration = ImpenetrableBoundaryCondition()
             bcs = FieldBoundaryConditions(grid, (Center, Center, Face),
-                                        top=no_penetration, bottom=no_penetration)
+                                        top=no_penetration, 
+                                        bottom=no_penetration)
 
             particulate_organic_phosphorus_sinking_velocity = ZFaceField(grid, boundary_conditions = bcs)
 
@@ -163,7 +165,7 @@ function CarbonAlkalinityNutrients(; grid,
                                      convert(FT, stoichoimetric_ratio_silicate_to_phosphate),
                                      convert(FT, rain_ratio_inorganic_to_organic_carbon),
                                      convert(FT, option_of_particulate_remin),
-                                     convert(FT, particulate_organic_phosphate_remin_timescale), 
+                                     convert(FT, particulate_organic_phosphorus_remin_timescale), 
                                      convert(FT, iron_scavenging_rate),
                                      convert(FT, ligand_concentration),
                                      convert(FT, ligand_stability_coefficient),
@@ -196,7 +198,7 @@ Adapt.adapt_structure(to, bgc::CarbonAlkalinityNutrients) =
                             adapt(to, bgc.stoichoimetric_ratio_silicate_to_phosphate),
                             adapt(to, bgc.rain_ratio_inorganic_to_organic_carbon),
                             adapt(to, bgc.option_of_particulate_remin),
-                            adapt(to, bgc.particulate_organic_phosphate_remin_timescale), 
+                            adapt(to, bgc.particulate_organic_phosphorus_remin_timescale), 
                             adapt(to, bgc.iron_scavenging_rate),
                             adapt(to, bgc.ligand_concentration),
                             adapt(to, bgc.ligand_stability_coefficient),
@@ -215,7 +217,7 @@ Add a vertical sinking "drift velocity" for the particulate organic phosphorus (
     return (; u, v, w)
 end
 
-adapt_structure(to, velocities::NamedTuple{(:u, :v, :w), Tuple{AbstractField, AbstractField, AbstractField}}) = NamedTuple{(:u, :v, :w)}(adapt.(to, values(velocities)))
+# adapt_structure(to, velocities::NamedTuple{(:u, :v, :w), Tuple{AbstractField, AbstractField, AbstractField}}) = NamedTuple{(:u, :v, :w)}(adapt.(to, values(velocities)))
 
 """
     PAR(surface_photosynthetically_active_ratiation, 
@@ -265,11 +267,17 @@ end
         N =nitrate_concentration
         F =iron_concentration
 
+        # First, adjust the concentrations to be non-zero
+        I_nonzero = max(0, I)
+        P_nonzero = max(0, P)
+        N_nonzero = max(0, N)
+        F_nonzero = max(0, F)
+
         # calculate the limitation terms
-        Lₗᵢₘ = I / (I + kᴵ)
-        Pₗᵢₘ = P / (P + kᴾ)
-        Nₗᵢₘ = N / (N + kᴺ)
-        Fₗᵢₘ = F / (F + kᶠ)
+        Lₗᵢₘ = I_nonzero / (I_nonzero + kᴵ)
+        Pₗᵢₘ = P_nonzero / (P_nonzero + kᴾ)
+        Nₗᵢₘ = N_nonzero / (N_nonzero + kᴺ)
+        Fₗᵢₘ = F_nonzero / (F_nonzero + kᶠ)
 
         # return the net community production
         return max(0,
@@ -293,7 +301,7 @@ or 2) a first-order rate constant .
 """
 # @inline particulate_organic_phosphorus_remin(r, POP) = max(0, r * POP) # to avoid potential negative flux
 @inline function particulate_organic_phosphorus_remin(option_of_particulate_remin,
-                                                    particulate_organic_phosphate_remin_timescale, 
+                                                    particulate_organic_phosphorus_remin_timescale, 
                                                     martin_curve_exponent,
                                                     particulate_organic_phosphorus_sinking_velocity,
                                                     PAR_attenuation_scale,
@@ -301,7 +309,7 @@ or 2) a first-order rate constant .
                                                     particulate_organic_phosphorus_concentration)
 
         Rᵣ = option_of_particulate_remin                                  
-        r = particulate_organic_phosphate_remin_timescale
+        r = particulate_organic_phosphorus_remin_timescale
         b = martin_curve_exponent    
         wₛ = particulate_organic_phosphorus_sinking_velocity
         λ = PAR_attenuation_scale
@@ -392,7 +400,7 @@ Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
     λ = bgc.PAR_attenuation_scale
     fᵢ= bgc.PAR_percent
     γ = bgc.dissolved_organic_phosphorus_remin_timescale
-    r = bgc.particulate_organic_phosphate_remin_timescale
+    r = bgc.particulate_organic_phosphorus_remin_timescale
     α = bgc.fraction_of_particulate_export
     Rᶜᴾ = bgc.stoichoimetric_ratio_carbon_to_phosphate       
     Rᶜᵃᶜᵒ³ = bgc.rain_ratio_inorganic_to_organic_carbon 
@@ -429,7 +437,7 @@ Tracer sources and sinks for Alkalinity (ALK)
     kᴵ = bgc.PAR_half_saturation
     λ = bgc.PAR_attenuation_scale
     fᵢ= bgc.PAR_percent
-    r = bgc.particulate_organic_phosphate_remin_timescale
+    r = bgc.particulate_organic_phosphorus_remin_timescale
     γ = bgc.dissolved_organic_phosphorus_remin_timescale
     α = bgc.fraction_of_particulate_export  
     Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
@@ -467,7 +475,7 @@ Tracer sources and sinks for inorganic/dissolved Nitrate (NO₃).
     kᴵ = bgc.PAR_half_saturation
     λ = bgc.PAR_attenuation_scale
     fᵢ= bgc.PAR_percent
-    r = bgc.particulate_organic_phosphate_remin_timescale
+    r = bgc.particulate_organic_phosphorus_remin_timescale
     γ = bgc.dissolved_organic_phosphorus_remin_timescale 
     Rᴺᴾ = bgc.stoichoimetric_ratio_nitrate_to_phosphate  
     b = bgc.martin_curve_exponent    
@@ -503,7 +511,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     kᴵ = bgc.PAR_half_saturation
     λ = bgc.PAR_attenuation_scale
     fᵢ= bgc.PAR_percent
-    r = bgc.particulate_organic_phosphate_remin_timescale
+    r = bgc.particulate_organic_phosphorus_remin_timescale
     γ = bgc.dissolved_organic_phosphorus_remin_timescale      
     Rᶠᴾ = bgc.stoichoimetric_ratio_phosphate_to_iron
     Lₜ     = bgc.ligand_concentration
@@ -544,7 +552,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     kᴵ = bgc.PAR_half_saturation
     λ = bgc.PAR_attenuation_scale
     fᵢ= bgc.PAR_percent
-    r = bgc.particulate_organic_phosphate_remin_timescale
+    r = bgc.particulate_organic_phosphorus_remin_timescale
     γ = bgc.dissolved_organic_phosphorus_remin_timescale 
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
@@ -605,7 +613,7 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
     kᴵ = bgc.PAR_half_saturation
     λ = bgc.PAR_attenuation_scale
     fᵢ= bgc.PAR_percent
-    r = bgc.particulate_organic_phosphate_remin_timescale
+    r = bgc.particulate_organic_phosphorus_remin_timescale
     α = bgc.fraction_of_particulate_export     
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
