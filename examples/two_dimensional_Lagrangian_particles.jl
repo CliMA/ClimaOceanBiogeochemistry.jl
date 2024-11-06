@@ -1,6 +1,7 @@
 # # test a 2D physical setting with Lagrangian particles
 
-using GLMakie
+# using GLMakie
+using CUDA
 using Printf
 using Statistics
 
@@ -16,7 +17,8 @@ Lx = 1000kilometers   # m
 Lz = 2000           # m
 
 # We use a two-dimensional grid, with a `Flat` `y`-direction:
-grid = RectilinearGrid(size = (Nx, Nz),
+grid = RectilinearGrid(GPU(),
+                       size = (Nx, Nz),
                        x = (0, Lx),
                        z = (-Lz, 0),
                        topology=(Bounded, Flat, Bounded))
@@ -24,25 +26,25 @@ grid = RectilinearGrid(size = (Nx, Nz),
 #################################### Boundary conditions ####################################
 
 # Wind stress boundary condition
-# τ₀ = 1e-5           # m² s⁻²
-@inline function τy(x, t, p)
-    return 0.0125/1e3 * (sinpi(x/p.Lx/0.8-0.5)+1)*(-tanh(x/p.Lx*pi/0.1-9*pi)+1)
+τ₀ = 2e-4           # m² s⁻²
+function τy(x, t, p)
+    xfrac = x / p.Lx
+    return xfrac < 0.8 ?  p.τ₀ * sinpi(xfrac / 1.6) :  p.τ₀ * sinpi((1 - xfrac) / 0.4)
 end
-
-y_wind_stress = FluxBoundaryCondition(τy, parameters=(; Lx)) #τ₀,
+y_wind_stress = FluxBoundaryCondition(τy, parameters=(; τ₀=τ₀, Lx=Lx)) 
 v_bcs = FieldBoundaryConditions(top=y_wind_stress)
 
 #################################### Model ####################################
 
-background_diffusivity = ScalarDiffusivity(ν=1e-4, κ=1e-4)
-catke = CATKEVerticalDiffusivity()
-# horizontal_closure = HorizontalScalarDiffusivity(ν=1e3, κ=1e3)
+kz(x,z,t) = 5e-3 * (tanh((z+150)/20)+1) + 1e-5
+vertical_closure = VerticalScalarDiffusivity(;ν=1e-4, κ=kz)
+horizontal_closure = HorizontalScalarDiffusivity(ν=1e3, κ=1e3)
 
 # Add Lagrangian Particles
-n_particles = 3
-x₀ = Lx/2 * ones(n_particles) #* collect([0.1,0.5,0.9]) #rand(n_particles)
+n_particles = 5
+x₀ = Lx * rand(n_particles) #Lx/2 * ones(n_particles) #* collect([0.1,0.5,0.9]) #rand(n_particles)
 y₀ = ones(n_particles)
-z₀ = -Lz * collect([0.005, 0.05, 0.1]) #* ones(n_particles)
+z₀ = -Lz * rand(n_particles) #collect([0.005, 0.05, 0.1]) #* ones(n_particles)
 
 # using StructArrays
 # struct LagrangianP{T}
@@ -60,7 +62,7 @@ lagrangian_particles = LagrangianParticles(x=x₀, y=y₀, z=z₀)
 model = HydrostaticFreeSurfaceModel(; grid,
                                     buoyancy = BuoyancyTracer(),
                                     coriolis = FPlane(; f=1e-4),
-                                    closure = (catke, background_diffusivity), #horizontal_closure),
+                                    closure = (vertical_closure, horizontal_closure), 
                                     tracers = (:b, :e),
                                     momentum_advection = WENO(),
                                     particles = lagrangian_particles,
@@ -72,24 +74,26 @@ bᵢ(x, z) = N² * z + M² * x
 
 set!(model, b=bᵢ) 
 
-simulation = Simulation(model; Δt = 30minutes, stop_time=365.25days)
+simulation = Simulation(model; Δt = 5minutes, stop_time=365.25*100days)
 
-# outputs = (u = model.velocities.u,
-#             w = model.velocities.w,
-#             c = model.tracers.c,
-#             h = model.tracers.h,
-#             p = model.particles)
+# We add a `TimeStepWizard` callback to adapt the simulation's time-step,
+wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=30minutes)
+simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(100))
 
-# simulation.output_writers[:simple_output] =
-#     JLD2OutputWriter(model, outputs, 
-#                      schedule = TimeInterval(1days), #30minutes
-#                      filename = "PassiveTracer_2D",
-#                      overwrite_existing = true)
+outputs = (u = model.velocities.u,
+            w = model.velocities.w,
+            p = model.particles)
+
+simulation.output_writers[:simple_output] =
+    JLD2OutputWriter(model, outputs, 
+                     schedule = TimeInterval(7days), 
+                     filename = "particle10_100y",
+                     overwrite_existing = true)
 
 run!(simulation)
 
 ############################ Visualizing the solution ############################
-
+#=
 xp = model.particles.properties.x
 zp = model.particles.properties.z
 
@@ -110,5 +114,5 @@ scatter!(ax_p, xp[3],zp[3], color =:red, markersize = 15, marker =:xcross,label=
 # xlims!(ax_p, 0, Lx)
 axislegend(ax_p, position = :lb)
 display(fig)
-
+=#
 
