@@ -81,7 +81,7 @@ simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(50))
 progress(sim) = @printf("Iteration: %d, time: %s\n", #, total(P): %.2e
                         iteration(sim), prettytime(sim)) 
 
-add_callback!(simulation, progress, IterationInterval(500))
+add_callback!(simulation, progress, IterationInterval(1000))
 
 # outputs = merge(model.velocities, model.tracers)
 outputs = (u = model.velocities.u,
@@ -105,7 +105,7 @@ simulation.output_writers[:simple_output] =
                      overwrite_existing = true)
 
 simulation.output_writers[:checkpointer] = Checkpointer(model,
-                    schedule = TimeInterval(365.25*25days),
+                    schedule = TimeInterval(365.25*50days),
                     prefix = "CAN_2D_Rz12_checkpoint",
                     overwrite_existing = true)
 
@@ -113,8 +113,8 @@ run!(simulation, pickup = false)
 
 ############################ Visualizing the solution ############################
 #=
-filepath = simulation.output_writers[:simple_output].filepath
-# filepath = "./CAN_2D_Rz11.jld2"
+# filepath = simulation.output_writers[:simple_output].filepath
+filepath = "./CAN_2D_Rz12.jld2"
 
 u_timeseries = FieldTimeSeries(filepath, "u")
 w_timeseries = FieldTimeSeries(filepath, "w")
@@ -158,30 +158,30 @@ hm_w = heatmap!(ax_w, xw, zw, wₙ; colorrange = (-2e-3,2e-3), colormap = :balan
 Colorbar(fig[2, 4], hm_w; flipaxis = false)
 
 ax_PO4 = Axis(fig[3, 1]; xlabel = "x (m)", ylabel = "z (m)", title = "[PO₄] (μM)", aspect = 1)
-hm_PO4 = heatmap!(ax_PO4, xw, zw, PO4ₙ; colorrange = (0,2),colormap = :jet1) 
+hm_PO4 = heatmap!(ax_PO4, xw, zw, PO4ₙ; colorrange = (0,2.5),colormap = :jet1) 
 Colorbar(fig[3, 2], hm_PO4; flipaxis = false)
 
 ax_POP = Axis(fig[3, 3]; xlabel = "x (m)", ylabel = "z (m)", title = "[POP] (μM)", aspect = 1)
-hm_POP = heatmap!(ax_POP, xw, zw, POPₙ; colorrange = (0,0.02),colormap = :jet1) 
+hm_POP = heatmap!(ax_POP, xw, zw, POPₙ; colorrange = (0,0.015),colormap = :jet1) 
 Colorbar(fig[3, 4], hm_POP; flipaxis = false)
 
 ax_avg_PO4 = Axis(fig[4, 1:2]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", title = "Average [PO₄] (μM)", yaxisposition = :right)
-xlims!(ax_avg_PO4, 0, 4.5)
+xlims!(ax_avg_PO4, 0, 3)
 lines!(ax_avg_PO4, avg_PO4ₙ, zi)
 
 ax_avg_POP = Axis(fig[4, 3:4]; xlabel = "[POP] (μM)", ylabel = "z (m)", title = "Average [POP] (μM)",yaxisposition = :right)
-xlims!(ax_avg_POP, 0, 0.01)
+xlims!(ax_avg_POP, 0, 0.015)
 lines!(ax_avg_POP, avg_POPₙ, zi)
 
 fig[1, 1:4] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "random_test.mp4", frames, framerate=50) do i
+record(fig, "CAN_2D_Rz12.mp4", frames, framerate=50) do i
     n[] = i
 end
 nothing #hide
-=#
+
 # Only plot the eastern domain
 # n = Observable(1)
 # title = @lift @sprintf("Eastern half of the domain; t = Week %d", times[$n] / 7days) 
@@ -214,7 +214,10 @@ nothing #hide
 # nothing #hide
 
 ################################## Plot all BGC tracers ##################################
-#=
+
+# data = JLD2.load("path/to/yourfile.jld2")
+# ave_POP = data["timeseries/avg_POP/1827"]
+
 PO4_final = 1e3*interior(PO4_timeseries[end], :, 1, :)
 POP_final = 1e3*interior(POP_timeseries[end], :, 1, :)
 DOP_final = 1e3*interior(DOP_timeseries[end], :, 1, :)
@@ -317,7 +320,7 @@ lines!(ax_avg_R, vec(avg_R),zi)
 
 # compare to Martin curve
 Remin_flux = vec(mean(10 .* POP_final; dims = 1))
-Martin_flux = Remin_flux[182]*((zi[182]+z₀)./(zi.+z₀)).^0.84
+Martin_flux = Remin_flux[190]*((zi[190]+z₀)./(zi.+z₀)).^0.84
 
 ax_flux = Axis(fig_rate[3, 3:4]; xlabel = "POP flux (mmol m⁻² d⁻¹)", ylabel = "z (m)", title = "Flux comparison", yaxisposition = :right)
 xlims!(ax_flux, 0, 0.2)
