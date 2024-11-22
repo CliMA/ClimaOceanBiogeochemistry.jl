@@ -16,6 +16,7 @@ Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 RootSolvers = "7181ea78-2dcb-4de3-ab41-2b8ab5a31e74"
 StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
+Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 UpdateJulia = "770da0de-323d-4d28-9202-0e205c1e0aff"
 XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 

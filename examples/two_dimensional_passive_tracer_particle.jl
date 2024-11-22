@@ -27,7 +27,7 @@ grid = RectilinearGrid(#GPU(),
 #################################### Boundary conditions ####################################
 
 # Wind stress boundary condition
-τ₀ = 2e-4           # m² s⁻² = x 1e3 N m⁻²
+τ₀ = 1e-3           # m² s⁻² = x 1e3 N m⁻²
 # @inline τy(x, t, p) = p.τ₀ * sinpi(0.5*(x/p.Lx+0.2))# * x/p.Lx
 function τy(x, t, p)
     xfrac = x / p.Lx
@@ -46,16 +46,16 @@ v_bcs = FieldBoundaryConditions(top=y_wind_stress)
 # mixing_length = CATKEMixingLength(Cᵇ = 0.001)
 # catke = CATKEVerticalDiffusivity(; mixing_length, tke_time_step = 10minutes)
 
-kz(x,z,t) = 5e-3 * (tanh((z+150)/20)+1) + 1e-5
-vertical_closure = VerticalScalarDiffusivity(;ν=1e-4, κ=kz)
-horizontal_closure = HorizontalScalarDiffusivity(κ=1, ν=1e3)
+kz(x,z,t) = 1e-5 + 5e-3 * (tanh((z+75)/10)+1) + 1e-3 * exp(-(z+2000)/50)
+vertical_closure = VerticalScalarDiffusivity(;ν=kz, κ=kz)
+horizontal_closure = HorizontalScalarDiffusivity(ν=1e4, κ=1e4)
 
 # Add Lagrangian Particles
-n_particles = 10
-x₀ = Lx * rand(n_particles) #Lx/2 * ones(n_particles) #* collect([0.1,0.5,0.9]) #rand(n_particles)
-y₀ = ones(n_particles)
-z₀ = -Lz * rand(n_particles) 
-lagrangian_particles = LagrangianParticles(x=x₀, y=y₀, z=z₀) 
+# n_particles = 10
+# x₀ = Lx * rand(n_particles) #Lx/2 * ones(n_particles) #* collect([0.1,0.5,0.9]) #rand(n_particles)
+# y₀ = ones(n_particles)
+# z₀ = -Lz * rand(n_particles) 
+# lagrangian_particles = LagrangianParticles(x=x₀, y=y₀, z=z₀) 
 
 # Model
 model = HydrostaticFreeSurfaceModel(; grid,
@@ -65,7 +65,7 @@ model = HydrostaticFreeSurfaceModel(; grid,
                                     tracers = (:b, :e, :T1, :T2),
                                     momentum_advection = WENO(),
                                     tracer_advection = WENO(),
-                                    particles = lagrangian_particles,
+                                    # particles = lagrangian_particles,
                                     boundary_conditions = (; v=v_bcs))
 
 M² = 0         # 1e-7 s⁻², squared buoyancy frequency
@@ -77,16 +77,16 @@ bᵢ(x, z) = N² * z + M² * x
 # T2ᵢ(x, z) =  floor(Int, x / 200kilometers) % 2
 
 T1ᵢ = zeros(Nx, 1, Nz)
-T1ᵢ[90:100, 1, 170:180] .= 1
+T1ᵢ[75:85, 1, 1:10] .= 1
 
 T2ᵢ = zeros(Nx, 1, Nz)
-T2ᵢ[45:55, 1, 100:110] .= 1
+T2ᵢ[75:85, 1, 90:100] .= 1
 
 set!(model, b=bᵢ, T1 = T1ᵢ, T2 = T2ᵢ) 
 
-simulation = Simulation(model; Δt = 5minutes, stop_time=100days)
+simulation = Simulation(model; Δt = 10seconds, stop_time=365.25*5days)
 wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=30minutes)
-simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(100))
+simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(50))
 
 progress(sim) = @printf("Iteration: %d, time: %s\n", 
                         iteration(sim), prettytime(sim)) 
@@ -95,13 +95,13 @@ add_callback!(simulation, progress, IterationInterval(1000))
 outputs = (u = model.velocities.u,
             w = model.velocities.w,
             T1 = model.tracers.T1,
-            T2 = model.tracers.T2,
-            p = model.particles)
+            T2 = model.tracers.T2)
+            # p = model.particles)
 
 simulation.output_writers[:simple_output] =
     JLD2OutputWriter(model, outputs, 
-                     schedule = TimeInterval(1days), 
-                     filename = "passiveTP_100d",
+                     schedule = TimeInterval(10days), 
+                     filename = "passiveT_ty1_5y",
                      overwrite_existing = true)
 
 run!(simulation)
@@ -109,7 +109,7 @@ run!(simulation)
 ############################ Visualizing the solution ############################
 
 # filepath = simulation.output_writers[:simple_output].filepath
-filepath = "./passiveTP_50y.jld2"
+filepath = "./passiveT_ty02_20y_btm1e2diff.jld2"
 
 # TODO: How to record a video of particle movement
 # using JLD2
@@ -126,43 +126,43 @@ xt, yt, zt = nodes(T1_timeseries)
 T2_timeseries = FieldTimeSeries(filepath, "T2")
 
 n = Observable(1)
-title = @lift @sprintf("t = Week %d", times[$n] / 7days) 
+title = @lift @sprintf("t = Day %d0", times[$n] / 10days) 
 
 uₙ = @lift 100*interior(u_timeseries[$n], :, 1, :)
 wₙ = @lift 100*interior(w_timeseries[$n], :, 1, :)
 T1ₙ = @lift interior(T1_timeseries[$n], :, 1, :)
 T2ₙ = @lift interior(T2_timeseries[$n], :, 1, :)
 
-fig = Figure(size = (1200, 1300))
+fig = Figure(size = (1200, 1200))
 
-ax_wind = Axis(fig[2, 3]; xlabel = "x (m)", ylabel = "τy (N m⁻²)", aspect = 1)
-function y_wind(x,Lx)
-    xfrac = x / Lx
-    return xfrac < 0.8 ?  τ₀ * sinpi(xfrac / 1.6) :  τ₀ * sinpi((1 - xfrac) / 0.4)
-end
-lines!(ax_wind, xw, 1000 .* τ₀ .* y_wind.(xw,Lx))
+# ax_wind = Axis(fig[2, 3]; xlabel = "x (m)", ylabel = "τy (N m⁻²)", aspect = 1)
+# function y_wind(x,Lx)
+#     xfrac = x / Lx
+#     return xfrac < 0.8 ?  τ₀ * sinpi(xfrac / 1.6) :  τ₀ * sinpi((1 - xfrac) / 0.4)
+# end
+# lines!(ax_wind, xw, 1000 .* τ₀ .* y_wind.(xw,Lx))
 
-ax_u = Axis(fig[3, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
+ax_u = Axis(fig[2, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
 hm_u = heatmap!(ax_u, xw, zw, uₙ; colorrange = (-0.5, 0.5), colormap = :balance) 
-Colorbar(fig[3, 2], hm_u; label = "u (cm/s)", flipaxis = false)
+Colorbar(fig[2, 2], hm_u; label = "u (cm/s)", flipaxis = false)
 
-ax_w = Axis(fig[3, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
+ax_w = Axis(fig[2, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
 hm_w = heatmap!(ax_w, xw, zw, wₙ; colorrange = (-2e-3,2e-3), colormap = :balance) 
-Colorbar(fig[3, 4], hm_w; label = "w (cm/s)", flipaxis = false)
+Colorbar(fig[2, 4], hm_w; label = "w (cm/s)", flipaxis = false)
 
-ax_T1 = Axis(fig[4, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_T1 = heatmap!(ax_T1, xt, zt, T1ₙ; colorrange = (0,0.25), colormap = :rainbow1) 
-Colorbar(fig[4, 4], hm_T1; label = "Passive tracer 1", flipaxis = false)
+ax_T1 = Axis(fig[3, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
+hm_T1 = heatmap!(ax_T1, xt, zt, T1ₙ; colorrange = (0,0.05), colormap = :rainbow1) 
+Colorbar(fig[3, 2], hm_T1; label = "Passive tracer 1", flipaxis = false)
 
-ax_T2 = Axis(fig[4, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_T2 = heatmap!(ax_T2, xt, zt, T2ₙ; colorrange = (0,0.25), colormap = :rainbow1) 
-Colorbar(fig[4, 2], hm_T2; label = "Passive tracer 2", flipaxis = false)
+ax_T2 = Axis(fig[3, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
+hm_T2 = heatmap!(ax_T2, xt, zt, T2ₙ; colorrange = (0,0.05), colormap = :rainbow1) 
+Colorbar(fig[3, 4], hm_T2; label = "Passive tracer 2", flipaxis = false)
 
 fig[1, 1:4] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "passiveTP_50y.mp4", frames, framerate=75) do i
+record(fig, "passiveT_ty02_20y_btm1e2diff.mp4", frames, framerate=80) do i
     n[] = i
 end
 nothing #hide
