@@ -10,14 +10,15 @@ using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonChemistryCoefficients
 using Oceananigans
 using Oceananigans.Units
 using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
- 
+# using CUDA
+
 using Printf
 using CairoMakie
 
 # ## A single column grid
 #
 # We set up a single column grid with 4 m grid spacing that's 256 m deep:
-grid = RectilinearGrid(
+grid = RectilinearGrid(#GPU(),
     size = 512,
     z = (-4096, 0),
     topology = (
@@ -167,11 +168,10 @@ end
 # We adjust some of the parameters of the model to make the simulation more interesting.
 model = HydrostaticFreeSurfaceModel(; 
     grid,
-    biogeochemistry     = CarbonAlkalinityNutrients(; 
-                            grid,
+    biogeochemistry     = CarbonAlkalinityNutrients(; grid,
                             maximum_net_community_production_rate = 1/365.25day,
-                            PAR_attenuation_scale = 100,
-                            particulate_organic_phosphate_sinking_speed = -100 / day,
+                            PAR_attenuation_scale = 100.,
+                            particulate_organic_phosphorus_sinking_velocity = -10 / day,
                             ),
     closure             = ScalarDiffusivity(κ=1e-4),   
     tracers             = (
@@ -375,8 +375,8 @@ axP = Axis(
 
 xlims!(axb, 7, 21)
 xlims!(axC, 1.8, 2.6)
-xlims!(axN, -5, 45)
-xlims!(axD, -50, 2050)
+xlims!(axN, -5, 75)
+xlims!(axD, -50, 250)
 xlims!(axF, -1, 1+simulation.stop_time/days)
 xlims!(axP, -1, 1+simulation.stop_time/days)
 ylims!(axF, -8, 2)

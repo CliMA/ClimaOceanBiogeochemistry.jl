@@ -305,7 +305,7 @@ set!(model,
 
 # Now let's built a `Simulation`.
 Δt₀ = 1minute
-stop_time = 120days
+stop_time = 12days
 
 simulation = Simulation(
     model, 
@@ -836,7 +836,7 @@ sfF = surface!(axF,
 contour!(axT, y, z, avg_T; 
          transformation = (:yz, zonal_slice_displacement * x[end]),
          levels = 15, 
-         limits = climT,
+         colorrange = climT,
          linewidth = 1, 
          color = :white,
          )
@@ -844,7 +844,7 @@ contour!(axT, y, z, avg_T;
 contour!(axS, y, z, avg_S; 
          transformation = (:yz, zonal_slice_displacement * x[end]),
          levels = 15, 
-         limits = climS,
+         colorrange = climS,
          linewidth = 1, 
          color = :white,
          )
@@ -852,7 +852,7 @@ contour!(axS, y, z, avg_S;
 contour!(axP, y, z, avg_P;
             transformation = (:yz, zonal_slice_displacement * x[end]),
             levels = 15, 
-            limits = climP,
+            colorrange = climP,
             linewidth = 1, 
             color = :white,
             )
@@ -860,7 +860,7 @@ contour!(axP, y, z, avg_P;
 contour!(axN, y, z, avg_N;
             transformation = (:yz, zonal_slice_displacement * x[end]),
             levels = 15, 
-            limits = climN,
+            colorrange = climN,
             linewidth = 1, 
             color = :white,
             )
@@ -868,7 +868,7 @@ contour!(axN, y, z, avg_N;
 contour!(axF, y, z, avg_F;
             transformation = (:yz, zonal_slice_displacement * x[end]),
             levels = 15, 
-            limits = climF,
+            colorrange = climF,
             linewidth = 1, 
             color = :white,
             )
