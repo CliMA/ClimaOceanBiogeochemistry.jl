@@ -188,7 +188,7 @@ Adapt.adapt_structure(to, bgc::CarbonAlkalinityNutrients) =
                             adapt(to, bgc.iron_scavenging_rate),
                             adapt(to, bgc.ligand_concentration),
                             adapt(to, bgc.ligand_stability_coefficient),
-                            particulate_organic_phosphorus_sinking_velocity,
+                            adapt(to, bgc.particulate_organic_phosphorus_sinking_velocity),
                             )
 
 const CAN = CarbonAlkalinityNutrients
