@@ -20,7 +20,7 @@ using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonChemistryCoefficients
 
 using Adapt
 using KernelAbstractions: @kernel, @index
-using Oceananigans.Utils: launch!
+using Oceananigans.Utils: KernelParameters, launch!
 using Printf
 using CairoMakie
 
@@ -56,7 +56,7 @@ dic_bcs  = FieldBoundaryConditions(
 ## These are filled in compute_CO₂_flux!
 ocean_CO₂ = Field{Center, Center, Nothing}(grid)
 atmos_CO₂ = Field{Center, Center, Nothing}(grid)
-pH        = Field{Center, Center, Nothing}(grid)
+pH        = Field{Center, Center, Center}(grid)
 set!(pH, 8.0)
 
 cmhr⁻¹_per_ms⁻¹ = 1 / 3.6e5 # conversion factor from cm/hr to m/s
@@ -78,7 +78,9 @@ Base.@kwdef struct CO₂_flux_parameters
     schmidt_dic_coeff5   = 660.0
 end
 
-adapt_structure( to, cp::CO₂_flux_parameters) = CO₂_flux_parameters(
+adapt_structure( 
+    to, cp::CO₂_flux_parameters
+    ) = CO₂_flux_parameters(
            adapt(to, cp.surface_wind_speed),
            adapt(to, cp.applied_pressure),
            adapt(to, cp.atmospheric_pCO₂),
@@ -89,8 +91,8 @@ adapt_structure( to, cp::CO₂_flux_parameters) = CO₂_flux_parameters(
            adapt(to, cp.schmidt_dic_coeff0),
            adapt(to, cp.schmidt_dic_coeff1),
            adapt(to, cp.schmidt_dic_coeff2),
-	   adapt(to, cp.schmidt_dic_coeff3),
-	   adapt(to, cp.schmidt_dic_coeff4),
+	       adapt(to, cp.schmidt_dic_coeff3),
+	       adapt(to, cp.schmidt_dic_coeff4),
            adapt(to, cp.schmidt_dic_coeff5),
 )
 
@@ -127,14 +129,14 @@ Compute the Schmidt number for dissolved inorganic carbon (DIC) based on the tem
     schmidt_dic_coeff4,
     schmidt_dic_coeff5,
     )
-    i, j = @index(Global, NTuple)
+    i, j, k = @index(Global, NTuple)
     
     schmidt_number_dic[i, j] =  ( 
          schmidt_dic_coeff0 - 
-         schmidt_dic_coeff1 * temperature[i, j, 1] + 
-         schmidt_dic_coeff2 * temperature[i, j, 1]^2 - 
-         schmidt_dic_coeff3 * temperature[i, j, 1]^3 + 
-         schmidt_dic_coeff4 * temperature[i, j, 1]^4 
+         schmidt_dic_coeff1 * temperature[i, j, k] + 
+         schmidt_dic_coeff2 * temperature[i, j, k]^2 - 
+         schmidt_dic_coeff3 * temperature[i, j, k]^3 + 
+         schmidt_dic_coeff4 * temperature[i, j, k]^4 
     ) / schmidt_dic_coeff5
 end
 
@@ -172,25 +174,25 @@ end
     oceanic_CO₂_solubility,
     Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ
     )
-    i, j = @index(Global, NTuple)
+    i, j, k = @index(Global, NTuple)
 
     ## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
     CarbonSolved = UniversalRobustCarbonSystem(
-                        Θᶜ[i, j, 1], 
-                        Sᴬ[i, j, 1], 
+                        Θᶜ[i, j, k], 
+                        Sᴬ[i, j, k], 
                         Δpᵦₐᵣ[i, j], 
-                        Cᵀ[i, j, 1]/reference_density, 
-                        Aᵀ[i, j, 1]/reference_density, 
-                        Pᵀ[i, j, 1]/reference_density, 
-                        Siᵀ[i, j, 1]/reference_density, 
-                        pH[i, j], 
+                        Cᵀ[i, j, k]/reference_density, 
+                        Aᵀ[i, j, k]/reference_density, 
+                        Pᵀ[i, j, k]/reference_density, 
+                        Siᵀ[i, j, k]/reference_density, 
+                        pH[i, j, k], 
                         pCO₂ᵃᵗᵐ[i, j]
     )
 
     ocean_pCO₂[i, j]                  = CarbonSolved.pCO₂ᵒᶜᵉ
     atmospheric_CO₂_solubility[i, j]  = CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ
     oceanic_CO₂_solubility[i, j]      = CarbonSolved.Pᵈⁱᶜₖₛₒₗₒ
-    pH[i, j]                          = CarbonSolved.pH
+    pH[i, j, k]                       = CarbonSolved.pH
 end
 
 """
