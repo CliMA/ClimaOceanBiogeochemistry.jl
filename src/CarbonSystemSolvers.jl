@@ -341,7 +341,6 @@ solver that converges from any given initial value.
             ),
         )
 
-
         #if abs(Aᵀᵣₐₜ) ≥ Aᵀᵃᵇˢₘᵢₙ/2
         ## if the function evaluation at the current point is
         ## not decreasing faster than with a bisection step (at least linearly)
@@ -1130,23 +1129,24 @@ Solve for DIC given total Alkalinity and pCO₂
              Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*
              pCO₂
              ) +
-        X^0*(
+        x^0*(
           -2*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀*
              Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*
              Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*
              Pᶜᵒᵉᶠᶠ.Cᵇₖ₁*
              pCO₂
-             )        
+             ),        
         ),
         NewtonsMethodAD{Float64}(10^-(pH)),
         #SecantMethod{Float64}(10^-(pH+0.1), 10^-(pH-0.1)),
         CompactSolution());
     
     
-    ifelse(
+    H⁺ = ifelse(
         sol.converged == true, 
-        H⁺ = sol.root, 
-        error("DirectCubicCarbonSolver did not converge"),
+        sol.root, 
+        0,
+        #error("DirectCubicCarbonSolver did not converge"),
     ) 
     return -log10(H⁺)
 end # end function
@@ -1206,10 +1206,11 @@ Solve for ocean pCO₂ given total Alkalinity and DIC
         NewtonsMethodAD{Float64}(10^-(pH)),
         CompactSolution());
 
-    ifelse(
-        sol.converged == true, 
-        H⁺ = sol.root, 
-        error("DirectCubicCarbonSolver did not converge"),
+    H⁺ = ifelse(
+        sol.converged, 
+        sol.root, 
+        0,
+        #error("DirectCubicCarbonSolver did not converge"),
     ) 
     return -log10(H⁺)
 end # end function
