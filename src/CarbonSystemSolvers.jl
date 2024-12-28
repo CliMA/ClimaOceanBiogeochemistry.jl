@@ -440,19 +440,19 @@ Calculates the root for the 2nd order approximation of the
     Rᴮᴬ = Pᶜᵒᵉᶠᶠ.Cᴮᵀ/Aᶜ
 
     # Coefficients of the cubic polynomial
-    za2 = Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ) + Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*(1-Rᶜᴬ)
-    za1 = Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ - Rᶜᴬ) + Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*(1 - (Rᶜᴬ+Rᶜᴬ))
-    za0 = Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ - (Rᶜᴬ+Rᶜᴬ))
+    a₀ = Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ - (Rᶜᴬ+Rᶜᴬ))
+    a₁ = Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ - Rᶜᴬ) + Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*(1 - (Rᶜᴬ+Rᶜᴬ))
+    a₂ = Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ) + Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*(1-Rᶜᴬ)
 
     # Taylor expansion around the minimum 
     #discriminant of the quadratic equation 
     #for the minimum close to the root
-    zd = za2*za2 - 3*za1 
+    d = a₂*a₂ - 3*a₁ 
 
-    zhmin = ifelse(
-        za2 < 0,
-        (-za2 + sqrt(zd))/3,
-        -za1/(za2 + sqrt(zd))
+    Hₘᵢₙ = ifelse(
+        a₂ < 0,
+        (-a₂ + sqrt(d))/3,
+        -a₁/(a₂ + sqrt(d))
     )
     
     # Determine a good value for initial H⁺ concentration
@@ -463,8 +463,8 @@ Calculates the root for the 2nd order approximation of the
                     Aᶜ >= (2*Cᵀ + Pᶜᵒᵉᶠᶠ.Cᴮᵀ),
                     1e-10,
                     ifelse(
-                        zd > 0,
-                        zhmin + sqrt(-(za0 + zhmin*(za1 + zhmin*(za2 + zhmin)))/sqrt(zd)),
+                        d > 0,
+                        Hₘᵢₙ + sqrt(-(a₀ + Hₘᵢₙ*(a₁ + Hₘᵢₙ*(a₂ + Hₘᵢₙ)))/sqrt(d)),
                         1e-7,
                     ),
                 ),
