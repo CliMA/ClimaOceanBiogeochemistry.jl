@@ -16,14 +16,13 @@ struct CarbonSystem{FT}
     Pᵈⁱᶜₖₛₒₗₒ :: FT
     Pᵈⁱᶜₖ₀   :: FT
 end
-
 """
     FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
 Calculate the dissolved and hydrated CO₂ concentration in seawater
 given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
 """
-@inline function FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+@inline function FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -40,7 +39,7 @@ end
 Calculate the bicarbonate ion concentration in seawater
 given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
 """
-@inline function FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+@inline function FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -57,7 +56,7 @@ end
 Calculate the carbonate concentration in seawater
 given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
 """
-@inline function FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+@inline function FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -74,7 +73,7 @@ end
 Calculate the dissolved and hydrated CO₂ concentration in seawater
 given the pCO₂, pH, and the carbon chemistry coefficients.
 """
-@inline function FpCO₂CO₂ˢᵒˡ(pCO₂, Pᶜᵒᵉᶠᶠ)
+@inline function FpCO₂CO₂ˢᵒˡ(pCO₂, Pᶜᵒᵉᶠᶠ) :: Real
     # Perhaps take account of fugacity here?
     return Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * pCO₂
 end
@@ -85,7 +84,7 @@ end
 Calculate the bicarbonate ion concentration in seawater
 given the pCO₂, pH, and the carbon chemistry coefficients.
 """
-@inline function FpCO₂HCO₃⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
+@inline function FpCO₂HCO₃⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -98,7 +97,7 @@ end
 Calculate the carbonate concentration in seawater
 given the pCO₂, pH, and the carbon chemistry coefficients.
 """
-@inline function FpCO₂CO₃²⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ)
+@inline function FpCO₂CO₃²⁻(pCO₂, pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -176,6 +175,22 @@ Uses the Munhoven (2013) SolveSAPHE package to solve the distribution of carbon 
         )
 end # end function
 
+adapt_structure( 
+    to, cs::CarbonSystem
+    ) = CO₂_flux_parameters(
+           adapt(to, cs.pH),
+           adapt(to, cs.CO₂ˢᵒˡ),
+           adapt(to, cs.HCO₃⁻),
+           adapt(to, cs.CO₃²⁻),
+           adapt(to, cs.Cᵀ),
+           adapt(to, cs.Aᵀ),
+           adapt(to, cs.pCO₂ᵒᶜᵉ),
+           adapt(to, cs.pCO₂ᵃᵗᵐ),
+           adapt(to, cs.Pᵈⁱᶜₖₛₒₗₐ),
+           adapt(to, cs.Pᵈⁱᶜₖₛₒₗₒ),
+	       adapt(to, cs.Pᵈⁱᶜₖ₀),
+)
+
 """
     Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
 
@@ -184,40 +199,39 @@ total phosphate Pᵀ, total silicate Siᵀ, and the carbon chemistry coefficient
 Uses the SolveSAPHE package (Munhoven et al., 2013), a universal, robust, pH 
 solver that converges from any given initial value.
 """
-@inline function Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ, NH₄ᵀ=0, H₂Sᵀ=0, Δₕ₊=1e-8, eᴴ⁺ᵗʰʳᵉˢʰ=1, Iᴴ⁺ₘₐₓ=100) 
+@inline function Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ, NH₄ᵀ=0, H₂Sᵀ=0, Δₕ₊=1e-8, eᴴ⁺ᵗʰʳᵉˢʰ=1, Iᴴ⁺ₘₐₓ=100) :: Real
    
     Iᴴ⁺                = 0
     Aᵀᵃᵇˢₘᵢₙ           = Inf
     H⁺ᶠᵃᶜᵗᵒʳ           = 1
 
-    if pH == 8
-        # Get a better initial H+ guess
-        H⁺ᵢₙᵢ = FH⁺ᵢₙᵢ(Aᵀ, Cᵀ, Pᶜᵒᵉᶠᶠ)
-    else
-        # Calculate H⁺ from pH
-        H⁺ᵢₙᵢ = 10^-pH
-    end
+    # Get a better initial H+ guess or Calculate H⁺ from the given pH
+    H⁺ᵢₙᵢ = ifelse(
+                pH == 8, 
+                FH⁺ᵢₙᵢ(Aᵀ, Cᵀ, Pᶜᵒᵉᶠᶠ), 
+                10^-pH,
+            )
 
     # Calculate initial bounds of H+ concentration
     Aᵀₗₒ, Aᵀₕᵢ = FboundsAᵀₙₕ₂ₒ( 
                     Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, Pᶜᵒᵉᶠᶠ
-                  )
+                )
 
     Δₗₒ = (Aᵀ - Aᵀₗₒ)^2 + 4 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
 
-    if Aᵀ ≥ Aᵀₗₒ
-        H⁺ₘᵢₙ = 2 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/( Aᵀ - Aᵀₗₒ + sqrt(Δₗₒ) )
-    else
-        H⁺ₘᵢₙ = Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃ *( -(Aᵀ - Aᵀₗₒ) + sqrt(Δₗₒ) )/2
-    end
+    H⁺ₘᵢₙ = ifelse(
+                Aᵀ ≥ Aᵀₗₒ, 
+                2 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/( Aᵀ - Aᵀₗₒ + sqrt(Δₗₒ) ),
+                Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃ *( -(Aᵀ - Aᵀₗₒ) + sqrt(Δₗₒ) )/2,
+            )
 
     Δₕᵢ = (Aᵀ - Aᵀₕᵢ)^2 + 4 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
 
-    if Aᵀ ≤ Aᵀₕᵢ
-        H⁺ₘₐₓ = Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃ *( -(Aᵀ - Aᵀₕᵢ) + sqrt(Δₕᵢ) )/2
-    else
-        H⁺ₘₐₓ = 2 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/( Aᵀ - Aᵀₕᵢ + sqrt(Δₕᵢ) )
-    end
+    H⁺ₘₐₓ = ifelse(
+                Aᵀ ≤ Aᵀₕᵢ, 
+                Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃ *( -(Aᵀ - Aᵀₕᵢ) + sqrt(Δₕᵢ) )/2,
+                2 * Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/( Aᵀ - Aᵀₕᵢ + sqrt(Δₕᵢ) ),
+            )
 
     # Initial guess for H⁺
     H⁺ = max(min(H⁺ₘₐₓ, H⁺ᵢₙᵢ), H⁺ₘᵢₙ)             
@@ -247,32 +261,25 @@ solver that converges from any given initial value.
 
         Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = FAᵀ(
                               Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
-                             )
+                        )
 
-        # Adapt bracketing interval
-        if Aᵀᵣₐₜ > 0
-           H⁺ₘᵢₙ = H⁺ₚᵣₑ
-        elseif Aᵀᵣₐₜ < 0
-           H⁺ₘₐₓ = H⁺ₚᵣₑ
-        else
-        # H⁺ is the root; unlikely but, one never knows
-           break
+        if Aᵀᵣₐₜ == 0
+            break
         end
 
-        if abs(Aᵀᵣₐₜ) ≥ Aᵀᵃᵇˢₘᵢₙ/2
-        # if the function evaluation at the current point is
-        # not decreasing faster than with a bisection step (at least linearly)
-        # in absolute value take one bisection step on [ph_min, ph_max]
-        # ph_new = (ph_min + ph_max)/2d0
-        # In terms of [H]_new:
-        # [H]_new = 10**(-ph_new)
-        #         = 10**(-(ph_min + ph_max)/2d0)
-        #         = SQRT(10**(-(ph_min + phmax)))
-        #         = SQRT(H⁺ₘₐₓ * H⁺ₘᵢₙ)
-     
-            H⁺        = sqrt(H⁺ₘₐₓ * H⁺ₘᵢₙ)
-            H⁺ᶠᵃᶜᵗᵒʳ  = ( H⁺ - H⁺ₚᵣₑ ) / H⁺ₚᵣₑ 
-        else
+        # Adapt bracketing interval
+        H⁺ₘᵢₙ = ifelse(
+                    Aᵀᵣₐₜ > 0, 
+                    H⁺ₚᵣₑ, 
+                    H⁺ₘᵢₙ
+                )
+        H⁺ₘₐₓ = ifelse(
+                    Aᵀᵣₐₜ < 0, 
+                    H⁺ₚᵣₑ, 
+                    H⁺ₘₐₓ
+                )
+
+        # Calculate the factor for the next iteration
         # dAᵀᵣₐₜ/dpH = dAᵀᵣₐₜ/d[H] * d[H]/dpH
         #           = -∂Aᵀᵣₐₜ∂H⁺ * LOG(10) * [H]
         # \Delta pH = -Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*d[H]/dpH) = Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*[H]*LOG(10))
@@ -282,56 +289,135 @@ solver that converges from any given initial value.
         #         = [H]_old * 10**(-Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*[H]_old*LOG(10)))
         #         = [H]_old * EXP(-LOG(10)*Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*[H]_old*LOG(10)))
         #         = [H]_old * EXP(-Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*[H]_old))
+        H⁺ᶠᵃᶜᵗᵒʳ = -Aᵀᵣₐₜ / ( ∂Aᵀᵣₐₜ∂H⁺ * H⁺ₚᵣₑ )
 
-            H⁺ᶠᵃᶜᵗᵒʳ = -Aᵀᵣₐₜ / ( ∂Aᵀᵣₐₜ∂H⁺ * H⁺ₚᵣₑ )
+        H⁺ = ifelse(
+                abs(H⁺ᶠᵃᶜᵗᵒʳ) > eᴴ⁺ᵗʰʳᵉˢʰ,
+                H⁺ₚᵣₑ * exp( H⁺ᶠᵃᶜᵗᵒʳ ),
+                H⁺ₚᵣₑ + (H⁺ᶠᵃᶜᵗᵒʳ * H⁺ₚᵣₑ),
+        )
 
-            if abs(H⁺ᶠᵃᶜᵗᵒʳ) > eᴴ⁺ᵗʰʳᵉˢʰ
-               H⁺ = H⁺ₚᵣₑ * exp( H⁺ᶠᵃᶜᵗᵒʳ )
-            else
-               H⁺ = H⁺ₚᵣₑ + (H⁺ᶠᵃᶜᵗᵒʳ * H⁺ₚᵣₑ)
-            end
-
-            if H⁺ < H⁺ₘᵢₙ
-            # if [H]_new < [H]_min
-            # i.e., if ph_new > ph_max then
-            # take one bisection step on [ph_prev, ph_max]
-            # ph_new = (ph_prev + ph_max)/2d0
+        # Evaluate if the new H⁺ is within the bounds and adjust
+        H⁺, H⁺ᶠᵃᶜᵗᵒʳ = ifelse(
+            abs(Aᵀᵣₐₜ) ≥ Aᵀᵃᵇˢₘᵢₙ/2,
+            # if the function evaluation at the current point is
+            # not decreasing faster than with a bisection step (at least linearly)
+            # in absolute value take one bisection step on [ph_min, ph_max]
+            # ph_new = (ph_min + ph_max)/2d0
             # In terms of [H]_new:
             # [H]_new = 10**(-ph_new)
-            #         = 10**(-(ph_prev + ph_max)/2d0)
-            #         = SQRT(10**(-(ph_prev + phmax)))
-            #         = SQRT([H]_old*10**(-ph_max))
-            #         = SQRT([H]_old * H⁺ₘᵢₙ)
-               H⁺        = sqrt( H⁺ₚᵣₑ * H⁺ₘᵢₙ )
-               H⁺ᶠᵃᶜᵗᵒʳ  = ( H⁺ - H⁺ₚᵣₑ ) / H⁺ₚᵣₑ 
-            end
+            #         = 10**(-(ph_min + ph_max)/2d0)
+            #         = SQRT(10**(-(ph_min + phmax)))
+            #         = SQRT(H⁺ₘₐₓ * H⁺ₘᵢₙ)
+            (sqrt(H⁺ₘₐₓ * H⁺ₘᵢₙ), ( H⁺ - H⁺ₚᵣₑ ) / H⁺ₚᵣₑ),
+            ifelse(
+                  H⁺ < H⁺ₘᵢₙ,
+                  # if [H]_new < [H]_min
+                  # i.e., if ph_new > ph_max then
+                  # take one bisection step on [ph_prev, ph_max]
+                  # ph_new = (ph_prev + ph_max)/2d0
+                  # In terms of [H]_new:
+                  # [H]_new = 10**(-ph_new)
+                  #         = 10**(-(ph_prev + ph_max)/2d0)
+                  #         = SQRT(10**(-(ph_prev + phmax)))
+                  #         = SQRT([H]_old*10**(-ph_max))
+                  #         = SQRT([H]_old * H⁺ₘᵢₙ)
+                  (sqrt( H⁺ₚᵣₑ * H⁺ₘᵢₙ ), ( H⁺ - H⁺ₚᵣₑ ) / H⁺ₚᵣₑ ),
+                  ifelse(
+                      H⁺ > H⁺ₘₐₓ,
+                      # if [H]_new > [H]_max
+                      # i.e., if ph_new < ph_min, then
+                      # take one bisection step on [ph_min, ph_prev]
+                      # ph_new = (ph_prev + ph_min)/2d0
+                      # In terms of [H]_new:
+                      # [H]_new = 10**(-ph_new)
+                      #         = 10**(-(ph_prev + ph_min)/2d0)
+                      #         = SQRT(10**(-(ph_prev + ph_min)))
+                      #         = SQRT([H]_old*10**(-ph_min))
+                      #         = SQRT([H]_old * zhmax)
+                      (sqrt( H⁺ₚᵣₑ * H⁺ₘₐₓ ), ( H⁺ - H⁺ₚᵣₑ ) / H⁺ₚᵣₑ),
+                      (H⁺, H⁺ᶠᵃᶜᵗᵒʳ),
+                  ),
+            ),
+        )
 
-            if H⁺ > H⁺ₘₐₓ 
-            # if [H]_new > [H]_max
-            # i.e., if ph_new < ph_min, then
-            # take one bisection step on [ph_min, ph_prev]
-            # ph_new = (ph_prev + ph_min)/2d0
-            # In terms of [H]_new:
-            # [H]_new = 10**(-ph_new)
-            #         = 10**(-(ph_prev + ph_min)/2d0)
-            #         = SQRT(10**(-(ph_prev + ph_min)))
-            #         = SQRT([H]_old*10**(-ph_min))
-            #         = SQRT([H]_old * zhmax)
-               H⁺       = sqrt( H⁺ₚᵣₑ * H⁺ₘₐₓ )
-               H⁺ᶠᵃᶜᵗᵒʳ = ( H⁺ - H⁺ₚᵣₑ ) / H⁺ₚᵣₑ
-            end
-        end
+
+        #if abs(Aᵀᵣₐₜ) ≥ Aᵀᵃᵇˢₘᵢₙ/2
+        ## if the function evaluation at the current point is
+        ## not decreasing faster than with a bisection step (at least linearly)
+        ## in absolute value take one bisection step on [ph_min, ph_max]
+        ## ph_new = (ph_min + ph_max)/2d0
+        ## In terms of [H]_new:
+        ## [H]_new = 10**(-ph_new)
+        ##         = 10**(-(ph_min + ph_max)/2d0)
+        ##         = SQRT(10**(-(ph_min + phmax)))
+        ##         = SQRT(H⁺ₘₐₓ * H⁺ₘᵢₙ)
+        #
+        #    H⁺        = sqrt(H⁺ₘₐₓ * H⁺ₘᵢₙ)
+        #    H⁺ᶠᵃᶜᵗᵒʳ  = ( H⁺ - H⁺ₚᵣₑ ) / H⁺ₚᵣₑ 
+        #else
+        ## dAᵀᵣₐₜ/dpH = dAᵀᵣₐₜ/d[H] * d[H]/dpH
+        ##           = -∂Aᵀᵣₐₜ∂H⁺ * LOG(10) * [H]
+        ## \Delta pH = -Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*d[H]/dpH) = Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*[H]*LOG(10))
+        ## pH_new = pH_old + \deltapH
+        ## [H]_new = 10**(-pH_new)
+        ##         = 10**(-pH_old - \Delta pH)
+        ##         = [H]_old * 10**(-Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*[H]_old*LOG(10)))
+        ##         = [H]_old * EXP(-LOG(10)*Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*[H]_old*LOG(10)))
+        ##         = [H]_old * EXP(-Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*[H]_old))
+        #
+        #    H⁺ᶠᵃᶜᵗᵒʳ = -Aᵀᵣₐₜ / ( ∂Aᵀᵣₐₜ∂H⁺ * H⁺ₚᵣₑ )
+        #
+        #    H⁺ = ifelse(
+        #            abs(H⁺ᶠᵃᶜᵗᵒʳ) > eᴴ⁺ᵗʰʳᵉˢʰ,
+        #            H⁺ₚᵣₑ * exp( H⁺ᶠᵃᶜᵗᵒʳ ),
+        #            H⁺ₚᵣₑ + (H⁺ᶠᵃᶜᵗᵒʳ * H⁺ₚᵣₑ),
+        #    )
+        #
+        #    # if [H]_new < [H]_min
+        #    # i.e., if ph_new > ph_max then
+        #    # take one bisection step on [ph_prev, ph_max]
+        #    # ph_new = (ph_prev + ph_max)/2d0
+        #    # In terms of [H]_new:
+        #    # [H]_new = 10**(-ph_new)
+        #    #         = 10**(-(ph_prev + ph_max)/2d0)
+        #    #         = SQRT(10**(-(ph_prev + phmax)))
+        #    #         = SQRT([H]_old*10**(-ph_max))
+        #    #         = SQRT([H]_old * H⁺ₘᵢₙ)
+        #    H⁺, H⁺ᶠᵃᶜᵗᵒʳ = ifelse(
+        #        H⁺ < H⁺ₘᵢₙ,
+        #        (sqrt( H⁺ₚᵣₑ * H⁺ₘᵢₙ ), ( H⁺ - H⁺ₚᵣₑ ) / H⁺ₚᵣₑ ),
+        #        (H⁺, H⁺ᶠᵃᶜᵗᵒʳ)
+        #    )
+        #
+        #    # if [H]_new > [H]_max
+        #    # i.e., if ph_new < ph_min, then
+        #    # take one bisection step on [ph_min, ph_prev]
+        #    # ph_new = (ph_prev + ph_min)/2d0
+        #    # In terms of [H]_new:
+        #    # [H]_new = 10**(-ph_new)
+        #    #         = 10**(-(ph_prev + ph_min)/2d0)
+        #    #         = SQRT(10**(-(ph_prev + ph_min)))
+        #    #         = SQRT([H]_old*10**(-ph_min))
+        #    #         = SQRT([H]_old * zhmax)
+        #    H⁺, H⁺ᶠᵃᶜᵗᵒʳ = ifelse(
+        #        H⁺ > H⁺ₘₐₓ,
+        #        (sqrt( H⁺ₚᵣₑ * H⁺ₘₐₓ ), ( H⁺ - H⁺ₚᵣₑ ) / H⁺ₚᵣₑ),
+        #        (H⁺, H⁺ᶠᵃᶜᵗᵒʳ),
+        #    )
+        #    end
+        #end
 
         Aᵀᵃᵇˢₘᵢₙ = min( abs(Aᵀᵣₐₜ), Aᵀᵃᵇˢₘᵢₙ)
     end # end while loop
 
-    if H⁺ > 0
-        Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = FAᵀ(
+    Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = ifelse(
+        H⁺ > 0,
+        FAᵀ(
             Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
-        )
-    else
-        ∂Aᵀᵣₐₜ∂H⁺ = nothing
-    end
+        ),
+        (nothing, nothing)
+    )
     return -log10(H⁺)
 end
 
@@ -348,38 +434,42 @@ Calculates the root for the 2nd order approximation of the
             and the 2nd order approximation does not have a solution
 
 """
-@inline function FH⁺ᵢₙᵢ(Aᶜ, Cᵀ, Pᶜᵒᵉᶠᶠ)
+@inline function FH⁺ᵢₙᵢ(Aᶜ, Cᵀ, Pᶜᵒᵉᶠᶠ) :: Real
+    # Calculate the coefficients of the cubic polynomial
+    Rᶜᴬ = Cᵀ/Aᶜ
+    Rᴮᴬ = Pᶜᵒᵉᶠᶠ.Cᴮᵀ/Aᶜ
 
-    if Aᶜ <= 0
-        return 1e-3
-    elseif Aᶜ >= (2*Cᵀ + Pᶜᵒᵉᶠᶠ.Cᴮᵀ)
-        return 1e-10
-    else
-        Rᶜᴬ = Cᵀ/Aᶜ
-        Rᴮᴬ = Pᶜᵒᵉᶠᶠ.Cᴮᵀ/Aᶜ
+    # Coefficients of the cubic polynomial
+    za2 = Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ) + Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*(1-Rᶜᴬ)
+    za1 = Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ - Rᶜᴬ) + Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*(1 - (Rᶜᴬ+Rᶜᴬ))
+    za0 = Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ - (Rᶜᴬ+Rᶜᴬ))
 
-        # Coefficients of the cubic polynomial
-        za2 = Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ) + Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*(1-Rᶜᴬ)
-        za1 = Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ - Rᶜᴬ) + Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*(1 - (Rᶜᴬ+Rᶜᴬ))
-        za0 = Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁*Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂*Pᶜᵒᵉᶠᶠ.Cᴮᵀ*(1 - Rᴮᴬ - (Rᶜᴬ+Rᶜᴬ))
+    # Taylor expansion around the minimum 
+    #discriminant of the quadratic equation 
+    #for the minimum close to the root
+    zd = za2*za2 - 3*za1 
 
-        # Taylor expansion around the minimum 
-        #discriminant of the quadratic equation 
-        #for the minimum close to the root
-        zd = za2*za2 - 3*za1 
-
-        if zd > 0
-            if za2 < 0
-                zhmin = (-za2 + sqrt(zd))/3
-            else
-                zhmin = -za1/(za2 + sqrt(zd))
-            end
-
-            return zhmin + sqrt(-(za0 + zhmin*(za1 + zhmin*(za2 + zhmin)))/sqrt(zd))
-        else
-            return 1e-7
-        end
-    end
+    zhmin = ifelse(
+        za2 < 0,
+        (-za2 + sqrt(zd))/3,
+        -za1/(za2 + sqrt(zd))
+    )
+    
+    # Determine a good value for initial H⁺ concentration
+    H⁺ᵢₙᵢ = ifelse(
+                Aᶜ <= 0,
+                1e-3,
+                ifelse(
+                    Aᶜ >= (2*Cᵀ + Pᶜᵒᵉᶠᶠ.Cᴮᵀ),
+                    1e-10,
+                    ifelse(
+                        zd > 0,
+                        zhmin + sqrt(-(za0 + zhmin*(za1 + zhmin*(za2 + zhmin)))/sqrt(zd)),
+                        1e-7,
+                    ),
+                ),
+            )
+    return H⁺ᵢₙᵢ
 end
 
 """
@@ -391,7 +481,7 @@ Calculate the lower and upper bounds of the "non-water-selfionization"
 """
 @inline function FboundsAᵀₙₕ₂ₒ( 
     Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, Pᶜᵒᵉᶠᶠ
-)
+) :: Tuple{Real, Real}
 # greatest lower bound (infimum)
     Aᵀₗₒ = -Pᵀ - Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴  - Pᶜᵒᵉᶠᶠ.Cᶠᵀ
 
@@ -410,7 +500,7 @@ Evaluate the rational function form of the total alkalinity-pH equation
 """
 @inline function FAᵀ(
     Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
-    )
+    ) 
     
     return FACᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ) + 
            FAPᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ) + 
@@ -436,7 +526,7 @@ end
 """
     function FACᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FACᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function FACᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # H2CO3 - HCO3 - CO3 : n=2, m=0
     return Cᵀ * (( 2 * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * 
                        Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ + 
@@ -451,7 +541,7 @@ end
 """
     F∂A∂Cᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Cᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function F∂A∂Cᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # H2CO3 - HCO3 - CO3 : n=2, m=0
     return - Cᵀ * (
                     ( Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * 
@@ -471,7 +561,7 @@ end
 """
     function FABᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FABᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function FABᵀ(H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # B(OH)3 - B(OH)4 : n=1, m=0
     return Pᶜᵒᵉᶠᶠ.Cᴮᵀ * (Pᶜᵒᵉᶠᶠ.Cᵇₖ₁/(Pᶜᵒᵉᶠᶠ.Cᵇₖ₁ + H⁺))   
 end
@@ -479,7 +569,7 @@ end
 """
     function F∂A∂Bᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Bᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function F∂A∂Bᵀ(H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # B(OH)3 - B(OH)4 : n=1, m=0
     return - Pᶜᵒᵉᶠᶠ.Cᴮᵀ * ( 
                             Pᶜᵒᵉᶠᶠ.Cᵇₖ₁
@@ -491,7 +581,7 @@ end
 """
     function FAPᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FAPᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function FAPᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # H3PO4 - H2PO4 - HPO4 - PO4 : n=3, m=1
     return Pᵀ * 3 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
                      Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * 
@@ -514,7 +604,7 @@ end
 """
     function F∂A∂Pᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Pᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function F∂A∂Pᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # H3PO4 - H2PO4 - HPO4 - PO4 : n=3, m=1
     return - Pᵀ * ((Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
                     Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * 
@@ -549,7 +639,7 @@ end
 """
     function FASiᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FASiᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function FASiᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # H4SiO4 - H3SiO4 : n=1, m=0
     return Siᵀ * (Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁/(Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁ + H⁺))
 end
@@ -557,7 +647,7 @@ end
 """
     function F∂A∂Siᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Siᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function F∂A∂Siᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # H4SiO4 - H3SiO4 : n=1, m=0
     return - Siᵀ * (Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁/(Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁ + H⁺)^2)
 end
@@ -565,7 +655,7 @@ end
 """
     function FASO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FASO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function FASO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # HSO4 - SO4 : n=1, m=1
     return Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * (Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ + H⁺) - 1)
 end
@@ -573,7 +663,7 @@ end
 """
     function F∂A∂SO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂SO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function F∂A∂SO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # HSO4 - SO4 : n=1, m=1
     return - Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * (Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ + H⁺)^2)
 end
@@ -581,7 +671,7 @@ end
 """
     function FAFᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FAFᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function FAFᵀ(H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # HF - F : n=1, m=1
     return Pᶜᵒᵉᶠᶠ.Cᶠᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁ + H⁺) - 1)
 end
@@ -589,7 +679,7 @@ end
 """
     function F∂A∂Fᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Fᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function F∂A∂Fᵀ(H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # HF - F : n=1, m=1
     return - Pᶜᵒᵉᶠᶠ.Cᶠᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁ + H⁺)^2)
 end
@@ -597,7 +687,7 @@ end
 """
     function FANH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FANH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function FANH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # NH4 - NH3 : n=1, m=0
     return NH₄ᵀ * (Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁ + H⁺))
 end
@@ -605,7 +695,7 @@ end
 """
     function F∂A∂NH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂NH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function F∂A∂NH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # NH4 - NH3 : n=1, m=0
     return - NH₄ᵀ * (Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁ + H⁺)^2)
 end
@@ -613,7 +703,7 @@ end
 """
     function FAH₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FAH₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function FAH₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # H2S - HS : n=1, m=0
     return H₂Sᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁ + H⁺))
 end
@@ -621,7 +711,7 @@ end
 """
     function F∂A∂H₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂H₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function F∂A∂H₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # H2S - HS : n=1, m=0
     return - H₂Sᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁ + H⁺)^2)
 end
@@ -629,7 +719,7 @@ end
 """
     function FAH₂O(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FAH₂O(H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function FAH₂O(H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # H2O - OH
     return Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/H⁺ -H⁺/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
 end
@@ -637,7 +727,7 @@ end
 """
     function F∂A∂H₂O(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂H₂O(H⁺, Pᶜᵒᵉᶠᶠ)
+@inline function F∂A∂H₂O(H⁺, Pᶜᵒᵉᶠᶠ) :: Real
     # H2O - OH
     return - Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/H⁺^2 - 1/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
 end
@@ -709,12 +799,28 @@ Uses the Follows et al (2006) method to solve the distribution of carbon species
         )
 end # end function
 
+adapt_structure( 
+    to, cs::CarbonSystem
+    ) = CO₂_flux_parameters(
+           adapt(to, cs.pH),
+           adapt(to, cs.CO₂ˢᵒˡ),
+           adapt(to, cs.HCO₃⁻),
+           adapt(to, cs.CO₃²⁻),
+           adapt(to, cs.Cᵀ),
+           adapt(to, cs.Aᵀ),
+           adapt(to, cs.pCO₂ᵒᶜᵉ),
+           adapt(to, cs.pCO₂ᵃᵗᵐ),
+           adapt(to, cs.Pᵈⁱᶜₖₛₒₗₐ),
+           adapt(to, cs.Pᵈⁱᶜₖₛₒₗₒ),
+	       adapt(to, cs.Pᵈⁱᶜₖ₀),
+)
+
 """
     BO₄H₄⁻(pH, Pᶜᵒᵉᶠᶠ) 
 
 Calculate borate (B(OH)₄⁻) contribution to Aᶜ using salinity as a proxy
 """
-@inline function BO₄H₄⁻(pH, Pᶜᵒᵉᶠᶠ) 
+@inline function BO₄H₄⁻(pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -726,7 +832,7 @@ end
 
 Calculate orthophosphoric acid (H₃PO₄) contribution to Aᶜ
 """
-@inline function H₃PO₄(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+@inline function H₃PO₄(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -743,7 +849,7 @@ end
 
 Calculate the dihydrogen phosphate (H₂PO₄⁻) contribution to Aᶜ
 """
-@inline function H₂PO₄⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ)
+@inline function H₂PO₄⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -760,7 +866,7 @@ end
 
 Calculate the monohydrogen phosphate (HPO₄²⁻) contribution to Aᶜ
 """
-@inline function HPO₄²⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+@inline function HPO₄²⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -777,7 +883,7 @@ end
 
 Calculate the phosphate (PO₄³⁻) contribution to Aᶜ
 """
-@inline function PO₄³⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+@inline function PO₄³⁻(Pᵀ, pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -794,7 +900,7 @@ end
 
 Calculate the silicate (SiO(OH)₃⁻) contribution to Aᶜ
 """
-@inline function SiO₄H₃⁻(Siᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+@inline function SiO₄H₃⁻(Siᵀ, pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -806,7 +912,7 @@ end
 
 Calculate the hydroxide (OH⁻) contribution to Aᶜ
 """
-@inline function OH⁻(pH, Pᶜᵒᵉᶠᶠ) 
+@inline function OH⁻(pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -818,7 +924,7 @@ end
 
 Calculate the "Free" H⁺ contribution to Aᶜ
 """
-@inline function H⁺ᶠʳᵉᵉ(pH, Pᶜᵒᵉᶠᶠ)
+@inline function H⁺ᶠʳᵉᵉ(pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -830,7 +936,7 @@ end
 
 Calculate the hydrogen sulphate (HSO₄⁻) contribution to Aᶜ
 """
-@inline function HSO₄⁻(pH, Pᶜᵒᵉᶠᶠ)
+@inline function HSO₄⁻(pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     # H⁺ = 10^-pH
 
@@ -842,7 +948,7 @@ end
 
 Calculate the hydrogen fluoride (HF) contribution to Aᶜ
 """
-@inline function HF(pH, Pᶜᵒᵉᶠᶠ)
+@inline function HF(pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -857,7 +963,7 @@ Solve for ocean pCO₂ given total Alkalinity and DIC
 Estimate H⁺ (hydrogen ion conc) using estimate of Aᶜ, carbonate alkalinity
 after (Follows et al., 2006)
 """
-@inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ) :: Real
 
 # Estimate carbonate alkalinity
     Aᶜ = Aᵀ - 
@@ -893,7 +999,7 @@ Solve for ocean DIC given total Alkalinity and pCO₂
 Estimate H⁺ (hydrogen ion conc) using estimate of Aᶜ, carbonate alkalinity
 after (Follows et al., 2006)
 """
-@inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ)
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ) :: Real
 
 # Estimate carbonate alkalinity
     Aᶜ = Aᵀ - 
@@ -981,12 +1087,28 @@ Not for serious use, but as a placeholder and for testing purposes
         )
 end # end function
 
+adapt_structure( 
+    to, cs::CarbonSystem
+    ) = CO₂_flux_parameters(
+           adapt(to, cs.pH),
+           adapt(to, cs.CO₂ˢᵒˡ),
+           adapt(to, cs.HCO₃⁻),
+           adapt(to, cs.CO₃²⁻),
+           adapt(to, cs.Cᵀ),
+           adapt(to, cs.Aᵀ),
+           adapt(to, cs.pCO₂ᵒᶜᵉ),
+           adapt(to, cs.pCO₂ᵃᵗᵐ),
+           adapt(to, cs.Pᵈⁱᶜₖₛₒₗₐ),
+           adapt(to, cs.Pᵈⁱᶜₖₛₒₗₒ),
+	       adapt(to, cs.Pᵈⁱᶜₖ₀),
+)
+
 """
     Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂ᵃᵗᵐ, pH, Pᶜᵒᵉᶠᶠ)
 
 Solve for DIC given total Alkalinity and pCO₂
 """
-@inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂, pH, Pᶜᵒᵉᶠᶠ)
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ, pCO₂, pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Find the real roots of the polynomial using RootSolvers.jl 
     sol = find_zero(  x -> (
         x^3*(Aᵀ) +
@@ -1020,15 +1142,13 @@ Solve for DIC given total Alkalinity and pCO₂
         #SecantMethod{Float64}(10^-(pH+0.1), 10^-(pH-0.1)),
         CompactSolution());
     
-    if sol.converged == true
-        H⁺ = sol.root
-        # Update pH
-        pH = -log10(H⁺)
-        return  pH
-    else
-        error("DirectCubicCarbonSolver did not converge")
-        return nothing
-    end
+    
+    ifelse(
+        sol.converged == true, 
+        H⁺ = sol.root, 
+        error("DirectCubicCarbonSolver did not converge"),
+    ) 
+    return -log10(H⁺)
 end # end function
 
 """
@@ -1036,7 +1156,7 @@ end # end function
 
 Solve for ocean pCO₂ given total Alkalinity and DIC
 """
-@inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ) :: Real
     # Find the real roots of the polynomial using RootSolvers.jl
     sol = find_zero(  x -> (
         x^3*(Aᵀ) +
@@ -1086,17 +1206,12 @@ Solve for ocean pCO₂ given total Alkalinity and DIC
         NewtonsMethodAD{Float64}(10^-(pH)),
         CompactSolution());
 
-    if sol.converged == true
-        H⁺ = sol.root
-
-        # Update pH
-        pH = -log10(H⁺)
-
-        return pH 
-    else
-        error("DirectCubicCarbonSolver did not converge")
-        return nothing
-    end
+    ifelse(
+        sol.converged == true, 
+        H⁺ = sol.root, 
+        error("DirectCubicCarbonSolver did not converge"),
+    ) 
+    return -log10(H⁺)
 end # end function
 
 end # module DirectCubicCarbonSolver
