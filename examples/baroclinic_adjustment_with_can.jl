@@ -350,7 +350,7 @@ solubility/activity of CO₂ in seawater.
     Δpᵦₐᵣ = Field{Center, Center, Nothing}(grid)
     set!(Δpᵦₐᵣ, applied_pressure)
 
-    S = simulation.model.tracers.S
+    S   = simulation.model.tracers.S
     DIC = simulation.model.tracers.DIC
     ALK = simulation.model.tracers.ALK
     PO₄ = simulation.model.tracers.PO₄
@@ -1240,7 +1240,7 @@ fig3d
 
 frames = 1:length(times)
 
-record(fig3d, filename * ".mp4", frames, framerate=8) do i
+CairoMakie.record(fig3d, filename * ".mp4", frames, framerate=8) do i
     msg = string("Plotting frame ", i, " of ", frames[end])
     print(msg * " \r")
     n[] = i
