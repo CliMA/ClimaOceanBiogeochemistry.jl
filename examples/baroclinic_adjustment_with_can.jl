@@ -97,7 +97,9 @@ adapt_structure(
 
 """
     compute_schmidt_dic(
-        schmidt_number_dic, Θᶜ; 
+        grid,
+        schmidt_number_dic, 
+        temperature, 
         schmidt_dic_coeff0,
         schmidt_dic_coeff1,
         schmidt_dic_coeff2,
@@ -111,7 +113,7 @@ Compute the Schmidt number for dissolved inorganic carbon (DIC) based on the tem
 # Arguments
 - `grid::RectilinearGrid`: The model grid.
 - `schmidt_number_dic::Field{Center, Center, Nothing}`: The computed Schmidt number for DIC.
-- `Θᶜ::Field{Center, Center, Nothing}`: Temperature in degrees Celsius.
+- `temperature::Field{Center, Center, Nothing}`: Temperature in degrees Celsius.
 - `schmidt_dic_coeff0::Float64`: Coefficient for the constant term (default: 2116.8).
 - `schmidt_dic_coeff1::Float64`: Coefficient for the linear term (default: 136.25).
 - `schmidt_dic_coeff2::Float64`: Coefficient for the quadratic term (default: 4.7353).
@@ -171,7 +173,9 @@ Compute the piston velocity for gas exchange at the ocean surface.
 
     i, j = @index(Global, NTuple)
     
-    piston_velocity[i, j, 1] = exchange_coefficient[i, j, 1] * surface_wind_speed[i, j, 1]^2 / sqrt(schmidt_number[i, j, 1])
+    piston_velocity[i, j, 1] = exchange_coefficient[i, j, 1] * 
+                               surface_wind_speed[i, j, 1]^2 / 
+                               sqrt(schmidt_number[i, j, 1])
 end
 
 """
@@ -208,7 +212,15 @@ Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
     ocean_pCO₂, 
     atmospheric_CO₂_solubility, 
     oceanic_CO₂_solubility,
-    Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ
+    temperature, 
+    salinity, 
+    applied_pressure_bar, 
+    DIC, 
+    ALK, 
+    PO4, 
+    Siᵀ, 
+    pH, 
+    atmosphere_pCO₂
     )
     
     i, j = @index(Global, NTuple)
@@ -216,15 +228,15 @@ Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
 
     ## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
     CarbonSolved = UniversalRobustCarbonSystem(
-                        Θᶜ[i, j, k], 
-                        Sᴬ[i, j, k], 
-                        Δpᵦₐᵣ[i, j, 1], 
-                        Cᵀ[i, j, k]/reference_density, 
-                        Aᵀ[i, j, k]/reference_density, 
-                        Pᵀ[i, j, k]/reference_density, 
+                        temperature[i, j, k], 
+                        salinity[i, j, k], 
+                        applied_pressure_bar[i, j, 1], 
+                        DIC[i, j, k]/reference_density, 
+                        ALK[i, j, k]/reference_density, 
+                        PO4[i, j, k]/reference_density, 
                         Siᵀ[i, j, k]/reference_density, 
                         pH[i, j, 1], 
-                        pCO₂ᵃᵗᵐ[i, j, 1]
+                        atmosphere_pCO₂[i, j, 1]
     )
 
     ocean_pCO₂[i, j, 1]                 = CarbonSolved.pCO₂ᵒᶜᵉ
@@ -235,6 +247,7 @@ end
 
 """
     compute_CO₂_flux(
+        grid,
         CO₂_flux,
         piston_velocity,
         atmospheric_pCO₂,
@@ -247,25 +260,27 @@ end
 Compute the flux of CO₂ between the atmosphere and the ocean.
 
 # Arguments
+- `grid::RectilinearGrid`: The model grid.
+- `reference_density::Float64`: The reference density of seawater.
 - `CO₂_flux::Field{Center, Center, Nothing}`: The computed CO₂ flux.
 - `piston_velocity::Field{Center, Center, Nothing}`: The piston velocity for gas exchange at the ocean surface.
 - `atmospheric_pCO₂::Float64`: The partial pressure of CO₂ in the atmosphere.
 - `oceanic_pCO₂::Field{Center, Center, Nothing}`: The partial pressure of CO₂ in the ocean.
 - `atmospheric_CO₂_solubility::Field{Center, Center, Nothing}`: The solubility of CO₂ in the atmosphere.
 - `oceanic_CO₂_solubility::Field{Center, Center, Nothing}`: The solubility of CO₂ in the ocean.
-- `reference_density::Float64`: The reference density of seawater.
 
 # Notes
 The convention is that a positive flux is upwards (outgassing), and a negative flux is downwards (uptake).
 """
 @kernel function compute_CO₂_flux!(
+    grid,
+    reference_density,
     CO₂_flux,
     piston_velocity,
     atmospheric_pCO₂,
     oceanic_pCO₂,
     atmospheric_CO₂_solubility,
     oceanic_CO₂_solubility,
-    reference_density
     )
     i, j = @index(Global, NTuple)
 
@@ -309,14 +324,15 @@ solubility/activity of CO₂ in seawater.
     set!(Siᵀ, silicate_conc)
 
     ## compute schmidt number for DIC
-    Sᴰᴵᶜ = Field{Center, Center, Nothing}(grid)
-    set!(Sᴰᴵᶜ, 0)
+    schmidt_dic = Field{Center, Center, Nothing}(grid)
+    set!(schmidt_dic, 0)
 
-    T = simulation.model.tracers.T
+    temperature = simulation.model.tracers.T
 
     kernel_args = (
-        Sᴰᴵᶜ, 
-        T,
+        grid,
+        schmidt_dic, 
+        temperature,
         schmidt_dic_coeff0,
         schmidt_dic_coeff1,
         schmidt_dic_coeff2,
@@ -333,20 +349,21 @@ solubility/activity of CO₂ in seawater.
     )
     
     ## compute gas exchange coefficient/piston velocity and correct with Schmidt number
-    U₁₀ = Field{Center, Center, Nothing}(grid)
-    set!(U₁₀, surface_wind_speed)
+    wind_speed = Field{Center, Center, Nothing}(grid)
+    set!(wind_speed, surface_wind_speed)
 
-    Kʷₐᵥₑ = Field{Center, Center, Nothing}(grid)
-    set!(Kʷₐᵥₑ, exchange_coefficient*cmhr⁻¹_per_ms⁻¹)
+    exchange_coefficient = Field{Center, Center, Nothing}(grid)
+    set!(exchange_coefficient, exchange_coefficient*cmhr⁻¹_per_ms⁻¹)
 
-    Kʷ = Field{Center, Center, Nothing}(grid)
-    set!(Kʷ, 0)
+    piston_velocity = Field{Center, Center, Nothing}(grid)
+    set!(piston_velocity, 0)
 
     kernel_args = (
-        Kʷ,
-        U₁₀,
-        Kʷₐᵥₑ,
-        Sᴰᴵᶜ,
+        grid,
+        piston_velocity,
+        wind_speed,
+        exchange_coefficient,
+        schmidt_dic,
         )
 
     ## This is a 2d only kernel, so no need for custom kernel_size to handle slicing of 3d inputs
@@ -361,10 +378,10 @@ solubility/activity of CO₂ in seawater.
     atmos_CO₂ = Field{Center, Center, Nothing}(grid)
     set!(atmos_CO₂, atmospheric_pCO₂)
 
-    Δpᵦₐᵣ = Field{Center, Center, Nothing}(grid)
-    set!(Δpᵦₐᵣ, applied_pressure)
+    applied_pressure_bar = Field{Center, Center, Nothing}(grid)
+    set!(applied_pressure_bar, applied_pressure)
 
-    S   = simulation.model.tracers.S
+    salinity = simulation.model.tracers.S
     DIC = simulation.model.tracers.DIC
     ALK = simulation.model.tracers.ALK
     PO₄ = simulation.model.tracers.PO₄
@@ -373,13 +390,14 @@ solubility/activity of CO₂ in seawater.
     oceanic_CO₂_solubility     = Field{Center, Center, Nothing}(grid)
     
     kernel_args = (
+        grid,
         reference_density,
         ocean_CO₂, 
         atmospheric_CO₂_solubility, 
         oceanic_CO₂_solubility,
-        T, 
-        S, 
-        Δpᵦₐᵣ, 
+        temperature, 
+        salinity, 
+        applied_pressure_bar, 
         DIC, 
         ALK,
         PO₄, 
@@ -397,13 +415,14 @@ solubility/activity of CO₂ in seawater.
 
     ## compute CO₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards)
     kernel_args = (
+        grid,
+        reference_density,
         CO₂_flux,
-        Kʷ,
+        piston_velocity,
         atmos_CO₂, 
         ocean_CO₂,
         atmospheric_CO₂_solubility, 
         oceanic_CO₂_solubility,
-        reference_density,
         )
 
     launch!(arch, 
