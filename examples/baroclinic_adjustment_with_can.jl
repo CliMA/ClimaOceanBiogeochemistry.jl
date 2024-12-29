@@ -77,7 +77,6 @@ Base.@kwdef struct CO₂_flux_parameters
     schmidt_dic_coeff4   = 7.555e-4
     schmidt_dic_coeff5   = 660.0
 end
-
 adapt_structure( 
     to, cp::CO₂_flux_parameters
     ) = CO₂_flux_parameters(
@@ -110,6 +109,7 @@ adapt_structure(
 Compute the Schmidt number for dissolved inorganic carbon (DIC) based on the temperature Θᶜ (in degrees Celsius).
 
 # Arguments
+- `grid::RectilinearGrid`: The model grid.
 - `schmidt_number_dic::Field{Center, Center, Nothing}`: The computed Schmidt number for DIC.
 - `Θᶜ::Field{Center, Center, Nothing}`: Temperature in degrees Celsius.
 - `schmidt_dic_coeff0::Float64`: Coefficient for the constant term (default: 2116.8).
@@ -120,6 +120,7 @@ Compute the Schmidt number for dissolved inorganic carbon (DIC) based on the tem
 - `schmidt_dic_coeff5::Float64`: Normalization coefficient (default: 660.0).
 """
 @kernel function compute_schmidt_dic!(
+    grid,
     schmidt_number_dic,
     temperature, 
     schmidt_dic_coeff0,
@@ -129,9 +130,11 @@ Compute the Schmidt number for dissolved inorganic carbon (DIC) based on the tem
     schmidt_dic_coeff4,
     schmidt_dic_coeff5,
     )
-    i, j, k = @index(Global, NTuple)
-    
-    schmidt_number_dic[i, j] =  ( 
+
+    i, j = @index(Global, NTuple)
+    k = size(grid, 3)
+
+    schmidt_number_dic[i, j, 1] =  ( 
          schmidt_dic_coeff0 - 
          schmidt_dic_coeff1 * temperature[i, j, k] + 
          schmidt_dic_coeff2 * temperature[i, j, k]^2 - 
@@ -142,6 +145,7 @@ end
 
 """
     compute_piston_velocity(
+        grid,
         piston_velocity,
         surface_wind_speed, 
         exchange_coefficient, 
@@ -151,48 +155,82 @@ end
 Compute the piston velocity for gas exchange at the ocean surface.
 
 # Arguments
+- `grid::RectilinearGrid`: The model grid.
 - `piston_velocity::Field{Center, Center, Nothing}`: The computed piston velocity.
 - `surface_wind_speed::Field{Center, Center, Nothing}`: The wind speed at the ocean surface.
 - `exchange_coefficient::Float64`: The gas exchange coefficient.
 - `schmidt_number::Field{Center, Center, Nothing}`: The Schmidt number.
 """
 @kernel function compute_piston_velocity!(
+    grid,
     piston_velocity,
     surface_wind_speed,
     exchange_coefficient,
     schmidt_number
     )
-    i, j = @index(Global, NTuple)
 
-    piston_velocity[i, j] = exchange_coefficient[i, j] * surface_wind_speed[i, j]^2 / sqrt(schmidt_number[i, j])
+    i, j = @index(Global, NTuple)
+    
+    piston_velocity[i, j, 1] = exchange_coefficient[i, j, 1] * surface_wind_speed[i, j, 1]^2 / sqrt(schmidt_number[i, j, 1])
 end
 
+"""
+    solve_ocean_pCO₂!(
+        grid,
+        reference_density,
+        ocean_pCO₂, 
+        atmospheric_CO₂_solubility, 
+        oceanic_CO₂_solubility,
+        Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ
+        )
+
+Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
+
+# Arguments
+- `grid::RectilinearGrid`: The model grid.
+- `reference_density::Float64`: The reference density of seawater.
+- `ocean_pCO₂::Field{Center, Center, Nothing}`: The computed oceanic pCO₂.
+- `atmospheric_CO₂_solubility::Field{Center, Center, Nothing}`: The solubility of CO₂ in the atmosphere.
+- `oceanic_CO₂_solubility::Field{Center, Center, Nothing}`: The solubility of CO₂ in the ocean.
+- `Θᶜ::Field{Center, Center, Nothing}`: Temperature in degrees Celsius.
+- `Sᴬ::Field{Center, Center, Nothing}`: Salinity in PSU.
+- `Δpᵦₐᵣ::Field{Center, Center, Nothing}`: Applied pressure in atm.
+- `Cᵀ::Field{Center, Center, Nothing}`: Total dissolved inorganic carbon (DIC) in mol kg⁻¹.
+- `Aᵀ::Field{Center, Center, Nothing}`: Total alkalinity (ALK) in mol kg⁻¹.
+- `Pᵀ::Field{Center, Center, Nothing}`: Phosphate concentration in mol kg⁻¹.
+- `Siᵀ::Field{Center, Center, Center}`: Silicate concentration in mol kg⁻¹.
+- `pH::Field{Center, Center, Center}`: The computed pH.
+- `pCO₂ᵃᵗᵐ::Field{Center, Center, Nothing}`: The partial pressure of CO₂ in the atmosphere.
+"""
 @kernel function solve_ocean_pCO₂!(
+    grid,
     reference_density,
     ocean_pCO₂, 
     atmospheric_CO₂_solubility, 
     oceanic_CO₂_solubility,
     Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ
     )
-    i, j, k = @index(Global, NTuple)
+    
+    i, j = @index(Global, NTuple)
+    k = size(grid, 3)
 
     ## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
     CarbonSolved = UniversalRobustCarbonSystem(
                         Θᶜ[i, j, k], 
                         Sᴬ[i, j, k], 
-                        Δpᵦₐᵣ[i, j], 
+                        Δpᵦₐᵣ[i, j, 1], 
                         Cᵀ[i, j, k]/reference_density, 
                         Aᵀ[i, j, k]/reference_density, 
                         Pᵀ[i, j, k]/reference_density, 
                         Siᵀ[i, j, k]/reference_density, 
-                        pH[i, j, k], 
-                        pCO₂ᵃᵗᵐ[i, j]
+                        pH[i, j, 1], 
+                        pCO₂ᵃᵗᵐ[i, j, 1]
     )
 
-    ocean_pCO₂[i, j]                  = CarbonSolved.pCO₂ᵒᶜᵉ
-    atmospheric_CO₂_solubility[i, j]  = CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ
-    oceanic_CO₂_solubility[i, j]      = CarbonSolved.Pᵈⁱᶜₖₛₒₗₒ
-    pH[i, j, k]                       = CarbonSolved.pH
+    ocean_pCO₂[i, j, 1]                 = CarbonSolved.pCO₂ᵒᶜᵉ
+    atmospheric_CO₂_solubility[i, j, 1] = CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ
+    oceanic_CO₂_solubility[i, j, 1]     = CarbonSolved.Pᵈⁱᶜₖₛₒₗₒ
+    pH[i, j, 1]                         = CarbonSolved.pH
 end
 
 """
@@ -232,9 +270,9 @@ The convention is that a positive flux is upwards (outgassing), and a negative f
     i, j = @index(Global, NTuple)
 
     ## compute CO₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards)
-    CO₂_flux[i, j] = - piston_velocity[i, j] * (
-                 atmospheric_pCO₂[i, j] * atmospheric_CO₂_solubility[i, j] - 
-                 oceanic_pCO₂[i, j]     * oceanic_CO₂_solubility[i, j]
+    CO₂_flux[i, j, 1] = - piston_velocity[i, j, 1] * (
+                 atmospheric_pCO₂[i, j, 1] * atmospheric_CO₂_solubility[i, j, 1] - 
+                 oceanic_pCO₂[i, j, 1]     * oceanic_CO₂_solubility[i, j, 1]
             ) * reference_density # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
 end
 
@@ -267,30 +305,6 @@ solubility/activity of CO₂ in seawater.
 
     CO₂_flux = simulation.model.tracers.DIC.boundary_conditions.top.condition
     
-    kernel_size = KernelParameters(
-	(grid.Nx, grid.Ny, 1),
-	(grid.Hx, grid.Hy, grid.Nz-1),
-    )
-
-    ## access model fields
-    #θᶜ = Field{Center, Center, Nothing}(simulation.model.grid)
-    #set!(θᶜ, view(interior(simulation.model.tracers.T), 1:Nx, 1:Ny, Nz))
-    #
-    #Sᴬ = Field{Center, Center, Nothing}(simulation.model.grid)
-    #set!(Sᴬ, view(interior(simulation.model.tracers.S), 1:Nx, 1:Ny, Nz))
-    #
-    #Cᵀ = Field{Center, Center, Nothing}(simulation.model.grid)
-    #set!(Cᵀ, view(interior(simulation.model.tracers.DIC), 1:Nx, 1:Ny, Nz))
-    #Cᵀ = Cᵀ/reference_density # Convert mol m⁻³ to mol kg⁻¹
-    #
-    #Aᵀ = Field{Center, Center, Nothing}(simulation.model.grid)
-    #set!(Aᵀ, view(interior(simulation.model.tracers.ALK), 1:Nx, 1:Ny, Nz))
-    #Aᵀ = Aᵀ/reference_density # Convert mol m⁻³ to mol kg⁻¹
-    #
-    #Pᵀ = Field{Center, Center, Nothing}(simulation.model.grid)
-    #set!(Pᵀ, view(interior(simulation.model.tracers.PO₄), 1:Nx, 1:Ny, Nz))
-    #Pᵀ = Pᵀ/reference_density # Convert mol m⁻³ to mol kg⁻¹
-    
     Siᵀ = Field{Center, Center, Center}(grid)
     set!(Siᵀ, silicate_conc)
 
@@ -301,8 +315,8 @@ solubility/activity of CO₂ in seawater.
     T = simulation.model.tracers.T
 
     kernel_args = (
-        Sᴰᴵᶜ.data.parent, 
-        T.data.parent,
+        Sᴰᴵᶜ, 
+        T,
         schmidt_dic_coeff0,
         schmidt_dic_coeff1,
         schmidt_dic_coeff2,
@@ -313,7 +327,7 @@ solubility/activity of CO₂ in seawater.
 
     launch!(arch, 
 	    grid, 
-	    kernel_size, 
+	    :xy, 
 	    compute_schmidt_dic!, 
 	    kernel_args...,
     )
@@ -329,10 +343,10 @@ solubility/activity of CO₂ in seawater.
     set!(Kʷ, 0)
 
     kernel_args = (
-        Kʷ.data.parent,
-        U₁₀.data.parent,
-        Kʷₐᵥₑ.data.parent,
-        Sᴰᴵᶜ.data.parent,
+        Kʷ,
+        U₁₀,
+        Kʷₐᵥₑ,
+        Sᴰᴵᶜ,
         )
 
     ## This is a 2d only kernel, so no need for custom kernel_size to handle slicing of 3d inputs
@@ -360,35 +374,35 @@ solubility/activity of CO₂ in seawater.
     
     kernel_args = (
         reference_density,
-        ocean_CO₂.data.parent, 
-        atmospheric_CO₂_solubility.data.parent, 
-        oceanic_CO₂_solubility.data.parent,
-        T.data.parent, 
-        S.data.parent, 
-        Δpᵦₐᵣ.data.parent, 
-        DIC.data.parent, 
-        ALK.data.parent,
-        PO₄.data.parent, 
-        Siᵀ.data.parent, 
-        pH.data.parent, 
-        atmos_CO₂.data.parent,
+        ocean_CO₂, 
+        atmospheric_CO₂_solubility, 
+        oceanic_CO₂_solubility,
+        T, 
+        S, 
+        Δpᵦₐᵣ, 
+        DIC, 
+        ALK,
+        PO₄, 
+        Siᵀ, 
+        pH, 
+        atmos_CO₂,
         )
 
     launch!(arch,
 	    grid,
-	    kernel_size,
+	    :xy,
 	    solve_ocean_pCO₂!,
 	    kernel_args...,
     )
 
     ## compute CO₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards)
     kernel_args = (
-        CO₂_flux.data.parent,
-        Kʷ.data.parent,
-        atmos_CO₂.data.parent, 
-        ocean_CO₂.data.parent,
-        atmospheric_CO₂_solubility.data.parent, 
-        oceanic_CO₂_solubility.data.parent,
+        CO₂_flux,
+        Kʷ,
+        atmos_CO₂, 
+        ocean_CO₂,
+        atmospheric_CO₂_solubility, 
+        oceanic_CO₂_solubility,
         reference_density,
         )
 
@@ -398,50 +412,6 @@ solubility/activity of CO₂ in seawater.
 	    compute_CO₂_flux!, 
 	    kernel_args...,
     )
-
-    ## store the oceanic and atmospheric CO₂ concentrations into Fields
-    #ocean_CO₂ = oceanic_pCO₂
-#    atmos_CO₂ = atmos_pCO₂
-#    ## access model fields
-#    for i = 1:Nx
-#        for j = 1:Ny
-#            Θᶜ = adapt(Array, simulation.model.tracers.T)[i,j,Nz]
-#            Sᴬ = adapt(Array, simulation.model.tracers.S)[i,j,Nz]
-#            Cᵀ = adapt(Array, simulation.model.tracers.DIC)[i,j,Nz]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
-#            Aᵀ = adapt(Array, simulation.model.tracers.ALK)[i,j,Nz]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
-#            Pᵀ = adapt(Array, simulation.model.tracers.PO₄)[i,j,Nz]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
-#
-#            ## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
-#            ## Returns ocean pCO₂ (in atm) and atmosphere/ocean solubility coefficients (mol kg⁻¹ atm⁻¹)
-#            (; pCO₂ᵒᶜᵉ, Pᵈⁱᶜₖₛₒₗₐ, Pᵈⁱᶜₖₛₒₗₒ) = 
-#                UniversalRobustCarbonSystem(
-#                        Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
-#                        )
-#
-#            ## compute schmidt number for DIC
-#            Cˢᶜᵈⁱᶜ =  ( a₀ˢᶜᵈⁱᶜ - 
-#                        a₁ˢᶜᵈⁱᶜ * Θᶜ + 
-#                        a₂ˢᶜᵈⁱᶜ * Θᶜ^2 - 
-#                        a₃ˢᶜᵈⁱᶜ * Θᶜ^3 + 
-#                        a₄ˢᶜᵈⁱᶜ * Θᶜ^4 
-#                      )/a₅ˢᶜᵈⁱᶜ
-#
-#            ## compute gas exchange coefficient/piston velocity and correct with Schmidt number
-#            Kʷ =  (
-#                   (Kʷₐᵥₑ * cmhr⁻¹_per_ms⁻¹) * U₁₀^2
-#                  ) / sqrt(Cˢᶜᵈⁱᶜ)    
-#
-#            ## compute CO₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards)
-#            CO₂_flux[i,j,Nz] = - Kʷ * (
-#                            pCO₂ᵃᵗᵐ * Pᵈⁱᶜₖₛₒₗₐ - 
-#                            pCO₂ᵒᶜᵉ * Pᵈⁱᶜₖₛₒₗₒ
-#                           ) * ρʳᵉᶠ # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
-#
-#            ## store the oceanic and atmospheric CO₂ concentrations into Fields
-#            ocean_CO₂[i,j,Nz] = pCO₂ᵒᶜᵉ
-#            atmos_CO₂[i,j,Nz] = pCO₂ᵃᵗᵐ 
-#        end
-#    end
     return nothing
 end
 
