@@ -12,9 +12,9 @@ using Oceananigans.Units
 
 #################################### Grid ####################################
 # Parameters
-Nx = 100 
-Nz = 200
-Lx = 1000kilometers   # m
+Nx = 500 
+Nz = 100
+Lx = 10000kilometers   # m
 Lz = 2000           # m
 
 # We use a two-dimensional grid, with a `Flat` `y`-direction:
@@ -27,18 +27,13 @@ grid = RectilinearGrid(#GPU(),
 #################################### Boundary conditions ####################################
 
 # Wind stress boundary condition
-τ₀ = 1e-3           # m² s⁻² = x 1e3 N m⁻²
-# @inline τy(x, t, p) = p.τ₀ * sinpi(0.5*(x/p.Lx+0.2))# * x/p.Lx
+τ₀ = - 1e-4          # m² s⁻²
 function τy(x, t, p)
     xfrac = x / p.Lx
-    return xfrac < 0.8 ?  p.τ₀ * sinpi(xfrac / 1.6) :  p.τ₀ * sinpi((1 - xfrac) / 0.4)
+    # return xfrac < 0.8 ?  p.τ₀ *sinpi(5*xfrac/8) : p.τ₀ * cospi((2.5 * xfrac - 2))
+    return p.τ₀ * sinpi(xfrac)
 end
-
-# @inline function τy(x, t, p)
-#     return  p.τ₀ * (sinpi(x/p.Lx/0.8-0.5)+1) #(-tanh(x/p.Lx*pi/0.1-9*pi)+1) * 
-# end
-# τ₀ = 0.0125 / 1e3
-y_wind_stress = FluxBoundaryCondition(τy, parameters=(; τ₀, Lx)) 
+y_wind_stress = FluxBoundaryCondition(τy, parameters=(; τ₀=τ₀, Lx=Lx)) 
 v_bcs = FieldBoundaryConditions(top=y_wind_stress)
 
 #################################### Model ####################################
@@ -46,9 +41,9 @@ v_bcs = FieldBoundaryConditions(top=y_wind_stress)
 # mixing_length = CATKEMixingLength(Cᵇ = 0.001)
 # catke = CATKEVerticalDiffusivity(; mixing_length, tke_time_step = 10minutes)
 
-kz(x,z,t) = 1e-5 + 5e-3 * (tanh((z+75)/10)+1) + 1e-3 * exp(-(z+2000)/50)
-vertical_closure = VerticalScalarDiffusivity(;ν=kz, κ=kz)
-horizontal_closure = HorizontalScalarDiffusivity(ν=1e4, κ=1e4)
+kz(x,z,t) = 1e-5 + 5e-3 * (tanh((z+150)/20)+1) + 1e-2 * exp(-(z+2000)/50)
+vertical_closure = VerticalScalarDiffusivity(VerticallyImplicitTimeDiscretization(),ν=1, κ=kz)
+horizontal_closure = HorizontalScalarDiffusivity(ν=1e3, κ=1e3)
 
 # Add Lagrangian Particles
 # n_particles = 10
@@ -62,9 +57,9 @@ model = HydrostaticFreeSurfaceModel(; grid,
                                     buoyancy = BuoyancyTracer(),
                                     coriolis = FPlane(; f=1e-4),
                                     closure = (vertical_closure, horizontal_closure),
-                                    tracers = (:b, :e, :T1, :T2),
-                                    momentum_advection = WENO(),
-                                    tracer_advection = WENO(),
+                                    tracers = (:b, :T1, :T2),
+                                    # momentum_advection = WENO(),
+                                    # tracer_advection = WENO(),
                                     # particles = lagrangian_particles,
                                     boundary_conditions = (; v=v_bcs))
 
@@ -77,14 +72,16 @@ bᵢ(x, z) = N² * z + M² * x
 # T2ᵢ(x, z) =  floor(Int, x / 200kilometers) % 2
 
 T1ᵢ = zeros(Nx, 1, Nz)
-T1ᵢ[75:85, 1, 1:10] .= 1
+T1ᵢ[460:470, 1, 80:90] .= 1
+T1ᵢ[20:30, 1, 80:90] .= 1
 
 T2ᵢ = zeros(Nx, 1, Nz)
-T2ᵢ[75:85, 1, 90:100] .= 1
+T2ᵢ[240:260, 1, 70:90] .= 1
 
 set!(model, b=bᵢ, T1 = T1ᵢ, T2 = T2ᵢ) 
 
-simulation = Simulation(model; Δt = 10seconds, stop_time=365.25*5days)
+simulation = Simulation(model; Δt = 5minutes, stop_time=3650days)
+
 wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=30minutes)
 simulation.callbacks[:wizard] = Callback(wizard, IterationInterval(50))
 
@@ -101,15 +98,15 @@ outputs = (u = model.velocities.u,
 simulation.output_writers[:simple_output] =
     JLD2OutputWriter(model, outputs, 
                      schedule = TimeInterval(10days), 
-                     filename = "passiveT_ty1_5y",
+                     filename = "passiveT_AMOCν1",
                      overwrite_existing = true)
 
 run!(simulation)
 
 ############################ Visualizing the solution ############################
 
-# filepath = simulation.output_writers[:simple_output].filepath
-filepath = "./passiveT_ty02_20y_btm1e2diff.jld2"
+filepath = simulation.output_writers[:simple_output].filepath
+# filepath = "./passiveT_ty02_20y_btm1e2diff.jld2"
 
 # TODO: How to record a video of particle movement
 # using JLD2
@@ -133,7 +130,7 @@ wₙ = @lift 100*interior(w_timeseries[$n], :, 1, :)
 T1ₙ = @lift interior(T1_timeseries[$n], :, 1, :)
 T2ₙ = @lift interior(T2_timeseries[$n], :, 1, :)
 
-fig = Figure(size = (1200, 1200))
+fig = Figure(size = (1000, 1000))
 
 # ax_wind = Axis(fig[2, 3]; xlabel = "x (m)", ylabel = "τy (N m⁻²)", aspect = 1)
 # function y_wind(x,Lx)
@@ -147,22 +144,22 @@ hm_u = heatmap!(ax_u, xw, zw, uₙ; colorrange = (-0.5, 0.5), colormap = :balanc
 Colorbar(fig[2, 2], hm_u; label = "u (cm/s)", flipaxis = false)
 
 ax_w = Axis(fig[2, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_w = heatmap!(ax_w, xw, zw, wₙ; colorrange = (-2e-3,2e-3), colormap = :balance) 
+hm_w = heatmap!(ax_w, xw, zw, wₙ; colorrange = (-2e-5,2e-5), colormap = :balance) 
 Colorbar(fig[2, 4], hm_w; label = "w (cm/s)", flipaxis = false)
 
 ax_T1 = Axis(fig[3, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_T1 = heatmap!(ax_T1, xt, zt, T1ₙ; colorrange = (0,0.05), colormap = :rainbow1) 
+hm_T1 = heatmap!(ax_T1, xt, zt, T1ₙ; colorrange = (0,0.1), colormap = :rainbow1) 
 Colorbar(fig[3, 2], hm_T1; label = "Passive tracer 1", flipaxis = false)
 
 ax_T2 = Axis(fig[3, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_T2 = heatmap!(ax_T2, xt, zt, T2ₙ; colorrange = (0,0.05), colormap = :rainbow1) 
+hm_T2 = heatmap!(ax_T2, xt, zt, T2ₙ; colorrange = (0,0.1), colormap = :rainbow1) 
 Colorbar(fig[3, 4], hm_T2; label = "Passive tracer 2", flipaxis = false)
 
 fig[1, 1:4] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "passiveT_ty02_20y_btm1e2diff.mp4", frames, framerate=80) do i
+record(fig, "passiveT_AMOCν1.mp4", frames, framerate=50) do i
     n[] = i
 end
 nothing #hide

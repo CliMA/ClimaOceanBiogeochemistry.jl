@@ -115,7 +115,7 @@ run!(simulation, pickup = false)
 ############################ Visualizing the solution ############################
 
 # filepath = simulation.output_writers[:simple_output].filepath
-filepath = "./CAN_2D_Rz21.jld2"
+filepath = "./CAN_2D_Rz18.jld2"
 
 u_timeseries = FieldTimeSeries(filepath, "u")
 w_timeseries = FieldTimeSeries(filepath, "w")
@@ -173,7 +173,7 @@ fig[1, 1:4] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "CAN_2D_Rz21.mp4", frames, framerate=50) do i
+record(fig, "CAN_2D_Rz18.mp4", frames, framerate=50) do i
     n[] = i
     PO4_prof[1] = avg_PO4ₙ[][1, :]
     POP_prof[1] = avg_POPₙ[][1, :]

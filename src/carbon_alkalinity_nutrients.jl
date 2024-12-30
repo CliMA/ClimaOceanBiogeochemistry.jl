@@ -6,19 +6,19 @@ using Adapt
 import Adapt: adapt_structure, adapt
 using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
 using Oceananigans.BoundaryConditions: ImpenetrableBoundaryCondition, fill_halo_regions!
-using Oceananigans.Fields: ConstantField, ZeroField, AbstractField
+using Oceananigans.Fields: ConstantField, ZeroField, AbstractField, CenterField
 using Oceananigans.Grids: Center, znode
 using Oceananigans.Units: days
 
 const c = Center()
 
-struct CarbonAlkalinityNutrients{FT, W} <: AbstractBiogeochemistry
+struct CarbonAlkalinityNutrients{FT, W, S} <: AbstractBiogeochemistry
     reference_density                             :: FT
-    maximum_net_community_production_rate         :: FT # mol PO₄ m⁻³ s⁻¹
+    maximum_net_community_production_rate         :: S # FT # mol PO₄ m⁻³ s⁻¹
     phosphate_half_saturation                     :: FT # mol PO₄ m⁻³
     nitrate_half_saturation                       :: FT # mol NO₃ m⁻³
     iron_half_saturation                          :: FT # mol Fe m⁻³
-    incident_PAR                                  :: FT # W m⁻²
+    incident_PAR                                  :: S # FT # W m⁻²
     PAR_half_saturation                           :: FT  # W m⁻²
     PAR_attenuation_scale                         :: FT  # m
     PAR_percent                                   :: FT  # m
@@ -131,6 +131,19 @@ function CarbonAlkalinityNutrients(; grid,
                                    martin_curve_exponent                       = 0.84,
                                    particulate_organic_phosphorus_sinking_velocity  = -10.0 / day)
 
+    if maximum_net_community_production_rate isa Number
+            max_NCP = maximum_net_community_production_rate            
+            maximum_net_community_production_rate = CenterField(grid)            
+            set!(maximum_net_community_production_rate, max_NCP)            
+            fill_halo_regions!(maximum_net_community_production_rate)
+    end
+    if incident_PAR isa Number
+        surface_PAR = incident_PAR            
+        incident_PAR = CenterField(grid)            
+        set!(incident_PAR, surface_PAR)            
+        fill_halo_regions!(incident_PAR)
+    end
+
     if particulate_organic_phosphorus_sinking_velocity isa Number
             w₀ = particulate_organic_phosphorus_sinking_velocity
             no_penetration = ImpenetrableBoundaryCondition()
@@ -148,11 +161,13 @@ function CarbonAlkalinityNutrients(; grid,
     FT = eltype(grid)
 
     return CarbonAlkalinityNutrients(convert(FT, reference_density),
-                                     convert(FT, maximum_net_community_production_rate),
+                                     maximum_net_community_production_rate,
+                                     #convert(FT, maximum_net_community_production_rate),
                                      convert(FT, phosphate_half_saturation),
                                      convert(FT, nitrate_half_saturation),
                                      convert(FT, iron_half_saturation),
-                                     convert(FT, incident_PAR),
+                                     incident_PAR,
+                                     #convert(FT, incident_PAR),
                                      convert(FT, PAR_half_saturation),
                                      convert(FT, PAR_attenuation_scale),
                                      convert(FT, PAR_percent),
@@ -286,7 +301,7 @@ end
 
         # return the net community production
         return max(0,
-        μᵖ * Lₗᵢₘ * min(Pₗᵢₘ, Nₗᵢₘ, Fₗᵢₘ)
+        μᵖ* Lₗᵢₘ * min(Pₗᵢₘ, Nₗᵢₘ, Fₗᵢₘ)
         )
 end
 
@@ -325,7 +340,7 @@ or 2) a first-order rate constant .
         z₀ = log(fᵢ)*λ # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
         POP = particulate_organic_phosphorus_concentration
     
-    return ifelse(z <= -1980, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP)))
+    return ifelse(z < -1980, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP)))
 end
 
 """
@@ -413,7 +428,7 @@ Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
     return (Rᶜᴾ * (
                     dissolved_organic_phosphorus_remin(γ, DOP) +
                     particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP) -
-                    (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
+                    (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I[i, j, k], PO₄, NO₃, Feₜ)
                 ) + particulate_inorganic_carbon_remin())
 end
 
@@ -450,7 +465,7 @@ Tracer sources and sinks for Alkalinity (ALK)
     POP = @inbounds fields.POP[i, j, k]
 
     return (-Rᴺᴾ * (
-                - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
+                - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I[i, j, k], PO₄, NO₃, Feₜ) +
                 dissolved_organic_phosphorus_remin(γ, DOP) +
                 particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
         2 * particulate_inorganic_carbon_remin())
@@ -488,7 +503,7 @@ Tracer sources and sinks for inorganic/dissolved Nitrate (NO₃).
     POP = @inbounds fields.POP[i, j, k]
 
     return (Rᴺᴾ * (
-           - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
+           - net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I[i, j, k], PO₄, NO₃, Feₜ) +
            dissolved_organic_phosphorus_remin(γ, DOP) +
            particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)))
 end
@@ -528,7 +543,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     POP = @inbounds fields.POP[i, j, k]
 
     return (Rᶠᴾ * (
-                -   net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) 
+                -   net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I[i, j, k], PO₄, NO₃, Feₜ) 
                 +   dissolved_organic_phosphorus_remin(γ, DOP) 
                 +   particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
             iron_sources() -
@@ -565,7 +580,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     DOP = @inbounds fields.DOP[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
 
-    return (- net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
+    return (- net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I[i, j, k], PO₄, NO₃, Feₜ) +
             dissolved_organic_phosphorus_remin(γ, DOP) +
             particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP))
 end
@@ -594,7 +609,7 @@ Tracer sources and sinks for dissolved organic phosphorus (DOP).
     DOP = @inbounds fields.DOP[i, j, k]
 
     return (- dissolved_organic_phosphorus_remin(γ, DOP) +
-             (1 - α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ))
+             (1 - α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I[i, j, k], PO₄, NO₃, Feₜ))
 end
 
 """
@@ -625,6 +640,6 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
     Feₜ = @inbounds fields.Fe[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
 
-    return (α * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
+    return (α * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I[i, j, k], PO₄, NO₃, Feₜ) -
            particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP))
 end
