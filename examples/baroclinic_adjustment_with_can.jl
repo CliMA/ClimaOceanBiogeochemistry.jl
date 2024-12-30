@@ -42,7 +42,7 @@ grid = RectilinearGrid(arch,
                        y        = (-Ly/2, Ly/2),
                        z        = (-Lz, 0),
                        topology = (
-                            Periodic, Periodic, Bounded,
+                            Periodic, Bounded, Bounded,
                         ))
 
 # For air-sea CO₂ fluxes, we use a FluxBoundaryCondition for the "top" of the DIC tracer.
