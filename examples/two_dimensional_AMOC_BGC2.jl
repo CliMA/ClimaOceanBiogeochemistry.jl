@@ -10,7 +10,7 @@ using Oceananigans.Models.HydrostaticFreeSurfaceModels:
                     PrescribedVelocityFields
 using Oceananigans.TurbulenceClosures: VerticallyImplicitTimeDiscretization
 using Oceananigans.Units
-using Oceananigans.Fields: ZeroField
+using Oceananigans.Fields: ZeroField, CenterField
 using Oceananigans.BoundaryConditions: fill_halo_regions!
 
 Ny = 500 
@@ -76,9 +76,9 @@ model = HydrostaticFreeSurfaceModel(grid = grid,
                                     buoyancy = nothing,
                                     closure = (vertical_closure, horizontal_closure))
 
-set!(model, DIC=2.1, ALK=2.35, NO₃=2e-2, PO₄=1.2e-3, DOP=0, POP=0, Fe = 5e-7) # mol PO₄ m⁻³
+set!(model, DIC=2.1, ALK=2.35, NO₃=2e-2, PO₄=1.2e-3, DOP=0, POP=0, Fe = 4e-7) # mol PO₄ m⁻³
 
-simulation = Simulation(model; Δt = 1days, stop_time=1000days) 
+simulation = Simulation(model; Δt = 1days, stop_time=10days)#365.25*2000days) 
 
 # We add a `TimeStepWizard` callback to adapt the simulation's time-step,
 # wizard = TimeStepWizard(cfl=0.2, max_change=1.1, max_Δt=60minutes)
@@ -87,7 +87,7 @@ simulation = Simulation(model; Δt = 1days, stop_time=1000days)
 # Print the progress 
 progress(sim) = @printf("Iteration: %d, time: %s\n", 
                         iteration(sim), prettytime(sim)) 
-add_callback!(simulation, progress, IterationInterval(2000))
+add_callback!(simulation, progress, IterationInterval(5))
 
 outputs = (v = model.velocities.v,
             w = model.velocities.w,

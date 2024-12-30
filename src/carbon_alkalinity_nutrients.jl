@@ -417,7 +417,7 @@ Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = PAR(I₀, λ, z)
+    I = PAR(I₀[i, j, k], λ, z)
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
@@ -428,7 +428,7 @@ Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
     return (Rᶜᴾ * (
                     dissolved_organic_phosphorus_remin(γ, DOP) +
                     particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP) -
-                    (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I[i, j, k], PO₄, NO₃, Feₜ)
+                    (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
                 ) + particulate_inorganic_carbon_remin())
 end
 
@@ -456,7 +456,7 @@ Tracer sources and sinks for Alkalinity (ALK)
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = PAR(I₀, λ, z)
+    I = PAR(I₀[i, j, k], λ, z)
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
@@ -465,7 +465,7 @@ Tracer sources and sinks for Alkalinity (ALK)
     POP = @inbounds fields.POP[i, j, k]
 
     return (-Rᴺᴾ * (
-                - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I[i, j, k], PO₄, NO₃, Feₜ) +
+                - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
                 dissolved_organic_phosphorus_remin(γ, DOP) +
                 particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
         2 * particulate_inorganic_carbon_remin())
@@ -494,7 +494,7 @@ Tracer sources and sinks for inorganic/dissolved Nitrate (NO₃).
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = PAR(I₀, λ, z)
+    I = PAR(I₀[i, j, k], λ, z)
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
@@ -503,7 +503,7 @@ Tracer sources and sinks for inorganic/dissolved Nitrate (NO₃).
     POP = @inbounds fields.POP[i, j, k]
 
     return (Rᴺᴾ * (
-           - net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I[i, j, k], PO₄, NO₃, Feₜ) +
+           - net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
            dissolved_organic_phosphorus_remin(γ, DOP) +
            particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)))
 end
@@ -534,7 +534,7 @@ Tracer sources and sinks for dissolved iron (FeT).
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = PAR(I₀, λ, z)
+    I = PAR(I₀[i, j, k], λ, z)
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
@@ -543,7 +543,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     POP = @inbounds fields.POP[i, j, k]
 
     return (Rᶠᴾ * (
-                -   net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I[i, j, k], PO₄, NO₃, Feₜ) 
+                -   net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) 
                 +   dissolved_organic_phosphorus_remin(γ, DOP) 
                 +   particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
             iron_sources() -
@@ -572,7 +572,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = PAR(I₀, λ, z)
+    I = PAR(I₀[i, j, k], λ, z)
     
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
@@ -580,7 +580,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     DOP = @inbounds fields.DOP[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
 
-    return (- net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I[i, j, k], PO₄, NO₃, Feₜ) +
+    return (- net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
             dissolved_organic_phosphorus_remin(γ, DOP) +
             particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP))
 end
@@ -601,7 +601,7 @@ Tracer sources and sinks for dissolved organic phosphorus (DOP).
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = PAR(I₀, λ, z)
+    I = PAR(I₀[i, j, k], λ, z)
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
@@ -609,7 +609,7 @@ Tracer sources and sinks for dissolved organic phosphorus (DOP).
     DOP = @inbounds fields.DOP[i, j, k]
 
     return (- dissolved_organic_phosphorus_remin(γ, DOP) +
-             (1 - α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I[i, j, k], PO₄, NO₃, Feₜ))
+             (1 - α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ))
 end
 
 """
@@ -633,13 +633,13 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    I = PAR(I₀, λ, z)
+    I = PAR(I₀[i, j, k], λ, z)
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
     NO₃ = @inbounds fields.NO₃[i, j, k]
     Feₜ = @inbounds fields.Fe[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
 
-    return (α * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I[i, j, k], PO₄, NO₃, Feₜ) -
+    return (α * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
            particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP))
 end
