@@ -248,7 +248,8 @@ solver that converges from any given initial value.
     H⁺ = max(min(H⁺ₘₐₓ, H⁺ᵢₙᵢ), H⁺ₘᵢₙ)             
     #H⁺ = sqrt(H⁺ₘₐₓ * H⁺ₘᵢₙ) # Safer(?) than the above line
 
-    while abs(H⁺ᶠᵃᶜᵗᵒʳ) > Δₕ₊
+    ##while abs(H⁺ᶠᵃᶜᵗᵒʳ) > Δₕ₊
+    for Iᴴ⁺ in 1:Iᴴ⁺ₘₐₓ
     # Stop iterations once |\delta{[H]}/[H]| < rdel
     # <=> |(H⁺ - H⁺ₚᵣₑ)/H⁺ₚᵣₑ| = |EXP(-Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*H⁺ₚᵣₑ)) -1| < rdel
     # |EXP(-Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*H⁺ₚᵣₑ)) -1| ~ |Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*H⁺ₚᵣₑ)|
@@ -259,13 +260,13 @@ solver that converges from any given initial value.
     # Hence |Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*H⁺)| < rdel
     # rdel <-- Δₕ₊
      
-        if Iᴴ⁺ ≥ Iᴴ⁺ₘₐₓ
-            H⁺ = nothing
-            break
-        end
-         
-        # Increase the iteration counter
-        Iᴴ⁺ += 1
+    ##    if Iᴴ⁺ ≥ Iᴴ⁺ₘₐₓ
+    ##        H⁺ = nothing
+    ##        break
+    ##    end
+    ##     
+    ##  # Increase the iteration counter
+    ##    Iᴴ⁺ += 1
 
         # remember for next iteration current H⁺ concentration
         H⁺ₚᵣₑ = H⁺
@@ -274,9 +275,9 @@ solver that converges from any given initial value.
                               Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
                         )
 
-        if Aᵀᵣₐₜ == 0
-            break
-        end
+    ##  if Aᵀᵣₐₜ == 0
+    ##      break
+    ##  end
 
         # Adapt bracketing interval
         H⁺ₘᵢₙ = ifelse(
