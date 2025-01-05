@@ -1,8 +1,8 @@
 # Struct to hold parameters for the UniversalRobustCarbonSolver
-Base.@kwdef struct CarbonSolverParameters #{FT<:Real, IT<:Int} #
-    Δₕ₊      #:: FT # Tolerance of the H⁺ solution 
-    H⁺ᵗʰʳᵉˢʰ #:: FT # H⁺ threshold for secant iteration
-    Iᴴ⁺ₘₐₓ   #:: IT # Maximum number of iterations
+struct CarbonSolverParameters{FT<:Real, IT<:Int} #
+    Δₕ₊      :: FT # Tolerance of the H⁺ solution 
+    H⁺ᵗʰʳᵉˢʰ :: FT # H⁺ threshold for secant iteration
+    Iᴴ⁺ₘₐₓ   :: IT # Maximum number of iterations
 end
 
 """
@@ -11,18 +11,17 @@ end
 Create a `CarbonSolverParameters` object with the specified parameters.
 
 # Arguments
-- `grid`: The grid object which determines the element type for the parameters.
 - `Δₕ₊`: A real number representing the increment for the hydrogen ion concentration. Default is `1e-8`.
 - `H⁺ᵗʰʳᵉˢʰ`: A real number representing the threshold for the hydrogen ion concentration. Default is `1`.
 - `Iᴴ⁺ₘₐₓ`: A real number representing the maximum number of iterations for the solver. Default is `100`.
 
 # Returns
-- A `CarbonSolverParameters` object with the specified parameters converted to the element type of the grid.
+- A `CarbonSolverParameters` object with the specified parameters.
 """
 function CarbonSolverParameters(;
     Δₕ₊      :: Real = 1e-8, 
     H⁺ᵗʰʳᵉˢʰ :: Real = 1.0, 
-    Iᴴ⁺ₘₐₓ   :: Real = 100.0,
+    Iᴴ⁺ₘₐₓ   :: Int = 100,
 )
     return CarbonSolverParameters(
         Δₕ₊,
@@ -32,39 +31,38 @@ function CarbonSolverParameters(;
 end
 
 # Struct to hold carbon dissociation function coefficients for chemical species
-Base.@kwdef struct CarbonCoefficientParameters #{FT<:Real}
-    a₀ #:: FT
-    a₁ #:: FT
-    a₂ #:: FT
-    a₃ #:: FT
-    a₄ #:: FT
-    a₅ #:: FT
-    b₀ #:: FT
-    b₁ #:: FT
-    b₂ #:: FT
-    b₃ #:: FT
-    c₀ #:: FT
-    c₁ #:: FT
-    c₂ #:: FT
-    d₀ #:: FT
-    d₁ #:: FT
-    k₀ #:: FT
-    k₁ #:: FT
-    k₂ #:: FT
-    p₀ #:: FT
-    v₀ #:: FT
-    v₁ #:: FT
-    v₂ #:: FT
-    v₃ #:: FT
+struct CarbonCoefficientParameters{FT<:Real}
+    a₀ :: FT
+    a₁ :: FT
+    a₂ :: FT
+    a₃ :: FT
+    a₄ :: FT
+    a₅ :: FT
+    b₀ :: FT
+    b₁ :: FT
+    b₂ :: FT
+    b₃ :: FT
+    c₀ :: FT
+    c₁ :: FT
+    c₂ :: FT
+    d₀ :: FT
+    d₁ :: FT
+    k₀ :: FT
+    k₁ :: FT
+    k₂ :: FT
+    p₀ :: FT
+    v₀ :: FT
+    v₁ :: FT
+    v₂ :: FT
+    v₃ :: FT
 end
 
 """
     CarbonCoefficientParameters(a₀=0, a₁=0, a₂=0, a₃=0, a₄=0, a₅=0, b₀=0, b₁=0, b₂=0, b₃=0, c₀=0, c₁=0, c₂=0, d₀=0, d₁=0, k₀=0, k₁=0, k₂=0, p₀=0, v₀=0, v₁=0, v₂=0, v₃=0)
 
-Create a `CarbonCoefficientParameters` object with the specified coefficients, converting them to the element type of the provided `grid`.
+Create a `CarbonCoefficientParameters` object with the specified coefficients.
 
 # Arguments
-- `grid`: The grid object whose element type will be used for the coefficients.
 - `a₀`, `a₁`, `a₂`, `a₃`, `a₄`, `a₅`: Coefficients for the `a` parameters (default is 0).
 - `b₀`, `b₁`, `b₂`, `b₃`: Coefficients for the `b` parameters (default is 0).
 - `c₀`, `c₁`, `c₂`: Coefficients for the `c` parameters (default is 0).
@@ -74,7 +72,7 @@ Create a `CarbonCoefficientParameters` object with the specified coefficients, c
 - `v₀`, `v₁`, `v₂`, `v₃`: Coefficients for the `v` parameters (default is 0).
 
 # Returns
-- A `CarbonCoefficientParameters` object with the specified coefficients converted to the element type of the provided `grid`.
+- A `CarbonCoefficientParameters` object with the specified coefficients.
 """
 function CarbonCoefficientParameters(;
     a₀ = 0.,
@@ -128,36 +126,36 @@ function CarbonCoefficientParameters(;
     )
 end
 
-Base.@kwdef struct CarbonSystemParameters #{CSP<:CarbonSolverParameters, CCP<:CarbonCoefficientParameters}
-    Sᵒᵖᵗˢ        #:: CSP
-    Pᴴ²⁰ˢʷ       #:: CCP
-    Pᵘˢ          #:: CCP
-    Pᴮᵀᴼᵀ        #:: CCP
-    Pᶜᵃᵀᴼᵀ       #:: CCP
-    Pᶠᵀᴼᵀ        #:: CCP
-    Pˢᴼ⁴ᵀᴼᵀ      #:: CCP
-    Pᵈⁱᶜₖₛₒₗₐ    # :: CCP
-    Pᵈⁱᶜₖₚᵣₑ     #:: CCP
-    Pᵈⁱᶜₖ₀       #:: CCP
-    Pᵈⁱᶜₖ₁ᵣ₉₃    #:: CCP
-    Pᵈⁱᶜₖ₂ᵣ₉₃    #:: CCP
-    Pᵈⁱᶜₖ₁ₘ₉₅    #:: CCP
-    Pᵈⁱᶜₖ₂ₘ₉₅    #:: CCP
-    Pᵈⁱᶜₖ₁ₗ₀₀    # :: CCP
-    Pᵈⁱᶜₖ₂ₗ₀₀    # :: CCP
-    Pᴮₖ₁         #:: CCP
-    Pᴴ²ᴼₖ₁       #:: CCP
-    Pᴾᴼ⁴ₖ₁       #:: CCP
-    Pᴾᴼ⁴ₖ₂       #:: CCP
-    Pᴾᴼ⁴ₖ₃       #:: CCP
-    Pˢⁱᵗₖ₁       #:: CCP
-    Pᴴ²ˢₖ₁       #:: CCP
-    Pᴺᴴ⁴ₖ₁       #:: CCP
-    Pᴴᶠᵦ₁        #:: CCP
-    Pᴴᶠₖ₁        #:: CCP
-    Pᴴˢᴼ⁴ₖ₁      #:: CCP
-    Pᶜᵃˡᶜⁱᵗᵉₛₚ   #:: CCP
-    Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ #:: CCP
+struct CarbonSystemParameters{CSP<:CarbonSolverParameters, CCP<:CarbonCoefficientParameters}
+    Sᵒᵖᵗˢ        :: CSP
+    Pᴴ²⁰ˢʷ       :: CCP
+    Pᵘˢ          :: CCP
+    Pᴮᵀᴼᵀ        :: CCP
+    Pᶜᵃᵀᴼᵀ       :: CCP
+    Pᶠᵀᴼᵀ        :: CCP
+    Pˢᴼ⁴ᵀᴼᵀ      :: CCP
+    Pᵈⁱᶜₖₛₒₗₐ     :: CCP
+    Pᵈⁱᶜₖₚᵣₑ     :: CCP
+    Pᵈⁱᶜₖ₀       :: CCP
+    Pᵈⁱᶜₖ₁ᵣ₉₃    :: CCP
+    Pᵈⁱᶜₖ₂ᵣ₉₃    :: CCP
+    Pᵈⁱᶜₖ₁ₘ₉₅    :: CCP
+    Pᵈⁱᶜₖ₂ₘ₉₅    :: CCP
+    Pᵈⁱᶜₖ₁ₗ₀₀     :: CCP
+    Pᵈⁱᶜₖ₂ₗ₀₀     :: CCP
+    Pᴮₖ₁         :: CCP
+    Pᴴ²ᴼₖ₁       :: CCP
+    Pᴾᴼ⁴ₖ₁       :: CCP
+    Pᴾᴼ⁴ₖ₂       :: CCP
+    Pᴾᴼ⁴ₖ₃       :: CCP
+    Pˢⁱᵗₖ₁       :: CCP
+    Pᴴ²ˢₖ₁       :: CCP
+    Pᴺᴴ⁴ₖ₁       :: CCP
+    Pᴴᶠᵦ₁        :: CCP
+    Pᴴᶠₖ₁        :: CCP
+    Pᴴˢᴼ⁴ₖ₁      :: CCP
+    Pᶜᵃˡᶜⁱᵗᵉₛₚ   :: CCP
+    Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ :: CCP
 end
 """
     CarbonSystemParameters(kwargs...)
@@ -167,11 +165,10 @@ The parameters are used in carbon system calculations and are initialized with d
     by passing keyword arguments.
 
 # Arguments
-- `grid`: The grid on which the carbon system parameters are defined.
 - `kwargs...`: Keyword arguments for various carbon coefficient parameters.
 
 # Keyword Arguments
-- `Sᵒᵖᵗˢ::CarbonSolverParameters`: Default is `CarbonSolverParameters(grid)`.
+- `Sᵒᵖᵗˢ::CarbonSolverParameters`: Default is `CarbonSolverParameters()`.
 - `Pᴴ²⁰ˢʷ::CarbonCoefficientParameters`: Default is `CarbonCoefficientParameters(a₀=1.0, a₁=-0.001005)`.
 - `Pᵘˢ::CarbonCoefficientParameters`: Default is `CarbonCoefficientParameters(a₀=0.019924)`.
 - `Pᴮᵀᴼᵀ::CarbonCoefficientParameters`: Default is `CarbonCoefficientParameters(a₀=0.000416, a₁=35.0, a₂=1.0)`.

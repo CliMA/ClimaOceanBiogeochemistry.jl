@@ -238,7 +238,7 @@ solver that converges from any given initial value.
                           pH::Real, 
                           Pᶜᵒᵉᶠᶠ,  
                           Sᵒᵖᵗˢ,
-                          ) :: Tuple{Real, Real}
+                          ) :: Tuple{Int, Real}
    
     # Initialize some variables
     #Iᴴ⁺                = 0
