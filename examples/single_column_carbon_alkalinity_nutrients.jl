@@ -121,7 +121,7 @@ adapt_structure(
 
 Compute the Schmidt number for dissolved inorganic carbon (DIC) based on the temperature Θᶜ (in degrees Celsius).
 
-# Arguments
+Arguments:
 - `grid::RectilinearGrid`: The model grid.
 - `schmidt_number_dic::Field{Center, Center, Nothing}`: The computed Schmidt number for DIC.
 - `temperature::Field{Center, Center, Nothing}`: Temperature in degrees Celsius.
@@ -167,7 +167,7 @@ end
 
 Compute the piston velocity for gas exchange at the ocean surface.
 
-# Arguments
+Arguments:
 - `grid::RectilinearGrid`: The model grid.
 - `piston_velocity::Field{Center, Center, Nothing}`: The computed piston velocity.
 - `surface_wind_speed::Field{Center, Center, Nothing}`: The wind speed at the ocean surface.
@@ -201,7 +201,7 @@ end
 
 Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
 
-# Arguments
+Arguments:
 - `grid::RectilinearGrid`: The model grid.
 - `reference_density::Float64`: The reference density of seawater.
 - `ocean_pCO₂::Field{Center, Center, Nothing}`: The computed oceanic pCO₂.
@@ -270,7 +270,7 @@ end
         
 Compute the flux of CO₂ between the atmosphere and the ocean.
 
-# Arguments
+Arguments:
 - `grid::RectilinearGrid`: The model grid.
 - `reference_density::Float64`: The reference density of seawater.
 - `CO₂_flux::Field{Center, Center, Nothing}`: The computed CO₂ flux.
