@@ -56,7 +56,7 @@ dic_bcs  = FieldBoundaryConditions(
 ## These are filled in compute_CO₂_flux!
 ocean_CO₂ = Field{Center, Center, Nothing}(grid)
 atmos_CO₂ = Field{Center, Center, Nothing}(grid)
-pH        = Field{Center, Center, Center}(grid)
+pH        = Field{Center, Center, Nothing}(grid)
 set!(pH, 8.0)
 
 cmhr⁻¹_per_ms⁻¹ = 1 / 3.6e5 # conversion factor from cm/hr to m/s
@@ -242,7 +242,7 @@ Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
     ocean_pCO₂[i, j, 1]                 = CarbonSolved.pCO₂ᵒᶜᵉ
     atmospheric_CO₂_solubility[i, j, 1] = CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ
     oceanic_CO₂_solubility[i, j, 1]     = CarbonSolved.Pᵈⁱᶜₖₛₒₗₒ
-    pH[i, j, k]                         = CarbonSolved.pH
+    pH[i, j, 1]                         = CarbonSolved.pH
 end
 
 """
