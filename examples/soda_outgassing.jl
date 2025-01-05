@@ -4,7 +4,7 @@
 # `UniversalRobustCarbonSystem` model in a 0-d context.
 
 using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
-using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonChemistryCoefficients
+using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonSystemParameters, CarbonChemistryCoefficients
 
 using Oceananigans
 using Oceananigans.Units
@@ -59,7 +59,7 @@ Returns the tendency due to CO₂ flux using the piston velocity
 formulation of Wanninkhof (1992) and the solubility/activity of 
 CO₂ that depends on temperature, etc.
 """
-@inline function compute_co₂_flux!(simulation)
+@inline function compute_co₂_flux!(simulation; solver_params = CarbonSystemParameters())
 ## Get coefficients from CO2_flux_parameters struct
 ## I really want the option to take these from the model
     (; surface_wind_speed, 
@@ -110,16 +110,22 @@ CO₂ that depends on temperature, etc.
         Δpᵦₐᵣ   = 0.0
     end
 
-    ## access model fields
     Θᶜ = simulation.model.tracers.T[1,1,Nz]
-    Cᵀ = simulation.model.tracers.DIC[1,1,Nz]/ρʳᵉᶠ # Convert mol m⁻³ to mol kg⁻¹
+    Cᵀ = simulation.model.tracers.DIC[1,1,Nz]/ρʳᵉᶠ
 
     ## compute soda pCO₂ using the UniversalRobustCarbonSystem solver
     ## Returns soda pCO₂ (in atm) and atmosphere/soda solubility coefficients (mol kg⁻¹ atm⁻¹)
-    (; pCO₂ᵒᶜᵉ, Pᵈⁱᶜₖₛₒₗₐ, Pᵈⁱᶜₖₛₒₗₒ) = 
-        UniversalRobustCarbonSystem(
-                Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
-                )
+    (; pCO₂ᵒᶜᵉ, Pᵈⁱᶜₖₛₒₗₐ, Pᵈⁱᶜₖₛₒₗₒ) = UniversalRobustCarbonSystem(
+        pH      = pH, 
+        pCO₂ᵃᵗᵐ = pCO₂ᵃᵗᵐ,
+        Θᶜ      = Θᶜ, 
+        Sᴬ      = Sᴬ, 
+        Δpᵦₐᵣ   = Δpᵦₐᵣ, 
+        Cᵀ      = Cᵀ, 
+        Aᵀ      = Aᵀ, 
+        Pᵀ      = Pᵀ, 
+        params  = solver_params,
+    )
 
     ## store the soda and atmospheric CO₂ concentrations into Fields
     soda_co₂[1,1,Nz] = (pCO₂ᵒᶜᵉ * Pᵈⁱᶜₖₛₒₗₒ ) * ρʳᵉᶠ # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
