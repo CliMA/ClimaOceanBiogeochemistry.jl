@@ -1,9 +1,17 @@
 module CarbonSystemSolvers
-export CarbonSystem, CarbonChemistryCoefficients
+export CarbonCoefficientParameters, 
+    CarbonSolverParameters, 
+    CarbonSystemParameters, 
+    CarbonChemistryCoefficients, 
+    CarbonSystem
 
+# definitions of the structs that hold the carbon system parameters and constructor functions
+include("carbon_system_parameters.jl")
+
+# functions to calculate the carbon chemistry coefficients
 include("carbon_chemistry_coefficients.jl")
 
-struct CarbonSystem{FT}
+struct CarbonSystem{FT<:Real}
     pH      :: FT
     CO₂ˢᵒˡ  :: FT
     HCO₃⁻   :: FT
@@ -109,38 +117,48 @@ module UniversalRobustCarbonSolver
 export UniversalRobustCarbonSystem,
         CarbonSystem
 
-using ..CarbonSystemSolvers: CarbonSystem, CarbonChemistryCoefficients, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, FCᵀHCO₃⁻
+using ..CarbonSystemSolvers: CarbonCoefficientParameters, 
+                             CarbonSolverParameters, 
+                             CarbonSystemParameters,
+                             CarbonChemistryCoefficients, 
+                             CarbonSystem, 
+                             FCᵀCO₂ˢᵒˡ, 
+                             FCᵀCO₃²⁻, 
+                             FCᵀHCO₃⁻
 
 """
     UniversalRobustCarbonSystem(
-            Θ       :: FT = 25.0,
-            Sᴬ      :: FT = 35.0,
-            Δpᵦₐᵣ   :: FT = 0.0,
-            Cᵀ      :: FT = 2050.0e-6,
-            Aᵀ      :: FT = 2350.0e-6,
-            Pᵀ      :: FT = 1.0e-6,
-            Siᵀ     :: FT = 15.0e-6,
-            pH      :: FT = 8.0,
-            pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
-            Pᶜᵒᵉᶠᶠ :: CarbonChemistryCoefficients,
+            pH      :: Real = 8.0,
+            pCO₂ᵃᵗᵐ :: Real = 280.0e-6,
+            Θ       :: Real = 25.0,
+            Sᴬ      :: Real = 35.0,
+            Δpᵦₐᵣ   :: Real = 0.0,
+            Cᵀ      :: Real = 2050.0e-6,
+            Aᵀ      :: Real = 2350.0e-6,
+            Pᵀ      :: Real = 1.0e-6,
+            Siᵀ     :: Real = 15.0e-6,
+            params,
             )
 
 Uses the Munhoven (2013) SolveSAPHE package to solve the distribution of carbon species
 """
-@inline function UniversalRobustCarbonSystem(
-        Θᶜ      :: FT = 25.0,
-        Sᴬ      :: FT = 35.0,
-        Δpᵦₐᵣ   :: FT = 0.0,
-        Cᵀ      :: FT = 2050.0e-6,
-        Aᵀ      :: FT = 2350.0e-6,
-        Pᵀ      :: FT = 1.0e-6,
-        Siᵀ     :: FT = 15.0e-6,
-        pH      :: FT = 8.0,
-        pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
-        ) where {FT}
+@inline function UniversalRobustCarbonSystem(;
+        pH      :: Real = 8.0,
+        pCO₂ᵃᵗᵐ :: Real = 280.0e-6,
+        Θᶜ      :: Real = 25.0,
+        Sᴬ      :: Real = 35.0,
+        Δpᵦₐᵣ   :: Real = 0.0,
+        Cᵀ      :: Real = 2050.0e-6,
+        Aᵀ      :: Real = 2350.0e-6,
+        Pᵀ      :: Real = 1.0e-6,
+        Siᵀ     :: Real = 15.0e-6,
+        NH₄ᵀ    :: Real = 0.0,
+        H₂Sᵀ    :: Real = 0.0,
+        params  :: CarbonSystemParameters = CarbonSystemParameters(),
+        )
 
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
-    Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+    Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
     
     # Some logic here about choosing coefficient options, particularly Cᵈⁱᶜ 
     Pᶜᵒᵉᶠᶠ = (Cᵈⁱᶜₖ₀ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
@@ -163,15 +181,27 @@ Uses the Munhoven (2013) SolveSAPHE package to solve the distribution of carbon 
     )
 
     # Calculate pH from Aᵀ and Cᵀ and then calculate the rest of the carbon system
-    pH     = Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, pH, Pᶜᵒᵉᶠᶠ) 
+    iter, pH     = Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, pH, Pᶜᵒᵉᶠᶠ, params.Sᵒᵖᵗˢ) 
+    if iter == params.Sᵒᵖᵗˢ.Iᴴ⁺ₘₐₓ
+        error("UniversalRobustCarbonSystem failed to converge")
+    end
     CO₂ˢᵒˡ = FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     HCO₃⁻  = FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     CO₃²⁻  = FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     pCO₂ᵒᶜᵉ= CO₂ˢᵒˡ / Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ # correct for fugacity of CO₂ in seawater?
 
     return CarbonSystem(
-        pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ, 
-        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₐ, Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₒ, Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
+        pH, 
+        CO₂ˢᵒˡ, 
+        HCO₃⁻, 
+        CO₃²⁻, 
+        Cᵀ, 
+        Aᵀ, 
+        pCO₂ᵒᶜᵉ, 
+        pCO₂ᵃᵗᵐ, 
+        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₐ, 
+        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₒ, 
+        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
         )
 end # end function
 
@@ -202,17 +232,16 @@ solver that converges from any given initial value.
 @inline function Fᵖᴴᵤₙᵢᵣₒ(Aᵀ::Real, 
                           Cᵀ::Real, 
                           Pᵀ::Real, 
-                          Siᵀ::Real, 
+                          Siᵀ::Real,
+                          NH₄ᵀ::Real, 
+                          H₂Sᵀ::Real, 
                           pH::Real, 
-                          Pᶜᵒᵉᶠᶠ; 
-                          NH₄ᵀ::Real = 0, 
-                          H₂Sᵀ::Real = 0, 
-                          Δₕ₊::Real = 1e-8, 
-                          H⁺ᵗʰʳᵉˢʰ::Real = 1, 
-                          Iᴴ⁺ₘₐₓ::Int = 100,
-                          ) :: Real
+                          Pᶜᵒᵉᶠᶠ,  
+                          Sᵒᵖᵗˢ,
+                          ) :: Tuple{Real, Real}
    
-    Iᴴ⁺                = 0
+    # Initialize some variables
+    #Iᴴ⁺                = 0
     Aᵀᵃᵇˢₘᵢₙ           = floatmax(typeof(Aᵀ))
     H⁺ᶠᵃᶜᵗᵒʳ           = 1.0
 
@@ -249,7 +278,7 @@ solver that converges from any given initial value.
     #H⁺ = sqrt(H⁺ₘₐₓ * H⁺ₘᵢₙ) # Safer(?) than the above line
 
     ##while abs(H⁺ᶠᵃᶜᵗᵒʳ) > Δₕ₊
-    for Iᴴ⁺ in 1:Iᴴ⁺ₘₐₓ
+    for Iᴴ⁺ in 1:Sᵒᵖᵗˢ.Iᴴ⁺ₘₐₓ
     # Stop iterations once |\delta{[H]}/[H]| < rdel
     # <=> |(H⁺ - H⁺ₚᵣₑ)/H⁺ₚᵣₑ| = |EXP(-Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*H⁺ₚᵣₑ)) -1| < rdel
     # |EXP(-Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*H⁺ₚᵣₑ)) -1| ~ |Aᵀᵣₐₜ/(∂Aᵀᵣₐₜ∂H⁺*H⁺ₚᵣₑ)|
@@ -272,8 +301,8 @@ solver that converges from any given initial value.
         H⁺ₚᵣₑ = H⁺
 
         Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = FAᵀ(
-                              Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
-                        )
+              Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
+        )
 
     ##  if Aᵀᵣₐₜ == 0
     ##      break
@@ -304,7 +333,7 @@ solver that converges from any given initial value.
         H⁺ᶠᵃᶜᵗᵒʳ = -Aᵀᵣₐₜ / ( ∂Aᵀᵣₐₜ∂H⁺ * H⁺ₚᵣₑ )
 
         H⁺ = ifelse(
-                abs(H⁺ᶠᵃᶜᵗᵒʳ) > H⁺ᵗʰʳᵉˢʰ,
+                abs(H⁺ᶠᵃᶜᵗᵒʳ) > Sᵒᵖᵗˢ.H⁺ᵗʰʳᵉˢʰ,
                 H⁺ₚᵣₑ * exp( H⁺ᶠᵃᶜᵗᵒʳ ),
                 H⁺ₚᵣₑ + (H⁺ᶠᵃᶜᵗᵒʳ * H⁺ₚᵣₑ),
         )
@@ -419,6 +448,21 @@ solver that converges from any given initial value.
         #    end
         #end
 
+        if abs(H⁺ᶠᵃᶜᵗᵒʳ) < Sᵒᵖᵗˢ.Δₕ₊
+            # H⁺ has converged to the desired accuracy so begin exiting
+            # This is similar to what is done in RootSolvers.jl
+            Aᵀᵃᵇˢₘᵢₙ = min( abs(Aᵀᵣₐₜ), Aᵀᵃᵇˢₘᵢₙ)
+            
+            Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = ifelse(
+                H⁺ > 0,
+                FAᵀ(
+                    Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
+                ),
+                (nothing, nothing)
+            )
+            return convert(AbstractFloat,Iᴴ⁺), -log10(H⁺)
+        end
+
         Aᵀᵃᵇˢₘᵢₙ = min( abs(Aᵀᵣₐₜ), Aᵀᵃᵇˢₘᵢₙ)
     end # end while loop
 
@@ -429,7 +473,7 @@ solver that converges from any given initial value.
         ),
         (nothing, nothing)
     )
-    return -log10(H⁺)
+    return Sᵒᵖᵗˢ.Iᴴ⁺ₘₐₓ, -log10(H⁺)
 end
 
 """
@@ -749,7 +793,14 @@ module AlkalinityCorrectionCarbonSolver
 export AlkalinityCorrectionCarbonSystem,
         CarbonSystem
 
-using ..CarbonSystemSolvers: CarbonSystem, CarbonChemistryCoefficients, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, FCᵀHCO₃⁻
+using ..CarbonSystemSolvers: CarbonCoefficientParameters, 
+                             CarbonSolverParameters, 
+                             CarbonSystemParameters,
+                             CarbonChemistryCoefficients, 
+                             CarbonSystem, 
+                             FCᵀCO₂ˢᵒˡ, 
+                             FCᵀCO₃²⁻, 
+                             FCᵀHCO₃⁻
 
 """
     AlkalinityCorrectionCarbonSystem(
@@ -766,19 +817,21 @@ using ..CarbonSystemSolvers: CarbonSystem, CarbonChemistryCoefficients, FCᵀCO�
 
 Uses the Follows et al (2006) method to solve the distribution of carbon species
 """
-@inline function AlkalinityCorrectionCarbonSystem(
-        Θᶜ      :: FT = 25.0,
-        Sᴬ      :: FT = 35.0,
-        Δpᵦₐᵣ   :: FT = 0.0,
-        Cᵀ      :: FT = 2050.0e-6,
-        Aᵀ      :: FT = 2350.0e-6,
-        Pᵀ      :: FT = 1.0e-6,
-        Siᵀ     :: FT = 15.0e-6,
-        pH      :: FT = 8.0,
-        pCO₂ᵃᵗᵐ :: FT = 280.0e-6) where {FT}
-
+@inline function AlkalinityCorrectionCarbonSystem(;
+        Θᶜ      :: Real = 25.0,
+        Sᴬ      :: Real = 35.0,
+        Δpᵦₐᵣ   :: Real = 0.0,
+        Cᵀ      :: Real = 2050.0e-6,
+        Aᵀ      :: Real = 2350.0e-6,
+        Pᵀ      :: Real = 1.0e-6,
+        Siᵀ     :: Real = 15.0e-6,
+        pH      :: Real = 8.0,
+        pCO₂ᵃᵗᵐ :: Real = 280.0e-6,
+        params :: CarbonSystemParameters = CarbonSystemParameters()
+        )
+    
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
-    Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+    Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
     
     # Some logic here about choosing coefficient options, particularly Cᵈⁱᶜ 
     Pᶜᵒᵉᶠᶠ = (Cᵈⁱᶜₖ₀ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
@@ -805,8 +858,17 @@ Uses the Follows et al (2006) method to solve the distribution of carbon species
     pCO₂ᵒᶜᵉ= CO₂ˢᵒˡ / Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ # correct for fugacity of CO₂ in seawater?
 
     return CarbonSystem(
-        pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ,
-        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₐ, Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₒ, Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
+        pH, 
+        CO₂ˢᵒˡ, 
+        HCO₃⁻, 
+        CO₃²⁻, 
+        Cᵀ, 
+        Aᵀ, 
+        pCO₂ᵒᶜᵉ, 
+        pCO₂ᵃᵗᵐ, 
+        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₐ, 
+        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₒ, 
+        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
         )
 end # end function
 
@@ -1045,9 +1107,15 @@ module DirectCubicCarbonSolver
 export DirectCubicCarbonSystem,
         CarbonSystem
 
+using ..CarbonSystemSolvers: CarbonCoefficientParameters, 
+                             CarbonSolverParameters, 
+                             CarbonSystemParameters,
+                             CarbonChemistryCoefficients, 
+                             CarbonSystem, 
+                             FCᵀCO₂ˢᵒˡ, 
+                             FCᵀCO₃²⁻, 
+                             FCᵀHCO₃⁻
 using RootSolvers
-using ..CarbonSystemSolvers: CarbonSystem, CarbonChemistryCoefficients, FCᵀCO₂ˢᵒˡ, FCᵀCO₃²⁻, FCᵀHCO₃⁻
-#include("carbon_chemistry_coefficients.jl")
 
 """
     DirectCubicCarbonSystem(
@@ -1063,17 +1131,19 @@ using ..CarbonSystemSolvers: CarbonSystem, CarbonChemistryCoefficients, FCᵀCO�
 DirectCubicCarbonSolver solves a cubic equation in terms of [H⁺]; 
 Not for serious use, but as a placeholder and for testing purposes
 """
-@inline function DirectCubicCarbonSystem(
-        Θᶜ      :: FT = 25.0,
-        Sᴬ      :: FT = 35.0,
-        Δpᵦₐᵣ   :: FT = 0.0,
-        Cᵀ      :: FT = 2050.0e-6,
-        Aᵀ      :: FT = 2350.0e-6,
-        pH      :: FT = 8.0,
-        pCO₂ᵃᵗᵐ :: FT = 280.0e-6) where {FT}
+@inline function DirectCubicCarbonSystem(;
+        Θᶜ      :: Real = 25.0,
+        Sᴬ      :: Real = 35.0,
+        Δpᵦₐᵣ   :: Real = 0.0,
+        Cᵀ      :: Real = 2050.0e-6,
+        Aᵀ      :: Real = 2350.0e-6,
+        pH      :: Real = 8.0,
+        pCO₂ᵃᵗᵐ :: Real = 280.0e-6,
+        params :: CarbonSystemParameters = CarbonSystemParameters(),
+        )
 
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
-    Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+    Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
     
     # Some logic here about choosing coefficient options, particularly Cᵈⁱᶜ 
     Pᶜᵒᵉᶠᶠ = (Cᵈⁱᶜₖ₀ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
@@ -1093,8 +1163,17 @@ Not for serious use, but as a placeholder and for testing purposes
     pCO₂ᵒᶜᵉ= CO₂ˢᵒˡ / Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ # correct for fugacity of CO₂ in seawater?
 
     return CarbonSystem(
-        pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ,
-        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₐ, Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₒ, Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
+        pH, 
+        CO₂ˢᵒˡ, 
+        HCO₃⁻, 
+        CO₃²⁻, 
+        Cᵀ, 
+        Aᵀ, 
+        pCO₂ᵒᶜᵉ, 
+        pCO₂ᵃᵗᵐ, 
+        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₐ, 
+        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₒ, 
+        Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
         )
 end # end function
 

@@ -16,7 +16,7 @@ using Oceananigans.Units
 using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
 using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
-using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonChemistryCoefficients
+using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonSystemParameters, CarbonChemistryCoefficients
 
 using Adapt
 using KernelAbstractions: @kernel, @index
@@ -208,6 +208,7 @@ Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
 """
 @kernel function solve_ocean_pCO₂!(
     grid,
+    solver_params,
     reference_density,
     ocean_pCO₂, 
     atmospheric_CO₂_solubility, 
@@ -218,7 +219,6 @@ Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
     DIC, 
     ALK, 
     PO4, 
-    Siᵀ, 
     pH, 
     atmosphere_pCO₂
     )
@@ -228,15 +228,15 @@ Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
 
     ## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
     CarbonSolved = UniversalRobustCarbonSystem(
-                        temperature[i, j, k], 
-                        salinity[i, j, k], 
-                        applied_pressure_bar[i, j, 1], 
-                        DIC[i, j, k]/reference_density, 
-                        ALK[i, j, k]/reference_density, 
-                        PO4[i, j, k]/reference_density, 
-                        Siᵀ[i, j, k]/reference_density, 
-                        pH[i, j, 1], 
-                        atmosphere_pCO₂[i, j, 1]
+                        pH      = pH[i, j, 1], 
+                        pCO₂ᵃᵗᵐ = atmosphere_pCO₂[i, j, 1],
+                        Θᶜ      = temperature[i, j, k], 
+                        Sᴬ      = salinity[i, j, k], 
+                        Δpᵦₐᵣ   = applied_pressure_bar[i, j, 1], 
+                        Cᵀ      = DIC[i, j, k]/reference_density, 
+                        Aᵀ      = ALK[i, j, k]/reference_density, 
+                        Pᵀ      = PO4[i, j, k]/reference_density, 
+                        params  = solver_params,
     )
 
     ocean_pCO₂[i, j, 1]                 = CarbonSolved.pCO₂ᵒᶜᵉ
@@ -291,6 +291,9 @@ The convention is that a positive flux is upwards (outgassing), and a negative f
             ) * reference_density # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
 end
 
+# Use default carbon system parameters
+solver_params = CarbonSystemParameters()
+
 """
     calculate_air_sea_carbon_exchange!(simulation)
     
@@ -298,7 +301,7 @@ Returns the tendency of DIC in the top layer due to air-sea CO₂ flux
 using the piston velocity formulation of Wanninkhof (1992) and the
 solubility/activity of CO₂ in seawater.
 """
-@inline function calculate_air_sea_carbon_exchange!(simulation)
+@inline function calculate_air_sea_carbon_exchange!(simulation, solver_params)
     grid = simulation.model.grid
 
 ## get coefficients from CO₂_flux_parameters struct
@@ -391,6 +394,7 @@ solubility/activity of CO₂ in seawater.
     
     kernel_args = (
         grid,
+        solver_params,
         reference_density,
         ocean_CO₂, 
         atmospheric_CO₂_solubility, 
@@ -401,7 +405,6 @@ solubility/activity of CO₂ in seawater.
         DIC, 
         ALK,
         PO₄, 
-        Siᵀ, 
         pH, 
         atmos_CO₂,
         )
@@ -628,7 +631,7 @@ simulation.callbacks[:print_progress] = Callback(
     )
 
 # Dont forget to add the callback to compute the CO₂ flux
-add_callback!(simulation, calculate_air_sea_carbon_exchange!)
+add_callback!(simulation, calculate_air_sea_carbon_exchange!, parameters = solver_params)
 
 # ## Diagnostics/Output
 

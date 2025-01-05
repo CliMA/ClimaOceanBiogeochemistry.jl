@@ -3,6 +3,11 @@ using Test
 include("../src/CarbonSystemSolvers.jl")
 
 using .CarbonSystemSolvers
+using .CarbonSystemSolvers: CarbonCoefficientParameters, 
+                             CarbonSolverParameters, 
+                             CarbonSystemParameters,
+                             CarbonSystem, 
+                             CarbonChemistryCoefficients
 using .CarbonSystemSolvers.DirectCubicCarbonSolver: DirectCubicCarbonSystem
 using .CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver: AlkalinityCorrectionCarbonSystem
 using .CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
@@ -15,9 +20,15 @@ Cᵀ      = 2050e-6 # umol/kg to mol/kg
 Aᵀ      = 2350e-6 # umol/kg to mol/kg
 pCO₂ᵃᵗᵐ = 280e-6  # uatm to atm
 pH      = 8.0
-FT = Float64
 
-Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
+# Use default carbon system parameters
+carbon_params = CarbonSystemParameters()
+
+@test carbon_params       isa CarbonSystemParameters
+#@test carbon_params.Sᵒᵖᵗˢ isa CarbonSolverParameters
+#@test carbon_params.Pᵈⁱᶜₖ₀ isa CarbonCoefficientParameters
+
+Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(carbon_params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
 
 # Check the type of the coefficients struct
 @test Cᶜᵒᵉᶠᶠ isa CarbonChemistryCoefficients
@@ -53,7 +64,14 @@ Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(Θᶜ, Sᴬ, Δpᵦₐᵣ)
 
 (; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
 DirectCubicCarbonSystem(
-        Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, pH, pCO₂ᵃᵗᵐ,
+        Θᶜ      = Θᶜ,
+        Sᴬ      = Sᴬ,
+        Δpᵦₐᵣ   = Δpᵦₐᵣ,
+        Cᵀ      = Cᵀ,
+        Aᵀ      = Aᵀ,
+        pH      = pH,
+        pCO₂ᵃᵗᵐ = pCO₂ᵃᵗᵐ,
+        params  = carbon_params,
         )
 
 @test pH            == 8.044006579710093 
@@ -67,7 +85,16 @@ Siᵀ = 7.5e-6 # umol/kg to mol/kg
 
 (; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
 AlkalinityCorrectionCarbonSystem(
-        Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
+        Θᶜ      = Θᶜ,
+        Sᴬ      = Sᴬ,
+        Δpᵦₐᵣ   = Δpᵦₐᵣ,
+        Cᵀ      = Cᵀ,
+        Aᵀ      = Aᵀ,
+        Pᵀ      = Pᵀ,
+        Siᵀ     = Siᵀ,
+        pH      = pH,
+        pCO₂ᵃᵗᵐ = pCO₂ᵃᵗᵐ,
+        params  = carbon_params,
         )
 
 @test pH            == 8.033988293659919
@@ -78,7 +105,16 @@ AlkalinityCorrectionCarbonSystem(
 
 (; pH, CO₂ˢᵒˡ, HCO₃⁻, CO₃²⁻, Cᵀ, Aᵀ, pCO₂ᵒᶜᵉ, pCO₂ᵃᵗᵐ) = 
 UniversalRobustCarbonSystem(
-        Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ,
+        Θᶜ      = Θᶜ,
+        Sᴬ      = Sᴬ,
+        Δpᵦₐᵣ   = Δpᵦₐᵣ,
+        Cᵀ      = Cᵀ,
+        Aᵀ      = Aᵀ,
+        Pᵀ      = Pᵀ,
+        Siᵀ     = Siᵀ,
+        pH      = pH,
+        pCO₂ᵃᵗᵐ = pCO₂ᵃᵗᵐ,
+        params  = carbon_params,
         )
 
 @test pH            == 8.037606899889317
