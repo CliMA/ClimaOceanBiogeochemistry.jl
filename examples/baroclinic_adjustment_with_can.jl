@@ -242,7 +242,7 @@ Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
     ocean_pCO₂[i, j, 1]                 = CarbonSolved.pCO₂ᵒᶜᵉ
     atmospheric_CO₂_solubility[i, j, 1] = CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ
     oceanic_CO₂_solubility[i, j, 1]     = CarbonSolved.Pᵈⁱᶜₖₛₒₗₒ
-    pH[i, j, 1]                         = CarbonSolved.pH
+    pH[i, j, k]                         = CarbonSolved.pH
 end
 
 """
@@ -355,8 +355,8 @@ solubility/activity of CO₂ in seawater.
     wind_speed = Field{Center, Center, Nothing}(grid)
     set!(wind_speed, surface_wind_speed)
 
-    exchange_coefficient = Field{Center, Center, Nothing}(grid)
-    set!(exchange_coefficient, exchange_coefficient*cmhr⁻¹_per_ms⁻¹)
+    average_exchange_coefficient = Field{Center, Center, Nothing}(grid)
+    set!(average_exchange_coefficient, exchange_coefficient*cmhr⁻¹_per_ms⁻¹)
 
     piston_velocity = Field{Center, Center, Nothing}(grid)
     set!(piston_velocity, 0)
@@ -378,7 +378,7 @@ solubility/activity of CO₂ in seawater.
     )
 
     ## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
-    atmos_CO₂ = Field{Center, Center, Nothing}(grid)
+    #atmos_CO₂ = Field{Center, Center, Nothing}(grid)
     set!(atmos_CO₂, atmospheric_pCO₂)
 
     applied_pressure_bar = Field{Center, Center, Nothing}(grid)
