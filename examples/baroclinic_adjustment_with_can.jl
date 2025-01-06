@@ -365,7 +365,7 @@ solubility/activity of CO₂ in seawater.
         grid,
         piston_velocity,
         wind_speed,
-        exchange_coefficient,
+        average_exchange_coefficient,
         schmidt_dic,
         )
 
