@@ -267,7 +267,7 @@ end
 
 ## Use default carbon coefficient parameters, but pass solver CarbonSolverParameters
 ##   you can pass anything in fieldnames(CarbonSystemParameters)
-solver_params = [Symbol("Sᵒᵖᵗˢ") => CarbonSolverParameters()]
+solver_params = (Sᵒᵖᵗˢ = CarbonSolverParameters(),)
 
 """
     calculate_air_sea_carbon_exchange!(simulation)
