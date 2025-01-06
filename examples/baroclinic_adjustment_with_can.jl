@@ -16,7 +16,7 @@ using Oceananigans.Units
 using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
 using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
-using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonSystemParameters, CarbonChemistryCoefficients
+using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonSystemParameters, CarbonSolverParameters, CarbonCoefficientParameters
 
 using Adapt
 using KernelAbstractions: @kernel, @index
@@ -67,15 +67,7 @@ Base.@kwdef struct CO₂_flux_parameters
     applied_pressure     = 0.0 # atm
     atmospheric_pCO₂     = 280e-6 # atm
     exchange_coefficient = 0.337 # cm hr⁻¹
-    silicate_conc        = 15e-3 # mol m⁻³
-    initial_pH_guess     = 8.0
     reference_density    = 1024.5 # kg m⁻³
-    schmidt_dic_coeff0   = 2116.8
-    schmidt_dic_coeff1   = 136.25 
-    schmidt_dic_coeff2   = 4.7353 
-    schmidt_dic_coeff3   = 9.2307e-2
-    schmidt_dic_coeff4   = 7.555e-4
-    schmidt_dic_coeff5   = 660.0
 end
 adapt_structure( 
     to, cp::CO₂_flux_parameters
@@ -84,15 +76,7 @@ adapt_structure(
            adapt(to, cp.applied_pressure),
            adapt(to, cp.atmospheric_pCO₂),
            adapt(to, cp.exchange_coefficient),
-           adapt(to, cp.silicate_conc),
-           adapt(to, cp.initial_pH_guess),
            adapt(to, cp.reference_density),
-           adapt(to, cp.schmidt_dic_coeff0),
-           adapt(to, cp.schmidt_dic_coeff1),
-           adapt(to, cp.schmidt_dic_coeff2),
-	       adapt(to, cp.schmidt_dic_coeff3),
-	       adapt(to, cp.schmidt_dic_coeff4),
-           adapt(to, cp.schmidt_dic_coeff5),
 )
 
 """
@@ -100,12 +84,6 @@ adapt_structure(
         grid,
         schmidt_number_dic, 
         temperature, 
-        schmidt_dic_coeff0,
-        schmidt_dic_coeff1,
-        schmidt_dic_coeff2,
-        schmidt_dic_coeff3,
-        schmidt_dic_coeff4,
-        schmidt_dic_coeff5,
         )
 
 Compute the Schmidt number for dissolved inorganic carbon (DIC) based on the temperature Θᶜ (in degrees Celsius).
@@ -114,35 +92,32 @@ Compute the Schmidt number for dissolved inorganic carbon (DIC) based on the tem
 - `grid::RectilinearGrid`: The model grid.
 - `schmidt_number_dic::Field{Center, Center, Nothing}`: The computed Schmidt number for DIC.
 - `temperature::Field{Center, Center, Nothing}`: Temperature in degrees Celsius.
-- `schmidt_dic_coeff0::Float64`: Coefficient for the constant term (default: 2116.8).
-- `schmidt_dic_coeff1::Float64`: Coefficient for the linear term (default: 136.25).
-- `schmidt_dic_coeff2::Float64`: Coefficient for the quadratic term (default: 4.7353).
-- `schmidt_dic_coeff3::Float64`: Coefficient for the cubic term (default: 9.2307e-2).
-- `schmidt_dic_coeff4::Float64`: Coefficient for the quartic term (default: 7.555e-4).
-- `schmidt_dic_coeff5::Float64`: Normalization coefficient (default: 660.0).
+- `kˢᶜ::CarbonCoefficientParameters`: The parameters for the Schmidt number calculation.
 """
 @kernel function compute_schmidt_dic!(
     grid,
     schmidt_number_dic,
     temperature, 
-    schmidt_dic_coeff0,
-    schmidt_dic_coeff1,
-    schmidt_dic_coeff2,
-    schmidt_dic_coeff3,
-    schmidt_dic_coeff4,
-    schmidt_dic_coeff5,
+    kˢᶜ = CarbonCoefficientParameters(
+            a₀ = 2116.8,
+            a₁ = 136.25,
+            a₂ = 4.7353,
+            a₃ = 9.2307e-2,
+            a₄ = 7.555e-4,
+            a₅ = 660.0,
+        ),
     )
 
     i, j = @index(Global, NTuple)
     k = size(grid, 3)
 
     schmidt_number_dic[i, j, 1] =  ( 
-         schmidt_dic_coeff0 - 
-         schmidt_dic_coeff1 * temperature[i, j, k] + 
-         schmidt_dic_coeff2 * temperature[i, j, k]^2 - 
-         schmidt_dic_coeff3 * temperature[i, j, k]^3 + 
-         schmidt_dic_coeff4 * temperature[i, j, k]^4 
-    ) / schmidt_dic_coeff5
+         kˢᶜ.a₀ - 
+         kˢᶜ.a₁ * temperature[i, j, k] + 
+         kˢᶜ.a₂ * temperature[i, j, k]^2 - 
+         kˢᶜ.a₃ * temperature[i, j, k]^3 + 
+         kˢᶜ.a₄ * temperature[i, j, k]^4 
+    ) /  kˢᶜ.a₅
 end
 
 """
@@ -202,7 +177,6 @@ Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
 - `Cᵀ::Field{Center, Center, Nothing}`: Total dissolved inorganic carbon (DIC) in mol kg⁻¹.
 - `Aᵀ::Field{Center, Center, Nothing}`: Total alkalinity (ALK) in mol kg⁻¹.
 - `Pᵀ::Field{Center, Center, Nothing}`: Phosphate concentration in mol kg⁻¹.
-- `Siᵀ::Field{Center, Center, Center}`: Silicate concentration in mol kg⁻¹.
 - `pH::Field{Center, Center, Center}`: The computed pH.
 - `pCO₂ᵃᵗᵐ::Field{Center, Center, Nothing}`: The partial pressure of CO₂ in the atmosphere.
 """
@@ -227,7 +201,7 @@ Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
     k = size(grid, 3)
 
     ## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
-    CarbonSolved = UniversalRobustCarbonSystem(
+    CarbonSolved = UniversalRobustCarbonSystem(;
                         pH      = pH[i, j, 1], 
                         pCO₂ᵃᵗᵐ = atmosphere_pCO₂[i, j, 1],
                         Θᶜ      = temperature[i, j, k], 
@@ -236,7 +210,7 @@ Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
                         Cᵀ      = DIC[i, j, k]/reference_density, 
                         Aᵀ      = ALK[i, j, k]/reference_density, 
                         Pᵀ      = PO4[i, j, k]/reference_density, 
-                        params  = solver_params,
+                        solver_params...,
     )
 
     ocean_pCO₂[i, j, 1]                 = CarbonSolved.pCO₂ᵒᶜᵉ
@@ -291,8 +265,9 @@ The convention is that a positive flux is upwards (outgassing), and a negative f
             ) * reference_density # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
 end
 
-# Use default carbon system parameters
-solver_params = CarbonSystemParameters()
+## Use default carbon coefficient parameters, but pass solver CarbonSolverParameters
+##   you can pass anything in fieldnames(CarbonSystemParameters)
+solver_params = [Symbol("Sᵒᵖᵗˢ") => CarbonSolverParameters()]
 
 """
     calculate_air_sea_carbon_exchange!(simulation)
@@ -310,38 +285,25 @@ solubility/activity of CO₂ in seawater.
         applied_pressure,
         atmospheric_pCO₂, 
         exchange_coefficient, 
-        silicate_conc, 
-        initial_pH_guess, 
         reference_density,
-        schmidt_dic_coeff0, 
-        schmidt_dic_coeff1, 
-        schmidt_dic_coeff2, 
-        schmidt_dic_coeff3, 
-        schmidt_dic_coeff4, 
-        schmidt_dic_coeff5,
         ) = CO₂_flux_parameters()
 
+    ## Access model fields
     CO₂_flux = simulation.model.tracers.DIC.boundary_conditions.top.condition
-    
-    Siᵀ = Field{Center, Center, Center}(grid)
-    set!(Siᵀ, silicate_conc)
+    temperature = simulation.model.tracers.T
+    salinity    = simulation.model.tracers.S
+    DIC         = simulation.model.tracers.DIC
+    ALK         = simulation.model.tracers.ALK
+    PO₄         = simulation.model.tracers.PO₄
 
     ## compute schmidt number for DIC
     schmidt_dic = Field{Center, Center, Nothing}(grid)
     set!(schmidt_dic, 0)
 
-    temperature = simulation.model.tracers.T
-
     kernel_args = (
         grid,
         schmidt_dic, 
         temperature,
-        schmidt_dic_coeff0,
-        schmidt_dic_coeff1,
-        schmidt_dic_coeff2,
-        schmidt_dic_coeff3,
-        schmidt_dic_coeff4,
-        schmidt_dic_coeff5,
     )
 
     launch!(arch, 
@@ -378,16 +340,11 @@ solubility/activity of CO₂ in seawater.
     )
 
     ## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
-    #atmos_CO₂ = Field{Center, Center, Nothing}(grid)
     set!(atmos_CO₂, atmospheric_pCO₂)
 
     applied_pressure_bar = Field{Center, Center, Nothing}(grid)
     set!(applied_pressure_bar, applied_pressure)
 
-    salinity = simulation.model.tracers.S
-    DIC = simulation.model.tracers.DIC
-    ALK = simulation.model.tracers.ALK
-    PO₄ = simulation.model.tracers.PO₄
     #oceanic_pCO₂               = Field{Center, Center, Nothing}(grid)
     atmospheric_CO₂_solubility = Field{Center, Center, Nothing}(grid)
     oceanic_CO₂_solubility     = Field{Center, Center, Nothing}(grid)

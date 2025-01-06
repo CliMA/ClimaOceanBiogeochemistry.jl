@@ -137,10 +137,31 @@ using ..CarbonSystemSolvers: CarbonCoefficientParameters,
             Aᵀ      :: Real = 2350.0e-6,
             Pᵀ      :: Real = 1.0e-6,
             Siᵀ     :: Real = 15.0e-6,
-            params,
+            kwargs...,
             )
 
-Uses the Munhoven (2013) SolveSAPHE package to solve the distribution of carbon species
+Uses the Munhoven (2013) SolveSAPHE package to solve the distribution of carbon species.
+Returns a CarbonSystem object.
+
+The function takes the following keyword arguments:
+- pH: The pH of the seawater
+- pCO₂ᵃᵗᵐ: The atmospheric partial pressure of CO₂
+- Θ: The temperature of the seawater
+- Sᴬ: The salinity of the seawater
+- Δpᵦₐᵣ: The applied pressure factor
+- Cᵀ: The total carbon concentration in seawater
+- Aᵀ: The total alkalinity of seawater
+- Pᵀ: The total phosphate concentration in seawater
+- Siᵀ: The total silicate concentration in seawater
+- NH₄ᵀ: The total ammonium concentration in seawater
+- H₂Sᵀ: The total hydrogen sulfide concentration in seawater
+- kwargs: Alternative solver options or dissociation coefficients to be 
+          passed to the CarbonSystemParameters constructor.
+
+The function returns a CarbonSystem object.
+
+References:
+- Munhoven, G. (2013). 
 """
 @inline function UniversalRobustCarbonSystem(;
         pH      :: Real = 8.0,
@@ -154,8 +175,16 @@ Uses the Munhoven (2013) SolveSAPHE package to solve the distribution of carbon 
         Siᵀ     :: Real = 15.0e-6,
         NH₄ᵀ    :: Real = 0.0,
         H₂Sᵀ    :: Real = 0.0,
-        params  :: CarbonSystemParameters = CarbonSystemParameters(),
-        )
+        kwargs...,
+    )
+
+    # Error check kwargs for input names that are not in the CarbonSystemParameters struct
+    for key in keys(kwargs)
+        if key ∉ fieldnames(CarbonSystemParameters)
+           error("UniversalRobustCarbonSystem: $key is not a valid keyword argument for CarbonSystemParameters()")
+        end
+     end
+    params = CarbonSystemParameters(; kwargs...)
 
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
     Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
@@ -826,9 +855,17 @@ Uses the Follows et al (2006) method to solve the distribution of carbon species
         Siᵀ     :: Real = 15.0e-6,
         pH      :: Real = 8.0,
         pCO₂ᵃᵗᵐ :: Real = 280.0e-6,
-        params :: CarbonSystemParameters = CarbonSystemParameters()
-        )
-    
+        kwargs...,
+    )
+
+    # Error check kwargs for input names that are not in the CarbonSystemParameters struct
+    for key in keys(kwargs)
+        if key ∉ fieldnames(CarbonSystemParameters)
+           error("AlkalinityCorrectionCarbonSystem: $key is not a valid keyword argument for CarbonSystemParameters()")
+        end
+     end
+    params = CarbonSystemParameters(; kwargs...)
+
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
     Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
     
@@ -1137,8 +1174,16 @@ Not for serious use, but as a placeholder and for testing purposes
         Aᵀ      :: Real = 2350.0e-6,
         pH      :: Real = 8.0,
         pCO₂ᵃᵗᵐ :: Real = 280.0e-6,
-        params :: CarbonSystemParameters = CarbonSystemParameters(),
-        )
+        kwargs...,
+    )
+
+    # Error check kwargs for input names that are not in the CarbonSystemParameters struct
+    for key in keys(kwargs)
+        if key ∉ fieldnames(CarbonSystemParameters)
+           error("DirectCubicCarbonSystem: $key is not a valid keyword argument for CarbonSystemParameters()")
+        end
+     end
+    params = CarbonSystemParameters(; kwargs...)
 
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
     Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
