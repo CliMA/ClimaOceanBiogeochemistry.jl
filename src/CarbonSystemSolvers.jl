@@ -204,10 +204,9 @@ Uses the Munhoven (2013) SolveSAPHE package to solve the distribution of carbon 
         Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
         )
 end # end function
-
 adapt_structure( 
     to, cs::CarbonSystem
-    ) = CO₂_flux_parameters(
+    ) = CarbonSystem(
            adapt(to, cs.pH),
            adapt(to, cs.CO₂ˢᵒˡ),
            adapt(to, cs.HCO₃⁻),
@@ -871,10 +870,9 @@ Uses the Follows et al (2006) method to solve the distribution of carbon species
         Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
         )
 end # end function
-
 adapt_structure( 
     to, cs::CarbonSystem
-    ) = CO₂_flux_parameters(
+    ) = CarbonSystem(
            adapt(to, cs.pH),
            adapt(to, cs.CO₂ˢᵒˡ),
            adapt(to, cs.HCO₃⁻),
@@ -1176,10 +1174,9 @@ Not for serious use, but as a placeholder and for testing purposes
         Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
         )
 end # end function
-
 adapt_structure( 
     to, cs::CarbonSystem
-    ) = CO₂_flux_parameters(
+    ) = CarbonSystem(
            adapt(to, cs.pH),
            adapt(to, cs.CO₂ˢᵒˡ),
            adapt(to, cs.HCO₃⁻),
