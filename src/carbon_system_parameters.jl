@@ -4,7 +4,13 @@ struct CarbonSolverParameters{FT<:Real, IT<:Int} #
     H⁺ᵗʰʳᵉˢʰ :: FT # H⁺ threshold for secant iteration
     Iᴴ⁺ₘₐₓ   :: IT # Maximum number of iterations
 end
-
+adapt_structure(
+    to, csp::CarbonSolverParameters
+    ) = CarbonSolverParameters(
+           adapt(to, csp.Δₕ₊),
+           adapt(to, csp.H⁺ᵗʰʳᵉˢʰ),
+           adapt(to, csp.Iᴴ⁺ₘₐₓ),
+)
 """
     CarbonSolverParameters(Δₕ₊::Real=1e-8, H⁺ᵗʰʳᵉˢʰ::Real=1, Iᴴ⁺ₘₐₓ::Real=100)
 
@@ -56,7 +62,33 @@ struct CarbonCoefficientParameters{FT<:Real}
     v₂ :: FT
     v₃ :: FT
 end
-
+adapt_structure(
+    to, ccp::CarbonCoefficientParameters
+    ) = CarbonCoefficientParameters(
+           adapt(to, ccp.a₀),
+           adapt(to, ccp.a₁),
+           adapt(to, ccp.a₂),
+           adapt(to, ccp.a₃),
+           adapt(to, ccp.a₄),
+           adapt(to, ccp.a₅),
+           adapt(to, ccp.b₀),
+           adapt(to, ccp.b₁),
+           adapt(to, ccp.b₂),
+           adapt(to, ccp.b₃),
+           adapt(to, ccp.c₀),
+           adapt(to, ccp.c₁),
+           adapt(to, ccp.c₂),
+           adapt(to, ccp.d₀),
+           adapt(to, ccp.d₁),
+           adapt(to, ccp.k₀),
+           adapt(to, ccp.k₁),
+           adapt(to, ccp.k₂),
+           adapt(to, ccp.p₀),
+           adapt(to, ccp.v₀),
+           adapt(to, ccp.v₁),
+           adapt(to, ccp.v₂),
+           adapt(to, ccp.v₃),
+)
 """
     CarbonCoefficientParameters(a₀=0, a₁=0, a₂=0, a₃=0, a₄=0, a₅=0, b₀=0, b₁=0, b₂=0, b₃=0, c₀=0, c₁=0, c₂=0, d₀=0, d₁=0, k₀=0, k₁=0, k₂=0, p₀=0, v₀=0, v₁=0, v₂=0, v₃=0)
 
