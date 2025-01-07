@@ -15,6 +15,7 @@ to_be_literated = [
     "single_column_nutrients_plankton_bacteria_detritus.jl",
     "soda_outgassing.jl",
     "single_column_carbon_alkalinity_nutrients.jl",
+    "baroclinic_adjustment_with_can.jl",
     "simple_plankton_growth_death.jl"
 ]
   
@@ -41,6 +42,7 @@ pages = [
         "Single column nutrients, plankton, bacteria, detritus" => "literated/single_column_nutrients_plankton_bacteria_detritus.md",
         "Single column carbon, alkalinity, nutrients" => "literated/single_column_carbon_alkalinity_nutrients.md",
         "Soda outgassing" => "literated/soda_outgassing.md",
+        "Baroclinic Adjustment with carbon, alkalinity and nutrients" => "literated/baroclinic_adjustment_with_can.md",
         "Simple plankton growth and death" => "literated/simple_plankton_growth_death.md"
     ],
     "Library" => [ 
