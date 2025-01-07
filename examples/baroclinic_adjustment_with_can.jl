@@ -88,7 +88,7 @@ adapt_structure(
 
 Compute the Schmidt number for dissolved inorganic carbon (DIC) based on the temperature Θᶜ (in degrees Celsius).
 
-Arguments:
+# Arguments
 - `grid::RectilinearGrid`: The model grid.
 - `schmidt_number_dic::Field{Center, Center, Nothing}`: The computed Schmidt number for DIC.
 - `temperature::Field{Center, Center, Nothing}`: Temperature in degrees Celsius.
@@ -131,7 +131,7 @@ end
 
 Compute the piston velocity for gas exchange at the ocean surface.
 
-Arguments:
+# Arguments
 - `grid::RectilinearGrid`: The model grid.
 - `piston_velocity::Field{Center, Center, Nothing}`: The computed piston velocity.
 - `surface_wind_speed::Field{Center, Center, Nothing}`: The wind speed at the ocean surface.
@@ -165,7 +165,7 @@ end
 
 Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
 
-Arguments:
+# Arguments
 - `grid::RectilinearGrid`: The model grid.
 - `reference_density::Float64`: The reference density of seawater.
 - `ocean_pCO₂::Field{Center, Center, Nothing}`: The computed oceanic pCO₂.
@@ -233,7 +233,7 @@ end
         
 Compute the flux of CO₂ between the atmosphere and the ocean.
 
-Arguments:
+# Arguments
 - `grid::RectilinearGrid`: The model grid.
 - `reference_density::Float64`: The reference density of seawater.
 - `CO₂_flux::Field{Center, Center, Nothing}`: The computed CO₂ flux.
@@ -243,7 +243,7 @@ Arguments:
 - `atmospheric_CO₂_solubility::Field{Center, Center, Nothing}`: The solubility of CO₂ in the atmosphere.
 - `oceanic_CO₂_solubility::Field{Center, Center, Nothing}`: The solubility of CO₂ in the ocean.
 
-Notes:
+# Notes
 The convention is that a positive flux is upwards (outgassing), and a negative flux is downwards (uptake).
 """
 @kernel function compute_CO₂_flux!(
@@ -266,7 +266,7 @@ The convention is that a positive flux is upwards (outgassing), and a negative f
 end
 
 ## Use default carbon coefficient parameters, but pass solver CarbonSolverParameters
-#   you can pass anything in fieldnames(CarbonSystemParameters)
+##   you can pass anything in fieldnames(CarbonSystemParameters)
 solver_params = (Sᵒᵖᵗˢ = CarbonSolverParameters(),)
 
 """
@@ -276,7 +276,7 @@ Returns the tendency of DIC in the top layer due to air-sea CO₂ flux
 using the piston velocity formulation of Wanninkhof (1992) and the
 solubility/activity of CO₂ in seawater.
 """
-@inline function calculate_air_sea_carbon_exchange!(simulation, solver_params = ())
+@inline function calculate_air_sea_carbon_exchange!(simulation, solver_params)
     grid = simulation.model.grid
 
 ## get coefficients from CO₂_flux_parameters struct
@@ -544,7 +544,7 @@ set!(model,
 
 # Now let's built a `Simulation`.
 Δt₀ = 1minute
-stop_time = 1days
+stop_time = 10days
 
 simulation = Simulation(
     model, 

@@ -4,7 +4,7 @@
 # `UniversalRobustCarbonSystem` model in a 0-d context.
 
 using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
-using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonSystemParameters, CarbonSolverParameters, CarbonCoefficientParameters
+using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonSystemParameters, CarbonChemistryCoefficients
 
 using Oceananigans
 using Oceananigans.Units
@@ -34,28 +34,23 @@ atmos_co₂ = Field{Center, Center, Nothing}(grid)
 
 # Build function for CO₂ flux calculation. Dissolved CO₂ in the soda will exchange with the overlying atmosphere
 # These are some coefficients and constants that we'll use in the calculation
-Base.@kwdef struct CO₂_flux_parameters{FT}
+Base.@kwdef struct CO2_flux_parameters{FT}
     surface_wind_speed   :: FT = 10. # ms⁻¹
     atmospheric_pCO₂     :: FT = 280e-6 # atm
     exchange_coefficient :: FT = 0.337 # cm hr⁻¹
-    salinity             :: FT = 0.0 # psu
+    salinity             :: FT = 35.0 # psu
     alkalinity           :: FT = 2.35e-3 # mol kg⁻¹
-    phosphate            :: FT = 0e-6 # mol kg⁻¹
+    silicate_conc        :: FT = 15e-6 # mol kg⁻¹
+    phosphate_conc       :: FT = 0e-6 # mol kg⁻¹
     initial_pH_guess     :: FT = 8.0
     reference_density    :: FT = 1024.5 # kg m⁻³
+    schmidt_dic_coeff0   :: FT = 2116.8
+    schmidt_dic_coeff1   :: FT = 136.25 
+    schmidt_dic_coeff2   :: FT = 4.7353 
+    schmidt_dic_coeff3   :: FT = 9.2307e-2
+    schmidt_dic_coeff4   :: FT = 7.555e-4
+    schmidt_dic_coeff5   :: FT = 660.0
 end
-adapt_structure( 
-    to, cp::CO₂_flux_parameters
-    ) = CO₂_flux_parameters(
-           adapt(to, cp.surface_wind_speed),
-           adapt(to, cp.atmospheric_pCO₂),
-           adapt(to, cp.exchange_coefficient),
-           adapt(to, cp.salinity),
-           adapt(to, cp.alkalinity),
-           adapt(to, cp.phosphate),
-           adapt(to, cp.initial_pH_guess),
-           adapt(to, cp.reference_density),
-)
 
 """
     compute_co₂_flux!(simulation)
@@ -64,28 +59,41 @@ Returns the tendency due to CO₂ flux using the piston velocity
 formulation of Wanninkhof (1992) and the solubility/activity of 
 CO₂ that depends on temperature, etc.
 """
-@inline function compute_co₂_flux!(simulation; solver_params = ())
+@inline function compute_co₂_flux!(simulation; solver_params = CarbonSystemParameters())
 ## Get coefficients from CO2_flux_parameters struct
 ## I really want the option to take these from the model
-    (; surface_wind_speed,  
-       atmospheric_pCO₂,    
+    (; surface_wind_speed, 
+       atmospheric_pCO₂, 
        exchange_coefficient, 
-       salinity,            
-       alkalinity,          
-       phosphate,           
-       initial_pH_guess,    
+       salinity,
+       alkalinity,
+       silicate_conc, 
+       phosphate_conc,
+       initial_pH_guess, 
        reference_density,   
-       ) = CO₂_flux_parameters()
+       schmidt_dic_coeff0, 
+       schmidt_dic_coeff1, 
+       schmidt_dic_coeff2, 
+       schmidt_dic_coeff3, 
+       schmidt_dic_coeff4, 
+       schmidt_dic_coeff5,
+       ) = CO2_flux_parameters()
 
     U₁₀      = surface_wind_speed  
     pCO₂ᵃᵗᵐ  = atmospheric_pCO₂    
     Kʷₐᵥₑ    = exchange_coefficient
     Sᴬ       = salinity
     Aᵀ       = alkalinity
-    Pᵀ       = phosphate   
+    Siᵀ      = silicate_conc   
+    Pᵀ       = phosphate_conc   
     pH       = initial_pH_guess
     ρʳᵉᶠ     = reference_density 
-
+    a₀ˢᶜᵈⁱᶜ   = schmidt_dic_coeff0 
+    a₁ˢᶜᵈⁱᶜ   = schmidt_dic_coeff1 
+    a₂ˢᶜᵈⁱᶜ   = schmidt_dic_coeff2 
+    a₃ˢᶜᵈⁱᶜ   = schmidt_dic_coeff3 
+    a₄ˢᶜᵈⁱᶜ   = schmidt_dic_coeff4 
+    a₅ˢᶜᵈⁱᶜ   = schmidt_dic_coeff5 
     co₂_flux = simulation.model.tracers.DIC.boundary_conditions.top.condition
 
     cmhr⁻¹_per_ms⁻¹ = 1 / 3.6e5 # conversion factor from cm/hr to m/s
@@ -116,7 +124,7 @@ CO₂ that depends on temperature, etc.
         Cᵀ      = Cᵀ, 
         Aᵀ      = Aᵀ, 
         Pᵀ      = Pᵀ, 
-        solver_params...,
+        params  = solver_params,
     )
 
     ## store the soda and atmospheric CO₂ concentrations into Fields
@@ -124,20 +132,12 @@ CO₂ that depends on temperature, etc.
     atmos_co₂[1,1,Nz] = (pCO₂ᵃᵗᵐ * Pᵈⁱᶜₖₛₒₗₐ) * ρʳᵉᶠ # Convert mol kg⁻¹ to mol m⁻³ 
 
     ## compute schmidt number for DIC
-    kˢᶜ = CarbonCoefficientParameters(
-            a₀ = 2116.8,
-            a₁ = 136.25,
-            a₂ = 4.7353,
-            a₃ = 9.2307e-2,
-            a₄ = 7.555e-4,
-            a₅ = 660.0,
-        )
-    Cˢᶜᵈⁱᶜ =  ( kˢᶜ.a₀ - 
-                kˢᶜ.a₁ * Θᶜ + 
-                kˢᶜ.a₂ * Θᶜ^2 - 
-                kˢᶜ.a₃ * Θᶜ^3 + 
-                kˢᶜ.a₄ * Θᶜ^4 
-              )/kˢᶜ.a₅
+    Cˢᶜᵈⁱᶜ =  ( a₀ˢᶜᵈⁱᶜ - 
+                a₁ˢᶜᵈⁱᶜ * Θᶜ + 
+                a₂ˢᶜᵈⁱᶜ * Θᶜ^2 - 
+                a₃ˢᶜᵈⁱᶜ * Θᶜ^3 + 
+                a₄ˢᶜᵈⁱᶜ * Θᶜ^4 
+              )/a₅ˢᶜᵈⁱᶜ
     
     ## compute gas exchange coefficient/piston velocity and correct with Schmidt number
     Kʷ =  (
