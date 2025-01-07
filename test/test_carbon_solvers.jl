@@ -71,7 +71,6 @@ DirectCubicCarbonSystem(
         Aᵀ      = Aᵀ,
         pH      = pH,
         pCO₂ᵃᵗᵐ = pCO₂ᵃᵗᵐ,
-        params  = carbon_params,
         )
 
 @test pH            == 8.044006579710093 
@@ -94,7 +93,6 @@ AlkalinityCorrectionCarbonSystem(
         Siᵀ     = Siᵀ,
         pH      = pH,
         pCO₂ᵃᵗᵐ = pCO₂ᵃᵗᵐ,
-        params  = carbon_params,
         )
 
 @test pH            == 8.033988293659919
@@ -114,7 +112,6 @@ UniversalRobustCarbonSystem(
         Siᵀ     = Siᵀ,
         pH      = pH,
         pCO₂ᵃᵗᵐ = pCO₂ᵃᵗᵐ,
-        params  = carbon_params,
         )
 
 @test pH            == 8.037606899889317
