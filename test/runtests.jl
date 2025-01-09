@@ -13,10 +13,10 @@ end
 end
 
 @testset "CarbonAlkalinityNutrients" begin
-    @test CarbonAlkalinityNutrients() isa CarbonAlkalinityNutrients
-
     grid = RectilinearGrid(size = 64, z = (-256, 0), topology = (Flat, Flat, Bounded))
-    model = HydrostaticFreeSurfaceModel(; grid, biogeochemistry = CarbonAlkalinityNutrients())
+    @test CarbonAlkalinityNutrients(; grid) isa CarbonAlkalinityNutrients
+
+    model = HydrostaticFreeSurfaceModel(; grid, biogeochemistry = CarbonAlkalinityNutrients(; grid))
 
     @test :PO₄ ∈ keys(model.tracers)
 
