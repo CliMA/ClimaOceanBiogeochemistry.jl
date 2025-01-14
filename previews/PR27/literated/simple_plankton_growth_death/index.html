@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Simple plankton growth and death · ClimaOceanBiogeochemistry.jl</title><meta name="title" content="Simple plankton growth and death · ClimaOceanBiogeochemistry.jl"/><meta property="og:title" content="Simple plankton growth and death · ClimaOceanBiogeochemistry.jl"/><meta property="twitter:title" content="Simple plankton growth and death · ClimaOceanBiogeochemistry.jl"/><meta name="description" content="Documentation for ClimaOceanBiogeochemistry.jl."/><meta property="og:description" content="Documentation for ClimaOceanBiogeochemistry.jl."/><meta property="twitter:description" content="Documentation for ClimaOceanBiogeochemistry.jl."/><meta property="og:url" content="https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/literated/simple_plankton_growth_death/"/><meta property="twitter:url" content="https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/literated/simple_plankton_growth_death/"/><link rel="canonical" href="https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/literated/simple_plankton_growth_death/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">ClimaOceanBiogeochemistry.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../single_column_nutrients_plankton_bacteria_detritus/">Single column nutrients, plankton, bacteria, detritus</a></li><li><a class="tocitem" href="../single_column_carbon_alkalinity_nutrients/">Single column carbon, alkalinity, nutrients</a></li><li class="is-active"><a class="tocitem" href>Simple plankton growth and death</a></li></ul></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../../library/outline/">Contents</a></li><li><a class="tocitem" href="../../library/public/">Public</a></li><li><a class="tocitem" href="../../library/internals/">Private</a></li><li><a class="tocitem" href="../../library/function_index/">Function index</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Simple plankton growth and death</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Simple plankton growth and death</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/CliMA/ClimaOceanBiogeochemistry.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/CliMA/ClimaOceanBiogeochemistry.jl/blob/main/examples/simple_plankton_growth_death.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><pre><code class="language-julia hljs">using Oceananigans
+using Oceananigans.Units
+using Oceananigans
+using Oceananigans.Grids: znode
+using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
+using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
+
+using Printf
+
+import Oceananigans.Biogeochemistry: required_biogeochemical_tracers
+
+&quot;&quot;&quot;
+    SimplePlanktonGrowthDeath(; growth_rate = 1/day
+                                shortwave_attenuation_scale = 20.0
+                                mortality_rate = 0.1/day)
+
+Return a single-tracer biogeochemistry model for growing and dying plankton.
+&quot;&quot;&quot;
+Base.@kwdef struct SimplePlanktonGrowthDeath{FT} &lt;: AbstractBiogeochemistry
+    growth_rate :: FT = 1/day
+    shortwave_attenuation_scale :: FT = 20.0
+    mortality_rate :: FT = 0.1/day
+end
+
+@inline required_biogeochemical_tracers(::SimplePlanktonGrowthDeath) = tuple(:P)
+
+const c = Center()
+
+@inline function (bgc::SimplePlanktonGrowthDeath)(i, j, k, grid, ::Val{:P}, clock, fields)
+   μ₀ = bgc.growth_rate
+   λ = bgc.shortwave_attenuation_scale
+   m = bgc.mortality_rate
+   P = @inbounds fields.P[i, j, k]
+   z = znode(i, j, k, grid, c, c, c)
+   return (μ₀ * exp(z / λ) - m) * P
+end</code></pre><p>We set up the model</p><pre><code class="language-julia hljs">grid = RectilinearGrid(size = 64,
+                       z = (-256meters, 0),
+                       topology = (Flat, Flat, Bounded))
+
+Qᵇ(t) = ifelse(t &lt; 4days, 1e-7, 0.0)
+b_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(Qᵇ))
+
+model = HydrostaticFreeSurfaceModel(; grid,
+                                    biogeochemistry = SimplePlanktonGrowthDeath(),
+                                    closure = CATKEVerticalDiffusivity(),
+                                    tracers = (:b, :e),
+                                    buoyancy = BuoyancyTracer(),
+                                    boundary_conditions = (; b=b_bcs))
+
+N² = 1e-5 # s⁻²
+bᵢ(z) = N² * z
+set!(model, b=bᵢ, P=1e-2, e=1e-6)
+
+simulation = Simulation(model, Δt=10minutes, stop_time=8days)
+
+progress(sim) = @printf(&quot;Iteration: %d, time: %s, max(P): %.2e \n&quot;,
+                        iteration(sim), prettytime(sim), maximum(model.tracers.P))
+
+simulation.callbacks[:progress] = Callback(progress, IterationInterval(10))
+
+outputs = merge(model.velocities, model.tracers)
+filename = &quot;simple_plankton_growth_death.jld2&quot;
+
+simulation.output_writers[:fields] = JLD2OutputWriter(model, outputs;
+                                                      filename,
+                                                      schedule = TimeInterval(20minutes),
+                                                      overwrite_existing = true)
+
+run!(simulation)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr36"><span class="sgr1">[ Info: </span></span>Initializing simulation...
+Iteration: 0, time: 0 seconds, max(P): 1.00e-02
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>    ... simulation initialization complete (6.864 seconds)
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Executing initial time step...
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>    ... initial time step complete (12.248 seconds).
+Iteration: 10, time: 1.667 hours, max(P): 1.05e-02
+Iteration: 20, time: 3.333 hours, max(P): 1.09e-02
+Iteration: 30, time: 5 hours, max(P): 1.12e-02
+Iteration: 40, time: 6.667 hours, max(P): 1.14e-02
+Iteration: 50, time: 8.333 hours, max(P): 1.16e-02
+Iteration: 60, time: 10 hours, max(P): 1.19e-02
+Iteration: 70, time: 11.667 hours, max(P): 1.21e-02
+Iteration: 80, time: 13.333 hours, max(P): 1.23e-02
+Iteration: 90, time: 15 hours, max(P): 1.25e-02
+Iteration: 100, time: 16.667 hours, max(P): 1.26e-02
+Iteration: 110, time: 18.333 hours, max(P): 1.29e-02
+Iteration: 120, time: 20 hours, max(P): 1.30e-02
+Iteration: 130, time: 21.667 hours, max(P): 1.32e-02
+Iteration: 140, time: 23.333 hours, max(P): 1.33e-02
+Iteration: 150, time: 1.042 days, max(P): 1.34e-02
+Iteration: 160, time: 1.111 days, max(P): 1.36e-02
+Iteration: 170, time: 1.181 days, max(P): 1.37e-02
+Iteration: 180, time: 1.250 days, max(P): 1.38e-02
+Iteration: 190, time: 1.319 days, max(P): 1.39e-02
+Iteration: 200, time: 1.389 days, max(P): 1.40e-02
+Iteration: 210, time: 1.458 days, max(P): 1.41e-02
+Iteration: 220, time: 1.528 days, max(P): 1.42e-02
+Iteration: 230, time: 1.597 days, max(P): 1.43e-02
+Iteration: 240, time: 1.667 days, max(P): 1.44e-02
+Iteration: 250, time: 1.736 days, max(P): 1.45e-02
+Iteration: 260, time: 1.806 days, max(P): 1.46e-02
+Iteration: 270, time: 1.875 days, max(P): 1.47e-02
+Iteration: 280, time: 1.944 days, max(P): 1.47e-02
+Iteration: 290, time: 2.014 days, max(P): 1.48e-02
+Iteration: 300, time: 2.083 days, max(P): 1.49e-02
+Iteration: 310, time: 2.153 days, max(P): 1.50e-02
+Iteration: 320, time: 2.222 days, max(P): 1.50e-02
+Iteration: 330, time: 2.292 days, max(P): 1.51e-02
+Iteration: 340, time: 2.361 days, max(P): 1.52e-02
+Iteration: 350, time: 2.431 days, max(P): 1.52e-02
+Iteration: 360, time: 2.500 days, max(P): 1.53e-02
+Iteration: 370, time: 2.569 days, max(P): 1.54e-02
+Iteration: 380, time: 2.639 days, max(P): 1.54e-02
+Iteration: 390, time: 2.708 days, max(P): 1.55e-02
+Iteration: 400, time: 2.778 days, max(P): 1.55e-02
+Iteration: 410, time: 2.847 days, max(P): 1.56e-02
+Iteration: 420, time: 2.917 days, max(P): 1.56e-02
+Iteration: 430, time: 2.986 days, max(P): 1.57e-02
+Iteration: 440, time: 3.056 days, max(P): 1.57e-02
+Iteration: 450, time: 3.125 days, max(P): 1.58e-02
+Iteration: 460, time: 3.194 days, max(P): 1.58e-02
+Iteration: 470, time: 3.264 days, max(P): 1.58e-02
+Iteration: 480, time: 3.333 days, max(P): 1.59e-02
+Iteration: 490, time: 3.403 days, max(P): 1.59e-02
+Iteration: 500, time: 3.472 days, max(P): 1.60e-02
+Iteration: 510, time: 3.542 days, max(P): 1.60e-02
+Iteration: 520, time: 3.611 days, max(P): 1.60e-02
+Iteration: 530, time: 3.681 days, max(P): 1.61e-02
+Iteration: 540, time: 3.750 days, max(P): 1.61e-02
+Iteration: 550, time: 3.819 days, max(P): 1.61e-02
+Iteration: 560, time: 3.889 days, max(P): 1.62e-02
+Iteration: 570, time: 3.958 days, max(P): 1.62e-02
+Iteration: 580, time: 4.028 days, max(P): 1.61e-02
+Iteration: 590, time: 4.097 days, max(P): 1.67e-02
+Iteration: 600, time: 4.167 days, max(P): 1.73e-02
+Iteration: 610, time: 4.236 days, max(P): 1.80e-02
+Iteration: 620, time: 4.306 days, max(P): 1.86e-02
+Iteration: 630, time: 4.375 days, max(P): 1.94e-02
+Iteration: 640, time: 4.444 days, max(P): 2.01e-02
+Iteration: 650, time: 4.514 days, max(P): 2.08e-02
+Iteration: 660, time: 4.583 days, max(P): 2.15e-02
+Iteration: 670, time: 4.653 days, max(P): 2.22e-02
+Iteration: 680, time: 4.722 days, max(P): 2.29e-02
+Iteration: 690, time: 4.792 days, max(P): 2.36e-02
+Iteration: 700, time: 4.861 days, max(P): 2.42e-02
+Iteration: 710, time: 4.931 days, max(P): 2.49e-02
+Iteration: 720, time: 5 days, max(P): 2.55e-02
+Iteration: 730, time: 5.069 days, max(P): 2.62e-02
+Iteration: 740, time: 5.139 days, max(P): 2.69e-02
+Iteration: 750, time: 5.208 days, max(P): 2.75e-02
+Iteration: 760, time: 5.278 days, max(P): 2.82e-02
+Iteration: 770, time: 5.347 days, max(P): 2.88e-02
+Iteration: 780, time: 5.417 days, max(P): 2.95e-02
+Iteration: 790, time: 5.486 days, max(P): 3.01e-02
+Iteration: 800, time: 5.556 days, max(P): 3.08e-02
+Iteration: 810, time: 5.625 days, max(P): 3.15e-02
+Iteration: 820, time: 5.694 days, max(P): 3.22e-02
+Iteration: 830, time: 5.764 days, max(P): 3.28e-02
+Iteration: 840, time: 5.833 days, max(P): 3.35e-02
+Iteration: 850, time: 5.903 days, max(P): 3.42e-02
+Iteration: 860, time: 5.972 days, max(P): 3.49e-02
+Iteration: 870, time: 6.042 days, max(P): 3.57e-02
+Iteration: 880, time: 6.111 days, max(P): 3.64e-02
+Iteration: 890, time: 6.181 days, max(P): 3.71e-02
+Iteration: 900, time: 6.250 days, max(P): 3.79e-02
+Iteration: 910, time: 6.319 days, max(P): 3.86e-02
+Iteration: 920, time: 6.389 days, max(P): 3.94e-02
+Iteration: 930, time: 6.458 days, max(P): 4.01e-02
+Iteration: 940, time: 6.528 days, max(P): 4.09e-02
+Iteration: 950, time: 6.597 days, max(P): 4.17e-02
+Iteration: 960, time: 6.667 days, max(P): 4.25e-02
+Iteration: 970, time: 6.736 days, max(P): 4.34e-02
+Iteration: 980, time: 6.806 days, max(P): 4.42e-02
+Iteration: 990, time: 6.875 days, max(P): 4.51e-02
+Iteration: 1000, time: 6.944 days, max(P): 4.59e-02
+Iteration: 1010, time: 7.014 days, max(P): 4.68e-02
+Iteration: 1020, time: 7.083 days, max(P): 4.77e-02
+Iteration: 1030, time: 7.153 days, max(P): 4.87e-02
+Iteration: 1040, time: 7.222 days, max(P): 4.96e-02
+Iteration: 1050, time: 7.292 days, max(P): 5.06e-02
+Iteration: 1060, time: 7.361 days, max(P): 5.15e-02
+Iteration: 1070, time: 7.431 days, max(P): 5.25e-02
+Iteration: 1080, time: 7.500 days, max(P): 5.35e-02
+Iteration: 1090, time: 7.569 days, max(P): 5.46e-02
+Iteration: 1100, time: 7.639 days, max(P): 5.56e-02
+Iteration: 1110, time: 7.708 days, max(P): 5.67e-02
+Iteration: 1120, time: 7.778 days, max(P): 5.78e-02
+Iteration: 1130, time: 7.847 days, max(P): 5.89e-02
+Iteration: 1140, time: 7.917 days, max(P): 6.00e-02
+Iteration: 1150, time: 7.986 days, max(P): 6.12e-02
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Simulation is stopping after running for 22.695 seconds.
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Simulation time 8 days equals or exceeds stop time 8 days.</code></pre><p>Now we load the saved output and plot</p><pre><code class="language-julia hljs">using CairoMakie
+
+bt = FieldTimeSeries(filename, &quot;b&quot;)
+et = FieldTimeSeries(filename, &quot;e&quot;)
+Pt = FieldTimeSeries(filename, &quot;P&quot;)
+
+t = bt.times
+Nt = length(t)
+z = znodes(bt)
+
+fig = Figure(size=(800, 400))
+
+axb = Axis(fig[1, 1], ylabel=&quot;z (m)&quot;, xlabel=&quot;Buoyancy (m² s⁻³)&quot;)
+axe = Axis(fig[1, 2], ylabel=&quot;z (m)&quot;, xlabel=&quot;Turbulent kinetic energy (m² s²)&quot;)
+axP = Axis(fig[1, 3], ylabel=&quot;z (m)&quot;, xlabel=&quot;Plankton concentration&quot;)
+
+xlims!(axe, -1e-5, 1e-3)
+xlims!(axP, 0, 0.1)
+
+n = Observable(1)
+
+title = @lift @sprintf(&quot;Convecting plankton at t = %d days&quot;, t[$n] / day)
+Label(fig[0, 1:3], title)
+
+bn = @lift interior(bt[$n], 1, 1, :)
+en = @lift interior(et[$n], 1, 1, :)
+Pn = @lift interior(Pt[$n], 1, 1, :)
+
+lines!(axb, bn, z)
+lines!(axe, en, z)
+lines!(axP, Pn, z)
+
+fig
+
+record(fig, &quot;simple_plankton_growth_death.mp4&quot;, 1:Nt, framerate=24) do nn
+    n[] = nn
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">&quot;simple_plankton_growth_death.mp4&quot;</code></pre><p><video src="../simple_plankton_growth_death.mp4" controls="true" title><a href="../simple_plankton_growth_death.mp4"></a></video></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../single_column_carbon_alkalinity_nutrients/">« Single column carbon, alkalinity, nutrients</a><a class="docs-footer-nextpage" href="../../library/outline/">Contents »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.3.0 on <span class="colophon-date" title="Tuesday 26 March 2024 20:26">Tuesday 26 March 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
