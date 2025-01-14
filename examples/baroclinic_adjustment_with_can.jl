@@ -13,6 +13,7 @@
 # ```
 using Oceananigans
 using Oceananigans.Units
+using Oceananigans.Grids: xnode, ynode, znode
 using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
 using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
@@ -449,9 +450,9 @@ M² = 8e-8 # [s⁻²] horizontal buoyancy gradient
 Δy = 50kilometers # width of the region of the front
 Δb = Δy * M²      # buoyancy jump associated with the front
 ϵb = 1e-2 * Δb    # noise amplitude
-α = model.buoyancy.model.equation_of_state.thermal_expansion
-β = model.buoyancy.model.equation_of_state.haline_contraction
-g = model.buoyancy.model.gravitational_acceleration
+α = model.buoyancy.formulation.equation_of_state.thermal_expansion
+β = model.buoyancy.formulation.equation_of_state.haline_contraction
+g = model.buoyancy.formulation.gravitational_acceleration
 
 #bᵢ(x, y, z) = N² * z + Δb * ramp(y, Δy) + ϵb * randn()
 T₀=10
@@ -485,9 +486,9 @@ POP₀ = 0.
 
 # Plot the initial temperature and salinity profiles
 set_theme!(Theme(fontsize = 12, linewidth=2))
-x_points = grid.xᶜᵃᵃ[1:Nx,1,1]
-y_points = grid.yᵃᶜᵃ[1:Ny,1,1]
-z_points = grid.zᵃᵃᶜ[1:Nz,1,1]
+x_points = xnodes(grid, Center())
+y_points = ynodes(grid, Center())
+z_points = znodes(grid, Center())
 
 fig = Figure(size = (1200, 1200))
 axT = Axis(
