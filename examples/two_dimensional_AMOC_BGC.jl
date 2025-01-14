@@ -138,8 +138,8 @@ run!(simulation) # , pickup = false)
 
 #################################### Visualize ####################################
 
-filepath = simulation.output_writers[:simple_output].filepath
-# filepath = "./AMOC64.jld2"
+# filepath = simulation.output_writers[:simple_output].filepath
+filepath = "./AMOC69.jld2"
 
 v_timeseries = FieldTimeSeries(filepath, "v")
 w_timeseries = FieldTimeSeries(filepath, "w")
@@ -156,8 +156,8 @@ Fe_timeseries = FieldTimeSeries(filepath, "Fe")
 NO3_timeseries = FieldTimeSeries(filepath, "NO₃")
 
 n = Observable(1)
-# title = @lift @sprintf("t = Year %d x 50", times[$n] / (3652.5*5)days) 
-title = @lift @sprintf("t = Day %d0", times[$n] / 10days) 
+title = @lift @sprintf("t = Year %d x 50", times[$n] / (3652.5*5)days) 
+# title = @lift @sprintf("t = Day %d0", times[$n] / 10days) 
 
 # convert unit from m/s to cm/s:
 vₙ = @lift 100*interior(v_timeseries[$n], 1, :, :)
@@ -220,7 +220,7 @@ fig[1, 1:6] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "AMOC_test.mp4", frames, framerate=25) do i
+record(fig, "AMOC69.mp4", frames, framerate=25) do i
     n[] = i
     PO4_prof[1] = avg_PO4ₙ[][1, :]
     POP_prof[1] = avg_POPₙ[][1, :]

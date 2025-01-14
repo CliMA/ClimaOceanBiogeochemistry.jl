@@ -103,29 +103,29 @@ Biogeochemical functions
 """
 function CarbonAlkalinityNutrients(; grid,
                                    reference_density                            = 1024.5,
-                                   maximum_net_community_production_rate        = 1 / day, 
-                                   phosphate_half_saturation                    = 1e-7 * reference_density, # mol PO₄ m⁻³
-                                   nitrate_half_saturation                      = 1.6e-6 * reference_density, # mol NO₃ m⁻³
+                                   maximum_net_community_production_rate        = 4.e-3/365.25days, 
+                                   phosphate_half_saturation                    = 5.e-7 * reference_density, # mol PO₄ m⁻³
+                                   nitrate_half_saturation                      = 7.e-6 * reference_density, # mol NO₃ m⁻³
                                    iron_half_saturation                         = 1.e-10 * reference_density, # mol Fe m⁻³
                                    incident_PAR                                 = 700.0, # W m⁻²
-                                   PAR_half_saturation                          = 10.0,  # W m⁻²
+                                   PAR_half_saturation                          = 30.0,  # W m⁻²
                                    PAR_attenuation_scale                        = 25.0,  # m
                                    PAR_percent                                  = 0.01,
                                    fraction_of_particulate_export               = 0.33,
-                                   dissolved_organic_phosphorus_remin_timescale  = 1/30days, # s⁻¹
-                                   stoichoimetric_ratio_carbon_to_phosphate     = 106.0,
+                                   dissolved_organic_phosphorus_remin_timescale  = 2. /365.25days, # s⁻¹
+                                   stoichoimetric_ratio_carbon_to_phosphate     = 117.0,
                                    stoichoimetric_ratio_nitrate_to_phosphate    = 16.0,
                                    stoichoimetric_ratio_phosphate_to_oxygen     = 170.0, 
                                    stoichoimetric_ratio_phosphate_to_iron       = 4.68e-4,
-                                   stoichoimetric_ratio_carbon_to_nitrate       = 106 / 16,
-                                   stoichoimetric_ratio_carbon_to_oxygen        = 106 / 170, 
-                                   stoichoimetric_ratio_carbon_to_iron          = 106 / 1e-3,
+                                   stoichoimetric_ratio_carbon_to_nitrate       = 117 / 16,
+                                   stoichoimetric_ratio_carbon_to_oxygen        = 117 / 170, 
+                                   stoichoimetric_ratio_carbon_to_iron          = 117 / 4.68e-4,
                                    stoichoimetric_ratio_silicate_to_phosphate   = 15.0,
-                                   rain_ratio_inorganic_to_organic_carbon       = 1e-1,
+                                   rain_ratio_inorganic_to_organic_carbon       = 1e-2,
                                    option_of_particulate_remin                  = 1, # r decrease with depth = 1; "power law" function = 2
                                    particulate_organic_phosphorus_remin_timescale= 0.03 / day, 
                                    particulate_organic_phosphorus_sedremin_timescale= 1 / day, 
-                                   iron_scavenging_rate                         = 5e-4/days, # s⁻¹
+                                   iron_scavenging_rate                         = 0.2 / 365.25days, # s⁻¹
                                    ligand_concentration                         = 1e-9 * reference_density, # mol L m⁻³
                                    ligand_stability_coefficient                 = 1e8,
                                    martin_curve_exponent                       = 0.84,
