@@ -478,7 +478,7 @@ simulation = Simulation(
 wizard = TimeStepWizard(
     cfl=0.2, 
     max_change=1.1, 
-    max_Δt=60minutes
+    max_Δt=60minutes,
     )
 
 simulation.callbacks[:wizard] = Callback(
@@ -506,11 +506,11 @@ function progress(simulation)
     else
         @printf("Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
             ((simulation.model.tracers.DIC[1, 1, grid.Nz]-
-                DIC₀[1, 1, 1])/simulation.model.timestepper.previous_Δt
+                DIC₀[1, 1, 1])/simulation.Δt
                 ) * 1e7)
         @printf("Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
             ((simulation.model.tracers.ALK[1, 1, grid.Nz]-
-                ALK₀[1, 1, 1])/simulation.model.timestepper.previous_Δt
+                ALK₀[1, 1, 1])/simulation.Δt
                 ) * 1e7)
         @printf("Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n", 
             (simulation.model.tracers.DIC.boundary_conditions.top.condition[1,1]
@@ -518,7 +518,7 @@ function progress(simulation)
 
         ## update the anomaly fields
         DIC₀[1, 1, 1] = simulation.model.tracers.DIC[1, 1, Nz]
-        ALK₀[1, 1, 1] = simulation.model.tracers.ALK[1, 1, Nz]    
+        ALK₀[1, 1, 1] = simulation.model.tracers.ALK[1, 1, Nz]
     end
 end
 
