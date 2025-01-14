@@ -339,7 +339,7 @@ or 2) a first-order rate constant .
         fᵢ= percent_light
         z₀ = log(fᵢ)*λ # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
         POP = particulate_organic_phosphorus_concentration
-    
+    # TODO: change the depth limit with something like k == grid.Nz
     return ifelse(z < -1980, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP)))
 end
 

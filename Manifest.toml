@@ -2,7 +2,7 @@
 
 julia_version = "1.10.5"
 manifest_format = "2.0"
-project_hash = "c88e8fa0c2b89fa73a812d6bfbeb1b0e30371065"
+project_hash = "b24865a5a7e56437f34d4851a8de2befddf17fd0"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "30bb95a372787af850addf28ac937f1be7b79173"
@@ -1562,11 +1562,9 @@ version = "0.5.5"
 
 [[deps.Oceananigans]]
 deps = ["Adapt", "CUDA", "Crayons", "CubedSphere", "Dates", "Distances", "DocStringExtensions", "FFTW", "Glob", "IncompleteLU", "InteractiveUtils", "IterativeSolvers", "JLD2", "KernelAbstractions", "LinearAlgebra", "Logging", "MPI", "NCDatasets", "OffsetArrays", "OrderedCollections", "Pkg", "Printf", "Random", "Rotations", "SeawaterPolynomials", "SparseArrays", "Statistics", "StructArrays"]
-git-tree-sha1 = "ec31305d2d92d543f855694657ea396c0acf5332"
-repo-rev = "glw/tuples-with-catke"
-repo-url = "https://github.com/CliMA/Oceananigans.jl"
+git-tree-sha1 = "ad462c4cfae42a329834e783c8c6d53040285685"
 uuid = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
-version = "0.92.0"
+version = "0.92.2"
 
     [deps.Oceananigans.extensions]
     OceananigansEnzymeExt = "Enzyme"
