@@ -105,15 +105,15 @@ run!(simulation)
 
 ############################ Visualizing the solution ############################
 
-filepath = simulation.output_writers[:simple_output].filepath
-# filepath = "./passiveT_ty02_20y_btm1e2diff.jld2"
+# filepath = simulation.output_writers[:simple_output].filepath
+filepath = "AMOC_PassiveT_lowk.jld2"
 
 # TODO: How to record a video of particle movement
 # using JLD2
 # myfile = jldopen("passiveTP_50y.jld2")
 # xₙ = myfile["timeseries/p/1"]
 
-u_timeseries = FieldTimeSeries(filepath, "u")
+v_timeseries = FieldTimeSeries(filepath, "v")
 w_timeseries = FieldTimeSeries(filepath, "w")
 times = w_timeseries.times
 xw, yw, zw = nodes(w_timeseries)
@@ -123,12 +123,12 @@ xt, yt, zt = nodes(T1_timeseries)
 T2_timeseries = FieldTimeSeries(filepath, "T2")
 
 n = Observable(1)
-title = @lift @sprintf("t = Day %d0", times[$n] / 10days) 
+title = @lift @sprintf("t = Year %d0", times[$n] / 3652.5days) 
 
-uₙ = @lift 100*interior(u_timeseries[$n], :, 1, :)
-wₙ = @lift 100*interior(w_timeseries[$n], :, 1, :)
-T1ₙ = @lift interior(T1_timeseries[$n], :, 1, :)
-T2ₙ = @lift interior(T2_timeseries[$n], :, 1, :)
+vₙ = @lift 100*interior(v_timeseries[$n], 1, :, :)
+wₙ = @lift 100*interior(w_timeseries[$n], 1, :, :)
+T1ₙ = @lift interior(T1_timeseries[$n], 1, :, :)
+T2ₙ = @lift interior(T2_timeseries[$n], 1, :, :)
 
 fig = Figure(size = (1000, 1000))
 
@@ -139,27 +139,27 @@ fig = Figure(size = (1000, 1000))
 # end
 # lines!(ax_wind, xw, 1000 .* τ₀ .* y_wind.(xw,Lx))
 
-ax_u = Axis(fig[2, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_u = heatmap!(ax_u, xw, zw, uₙ; colorrange = (-0.5, 0.5), colormap = :balance) 
-Colorbar(fig[2, 2], hm_u; label = "u (cm/s)", flipaxis = false)
+ax_v = Axis(fig[2, 1]; xlabel = "y (km)", ylabel = "z (m)", aspect = 1)
+hm_v = heatmap!(ax_v, yw/1e3, zw, vₙ; colorrange = (-2.5, 2.5), colormap = :balance) 
+Colorbar(fig[2, 2], hm_v; label = "v (cm/s)", flipaxis = false)
 
-ax_w = Axis(fig[2, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_w = heatmap!(ax_w, xw, zw, wₙ; colorrange = (-2e-5,2e-5), colormap = :balance) 
+ax_w = Axis(fig[2, 3]; xlabel = "y (km)", ylabel = "z (m)", aspect = 1)
+hm_w = heatmap!(ax_w, yw/1e3, zw, wₙ; colorrange = (-8e-4,8e-4), colormap = :balance) 
 Colorbar(fig[2, 4], hm_w; label = "w (cm/s)", flipaxis = false)
 
-ax_T1 = Axis(fig[3, 1]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_T1 = heatmap!(ax_T1, xt, zt, T1ₙ; colorrange = (0,0.1), colormap = :rainbow1) 
+ax_T1 = Axis(fig[3, 1]; xlabel = "y (km)", ylabel = "z (m)", aspect = 1)
+hm_T1 = heatmap!(ax_T1, yt/1e3, zt, T1ₙ; colorrange = (0,1), colormap = :rainbow1) 
 Colorbar(fig[3, 2], hm_T1; label = "Passive tracer 1", flipaxis = false)
 
-ax_T2 = Axis(fig[3, 3]; xlabel = "x (m)", ylabel = "z (m)", aspect = 1)
-hm_T2 = heatmap!(ax_T2, xt, zt, T2ₙ; colorrange = (0,0.1), colormap = :rainbow1) 
+ax_T2 = Axis(fig[3, 3]; xlabel = "y (km)", ylabel = "z (m)", aspect = 1)
+hm_T2 = heatmap!(ax_T2, yt/1e3, zt, T2ₙ; colorrange = (0,1), colormap = :rainbow1) 
 Colorbar(fig[3, 4], hm_T2; label = "Passive tracer 2", flipaxis = false)
 
 fig[1, 1:4] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "passiveT_AMOCν1.mp4", frames, framerate=50) do i
+record(fig, "AMOC_passiveT_lowk.mp4", frames, framerate=20) do i
     n[] = i
 end
 nothing #hide

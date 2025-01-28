@@ -14,12 +14,12 @@ using Oceananigans.Models.HydrostaticFreeSurfaceModels:
                     PrescribedVelocityFields
 using Oceananigans.TurbulenceClosures: VerticallyImplicitTimeDiscretization
 using Oceananigans: TendencyCallsite
-using Oceananigans.Advection: FluxFormAdvection
+# using Oceananigans.Advection: FluxFormAdvection
 
-const Ny = 500 
-const Nz = 100
-const Ly = 15000kilometers   # m
-const Lz = 2000           # m
+Ny = 500 
+Nz = 200
+Ly = 15000kilometers   # m
+Lz = 4000           # m
 
 arch = CPU()
 # We use a two-dimensional grid, with a `Flat` `y`-direction:
@@ -30,15 +30,15 @@ grid = RectilinearGrid(arch,
                        topology=(Flat, Bounded, Bounded))
 
 # Set streamfunction
-deltaN = 200kilometers   # North downwelling width
-deltaS = 500kilometers  # South upwelling width
-deltaZ = -1000     # Vertical asymmetry
-Ψᵢ(y, z)  = - 1.2 * ((1 - exp(-y / deltaS)) * (1 - exp(-(Ly - y) / deltaN)) * 
+deltaN = 1000kilometers   # North downwelling width
+deltaS = 2000kilometers  # South upwelling width
+deltaZ = 1000     # Vertical asymmetry
+Ψᵢ(y, z)  = - 12 * ((1 - exp(-y / deltaS)) * (1 - exp(-(Ly - y) / deltaN)) * 
             sinpi(z / Lz) * exp(z/deltaZ))
 
 # Ψᵢ(y, z) = 10*(y/Ly) * sinpi(-z/Lz) * exp((2/Lz)*z) * (1-exp((y-Ly)/(0.2*Ly)))
 # Ψᵢ(x, z) = 0.1 * sinpi(x/Lx) * sinpi(-z/Lz) * exp((2/Lz)*z) * exp((2/Lx)*x)
-Ψ = Field{Face, Center, Face}(grid)
+Ψ = Field{Center, Face, Face}(grid)
 set!(Ψ, Ψᵢ)
 fill_halo_regions!(Ψ, arch)
 
@@ -56,7 +56,7 @@ fill_halo_regions!(u, arch)
 
 ############################# Model setup ############################# 
 
-kz(y,z,t) = 1e-4 + 5e-3 * (tanh((z+150)/20)+1) + 1e-2 * exp(-(z+2000)/50)
+kz(y,z,t) = 1e-4 + 5e-3 * (tanh((z+100)/20)+1) + 1e-2 * exp(-(z+4000)/50)
 tracer_vertical_closure = VerticalScalarDiffusivity(VerticallyImplicitTimeDiscretization(), 
                                                 κ=(DIC=kz,ALK=kz,PO₄=kz,NO₃=kz,DOP=kz,POP=kz,Fe=0))
 tracer_horizontal_closure = HorizontalScalarDiffusivity(κ=(DIC=1e3,ALK=1e3,PO₄=1e3,NO₃=1e3,DOP=1e3,POP=1e3,Fe=0))
@@ -70,7 +70,7 @@ tracer_horizontal_closure = HorizontalScalarDiffusivity(κ=(DIC=1e3,ALK=1e3,PO�
 
 # Set max NCP as a function of latitude (y)
 maximum_net_community_production_rate = CenterField(grid)
-maxNCP(y,z) = (1e-5 + sinpi(y/Ly) * 5e-5)/day
+maxNCP(y,z) = (8e-6 + sinpi(y/Ly) * 8e-5)/day
 set!(maximum_net_community_production_rate, maxNCP)
 fill_halo_regions!(maximum_net_community_production_rate, arch)
 
@@ -84,23 +84,19 @@ fill_halo_regions!(incident_PAR, arch)
 model = HydrostaticFreeSurfaceModel(grid = grid,
                                     biogeochemistry = CarbonAlkalinityNutrients(; grid,
                                                                         maximum_net_community_production_rate  = maximum_net_community_production_rate,
-                                                                        incident_PAR = incident_PAR,
-                                                                        particulate_organic_phosphorus_sedremin_timescale = 0.5 / day),
+                                                                        incident_PAR = incident_PAR),
+                                                                        #particulate_organic_phosphorus_sedremin_timescale = 0.1 / day),
                                                                         #iron_scavenging_rate = 0),
                                     velocities = PrescribedVelocityFields(; u, v, w),
                                     tracers = (:DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
                                     # forcing=(; Fe=F_forcing),
-                                    tracer_advection = FluxFormAdvection(
-                                                                    Centered(),
-                                                                    Centered(),
-                                                                    Centered()),
                                     coriolis = nothing,
                                     buoyancy = nothing,
                                     closure = (tracer_vertical_closure, tracer_horizontal_closure))
 
-set!(model, DIC=2.1, ALK=2.35, NO₃=2e-2, PO₄=1.2e-3, DOP=0, POP=0, Fe = 6e-7) # mol PO₄ m⁻³
+set!(model, DIC=2.1, ALK=2.35, NO₃=2.4e-2, PO₄=1.7e-3, DOP=0, POP=0, Fe = 6e-7) # mol PO₄ m⁻³
 
-simulation = Simulation(model; Δt = 1days, stop_time=300days) 
+simulation = Simulation(model; Δt = 1day, stop_time=365.25days) 
 
 # Define a callback to zero out Fe tendency
 function modify_tendency!(model)
@@ -111,8 +107,9 @@ simulation.callbacks[:modify_Fe] = Callback(modify_tendency!,
                                             callsite = TendencyCallsite())
 
 # Print the progress 
-progress(sim) = @printf("Iteration: %d, time: %s\n", 
-                        iteration(sim), prettytime(sim)) 
+progress(sim) = @printf("Iteration: %d, time: %s, total(P): %.2e \n",
+            iteration(sim), prettytime(sim),
+            sum(model.tracers.PO₄) + sum(model.tracers.POP) + sum(model.tracers.DOP))
 add_callback!(simulation, progress, IterationInterval(100))
 
 outputs = (v = model.velocities.v,
@@ -125,8 +122,8 @@ outputs = (v = model.velocities.v,
 
 simulation.output_writers[:simple_output] =
         JLD2OutputWriter(model, outputs, 
-                        schedule = TimeInterval(10days), 
-                        filename = "AMOC_test",
+                        schedule = TimeInterval(365.25days), 
+                        filename = "AMOC_test4",
                         overwrite_existing = true)
 
 # simulation.output_writers[:checkpointer] = Checkpointer(model2,
@@ -138,25 +135,25 @@ run!(simulation) # , pickup = false)
 
 #################################### Visualize ####################################
 
-# filepath = simulation.output_writers[:simple_output].filepath
-filepath = "./AMOC69.jld2"
+filepath = simulation.output_writers[:simple_output].filepath
+# filepath = "./AMOC91.jld2"
 
 v_timeseries = FieldTimeSeries(filepath, "v")
 w_timeseries = FieldTimeSeries(filepath, "w")
 
 times = w_timeseries.times
+xv, yv, zv = nodes(v_timeseries)
 xw, yw, zw = nodes(w_timeseries)
 
 PO4_timeseries = FieldTimeSeries(filepath, "PO₄")
-# times = PO4_timeseries.times
-# xw, yw, zw = nodes(PO4_timeseries)
+xt, yt, zt = nodes(PO4_timeseries)
 POP_timeseries = FieldTimeSeries(filepath, "POP")
 DOP_timeseries = FieldTimeSeries(filepath, "DOP")
 Fe_timeseries = FieldTimeSeries(filepath, "Fe")
 NO3_timeseries = FieldTimeSeries(filepath, "NO₃")
 
 n = Observable(1)
-title = @lift @sprintf("t = Year %d x 50", times[$n] / (3652.5*5)days) 
+title = @lift @sprintf("t = Year %d", times[$n] / 365.25days) 
 # title = @lift @sprintf("t = Day %d0", times[$n] / 10days) 
 
 # convert unit from m/s to cm/s:
@@ -173,21 +170,26 @@ avg_POPₙ = @lift mean(1e3*interior(POP_timeseries[$n], 1, :, :), dims=1)
 NO3ₙ = @lift 1e3*interior(NO3_timeseries[$n], 1, :, :)
 Feₙ = @lift 1e6*interior(Fe_timeseries[$n], 1, :, :)
 
+#################################################################################
+
+colors5 = cgrad(:RdYlBu, 5, categorical=true, rev=true) 
+colors6 = cgrad(:RdYlBu, 6, categorical=true, rev=true) 
+colors8 = cgrad(:RdYlBu, 8, categorical=true, rev=true)
+
+
 fig = Figure(size = (1500, 1500))
-colors6 = cgrad(:RdYlBu_6, 6, categorical=true, rev=true) #Reverse(:RdYlBu_6)
-colors8 = cgrad(:RdYlBu_8, 8, categorical=true, rev=true) #Reverse(:RdYlBu_8)
 
 ax_s = Axis(fig[2, 1]; xlabel = "y (km)", ylabel = "z (m)",title = "Stream function (m² s⁻¹)", aspect = 1)
 hm_s = heatmap!(ax_s, yw./1e3, zw, Ψ; colormap = :viridis) 
 Colorbar(fig[2, 2], hm_s; flipaxis = false)
-contour!(ax_s, yw./1e3, grid.zᵃᵃᶜ[0:100], Ψ, levels = 10, color = :black)
+contour!(ax_s, yv./1e3, zw, Ψ, levels = 10, color = :black)
 
 ax_v = Axis(fig[2, 3]; xlabel = "y (km)", ylabel = "z (m)",title = "v (t) (cm s⁻¹)", aspect = 1)
-hm_v = heatmap!(ax_v, yw./1e3, zw, vₙ; colorrange = (-2.5,2.5), colormap = :balance) 
+hm_v = heatmap!(ax_v, yw./1e3, zw, vₙ; colorrange = (-2.2,2.2), colormap = :balance) 
 Colorbar(fig[2, 4], hm_v; flipaxis = false)
 
 ax_w = Axis(fig[2, 5]; xlabel = "y (km)", ylabel = "z (m)", title = "w (t) (cm s⁻¹)", aspect = 1)
-hm_w = heatmap!(ax_w, yw./1e3, zw, wₙ; colorrange = (-8e-4, 8e-4), colormap = :balance) 
+hm_w = heatmap!(ax_w, yw./1e3, zw, wₙ; colorrange = (-6e-4, 6e-4), colormap = :balance) 
 Colorbar(fig[2, 6], hm_w; flipaxis = false)
 
 ax_PO4 = Axis(fig[3, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "[PO₄] (μM)", aspect = 1)
@@ -201,124 +203,187 @@ hm_NO3 = heatmap!(ax_NO3, yw/1e3, zw, NO3ₙ; colorrange = (0,40),colormap = col
 Colorbar(fig[3, 4], hm_NO3; flipaxis = false)
 
 ax_Fe = Axis(fig[3, 5]; xlabel = "y (km)", ylabel = "z (m)", title = "[Fe] (nM)", aspect = 1)
-hm_Fe = heatmap!(ax_Fe, yw/1e3, zw, Feₙ; colorrange = (0,1.5),colormap = colors6) 
+hm_Fe = heatmap!(ax_Fe, yw/1e3, zw, Feₙ; colorrange = (0,1),colormap = colors6) 
 Colorbar(fig[3, 6], hm_Fe; flipaxis = false)
 
 ax_POP = Axis(fig[4, 3]; xlabel = "y (km)", ylabel = "z (m)", title = "[POP] (μM)", aspect = 1)
-hm_POP = heatmap!(ax_POP, yw/1e3, zw, POPₙ; colorrange = (0,0.01),colormap = :rainbow1) 
+hm_POP = heatmap!(ax_POP, yw/1e3, zw, POPₙ; colorrange = (0,0.006),colormap = :rainbow1) 
 Colorbar(fig[4, 4], hm_POP; flipaxis = false)
 
 ax_avg_PO4 = Axis(fig[4, 1:2]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", title = "Average [PO₄] (μM)", yaxisposition = :right)
-xlims!(ax_avg_PO4, 0, 4)
-PO4_prof = lines!(ax_avg_PO4, avg_PO4ₙ[][1, :], zw[1:100])
+xlims!(ax_avg_PO4, 0, 3)
+PO4_prof = lines!(ax_avg_PO4, avg_PO4ₙ[][1, :], zt)
 
 ax_avg_POP = Axis(fig[4, 5:6]; xlabel = "[POP] (μM)", ylabel = "z (m)", title = "Average [POP] (μM)",yaxisposition = :right)
-xlims!(ax_avg_POP, 0, 0.01)
-POP_prof = lines!(ax_avg_POP, avg_POPₙ[][1, :], zw[1:100])
+xlims!(ax_avg_POP, 0, 0.005)
+POP_prof = lines!(ax_avg_POP, avg_POPₙ[][1, :], zt)
 
 fig[1, 1:6] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "AMOC69.mp4", frames, framerate=25) do i
+record(fig, "AMOC_test4.mp4", frames, framerate=10) do i
     n[] = i
     PO4_prof[1] = avg_PO4ₙ[][1, :]
     POP_prof[1] = avg_POPₙ[][1, :]
 end
 nothing #hide
 
-################################ Video comparing two models ################################
-# filepath1 = "./AMOC64.jld2"
-# filepath2 = "./AMOC63.jld2"
 
-# PO4_timeseries1 = FieldTimeSeries(filepath1, "PO₄")
-# PO4_timeseries2 = FieldTimeSeries(filepath2, "PO₄")
-# times = PO4_timeseries1.times
-# xw, yw, zw = nodes(PO4_timeseries1)
+#= Comfirm steady-state
+num_timesteps = 41 # number of time slices saved
+PO4_sum_vector = zeros(Float64, num_timesteps)
+DOP_sum_vector = zeros(Float64, num_timesteps)
+POP_sum_vector = zeros(Float64, num_timesteps)
+NO3_sum_vector = zeros(Float64, num_timesteps)
+PO4_single_vector = zeros(Float64, num_timesteps)
+POP_single_vector = zeros(Float64, num_timesteps)
+DOP_single_vector = zeros(Float64, num_timesteps)
+NO3_single_vector = zeros(Float64, num_timesteps)
 
-# n = Observable(1)
-# title = @lift @sprintf("t = Year %d x 50", times[$n] / (3652.5*5)days) 
+for index in 1:num_timesteps
+    # mol P m-3
+    PO4_sum_vector[index] = sum(interior(PO4_timeseries[index], 1, :, :))
+    DOP_sum_vector[index] = sum(interior(DOP_timeseries[index], 1, :, :))
+    POP_sum_vector[index] = sum(interior(POP_timeseries[index], 1, :, :))
+    NO3_sum_vector[index] = sum(interior(NO3_timeseries[index], 1, :, :))
+    PO4_single_vector[index] = PO4_timeseries[1, 100, 99, index]
+    DOP_single_vector[index] = DOP_timeseries[1, 100, 99, index]
+    POP_single_vector[index] = POP_timeseries[1, 100, 99, index]
+    NO3_single_vector[index] = NO3_timeseries[1, 100, 99, index]
+end
 
-# PO4ₙ1 = @lift 1e3*interior(PO4_timeseries1[$n], 1, :, :)
-# avg_PO4ₙ1 = @lift mean(1e3*interior(PO4_timeseries1[$n], 1, :, :), dims=1) 
-# PO4ₙ2 = @lift 1e3*interior(PO4_timeseries2[$n], 1, :, :)
-# avg_PO4ₙ2 = @lift mean(1e3*interior(PO4_timeseries2[$n], 1, :, :), dims=1) 
+# Create the time vector `t`
+t = 0:50:2000 
 
-# fig = Figure(size = (800, 700))
-# colors6 = cgrad(:RdYlBu_6, 6, categorical=true, rev=true) #Reverse(:RdYlBu_6)
-# colors8 = cgrad(:RdYlBu_8, 8, categorical=true, rev=true) #Reverse(:RdYlBu_8)
+# Plot the data using GLMakie
+fig_sum = Figure()
+ax = Axis(fig_sum[1, 1], xlabel="Time (years)", ylabel="mol m⁻³", title="Sum of tracer vs Time")
+lines!(ax, t, PO4_sum_vector./100, label="PO₄/100", linewidth = 3)
+lines!(ax, t, DOP_sum_vector, label="DOP", linewidth = 3)
+lines!(ax, t, POP_sum_vector, label="POP", linewidth = 3)
+lines!(ax, t, NO3_sum_vector./1600, label="NO₃/1600", linewidth = 3)
+axislegend(ax, position = (0.9,0.5))
 
-# ax_PO4 = Axis(fig[2, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "[PO₄] (μM)", aspect = 1)
-# hm_PO4 = heatmap!(ax_PO4, yw/1e3, zw, PO4ₙ1; colorrange = (0,3),colormap = colors6, interpolate = false) 
-# Colorbar(fig[2, 2], hm_PO4; flipaxis = false)
+ax_single = Axis(fig_sum[1, 2], xlabel="Time (years)", ylabel="mol m⁻³", title="A single point of tracer vs Time")
+lines!(ax_single, t, PO4_single_vector./100, label="PO₄/100", linewidth = 3)
+lines!(ax_single, t, DOP_single_vector./20, label="DOP/20", linewidth = 3)
+lines!(ax_single, t, POP_single_vector, label="POP", linewidth = 3)
+lines!(ax_single, t, NO3_single_vector./1600, label="NO₃/1600", linewidth = 3)
+axislegend(ax_single, position = :rt)
 
-# ax_PO42 = Axis(fig[3, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "[PO₄] (μM)", aspect = 1)
-# hm_PO42 = heatmap!(ax_PO42, yw/1e3, zw, PO4ₙ2; colorrange = (0,3),colormap = colors6, interpolate = false) 
-# Colorbar(fig[3, 2], hm_PO42; flipaxis = false)
+display(fig_sum)
+=#
 
-# ax_avg_PO4 = Axis(fig[2, 3]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", title = "Average [PO₄] (μM)")
-# xlims!(ax_avg_PO4, 0, 4)
-# PO4_prof = lines!(ax_avg_PO4, avg_PO4ₙ1[][1, :], zw[1:100])
+################################# Load final data ################################
 
-# ax_avg_PO42 = Axis(fig[3, 3]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", title = "Average [PO₄] (μM)")
-# xlims!(ax_avg_PO42, 0, 4)
-# PO4_prof2 = lines!(ax_avg_PO42, avg_PO4ₙ2[][1, :], zw[1:100])
-
-# fig[1, 1:3] = Label(fig, title, tellwidth=false)
-
-# frames = 1:length(times)
-# record(fig, "AMOC63vs64.mp4", frames, framerate=25) do i
-#     n[] = i
-#     PO4_prof[1] = avg_PO4ₙ1[][1, :]
-#     PO4_prof2[1] = avg_PO4ₙ2[][1, :]
-# end
-# nothing #hide
-
-# POP_timeseries1 = FieldTimeSeries(filepath1, "POP")
-# POP_timeseries2 = FieldTimeSeries(filepath2, "POP")
-# DOP_timeseries1 = FieldTimeSeries(filepath1, "DOP")
-# DOP_timeseries2 = FieldTimeSeries(filepath2, "DOP")
-# PO4_final1 = 1e3*interior(PO4_timeseries1[end], 1, :, :)
-# PO4_final2 = 1e3*interior(PO4_timeseries2[end], 1, :, :)
-# POP_final1 = 1e3*interior(POP_timeseries1[end], 1, :, :)
-# POP_final2 = 1e3*interior(POP_timeseries2[end], 1, :, :)
-# DOP_final1 = 1e3*interior(DOP_timeseries1[end], 1, :, :)
-# DOP_final2 = 1e3*interior(DOP_timeseries2[end], 1, :, :)
-
-# totalP1 = sum((PO4_final1 + POP_final1 + DOP_final1)*3e4*20)/1e12
-# totalP2 = sum((PO4_final2 + POP_final2 + DOP_final2)*3e4*20)/1e12
-
-# PO4_init = 1e3*interior(PO4_timeseries2[1], 1, :, :)
-# DOP_init = 1e3*interior(DOP_timeseries2[1], 1, :, :)
-# POP_init = 1e3*interior(POP_timeseries2[1], 1, :, :)
-# totalP_init = sum((PO4_init + POP_init + DOP_init)*3e4*20)/1e12
-
-####################################################################################
+# POP_snd = 1e3*interior(POP_timeseries[end-1], 1, :, :)
 #=
-PO4_final = 1e3*interior(PO4_timeseries[end], 1, :, :)
-NO3_final = 1e3*interior(NO3_timeseries[end],1, :, :)
-POP_final = 1e3*interior(POP_timeseries[end], 1, :, :)
-DOP_final = 1e3*interior(DOP_timeseries[end], 1, :, :)
-Fe_final = 1e6*interior(Fe_timeseries[end], 1, :, :)
+PO4_final = interior(PO4_timeseries[end], 1, :, :)
+NO3_final = interior(NO3_timeseries[end], 1, :, :)
+POP_final = interior(POP_timeseries[end], 1, :, :)
+DOP_final = interior(DOP_timeseries[end], 1, :, :)
+Fe_final = interior(Fe_timeseries[end], 1, :, :)
 
-z_matrix = repeat(zw[1:100], 1, 500)
-# μᵖ= 3e-5 # /day
-μ(y,z)= 1e-5+ sinpi(y/Ly) * 5e-5
-μ_flat = zeros(length(yw), length(zw[1:100]))  
-yw_broadcast = reshape(yw, length(yw), 1) 
-zw_broadcast = reshape(zw[1:100], 1, length(zw[1:100])) 
-μ_flat .= μ.(yw_broadcast, zw_broadcast)  
+###################### Plot model nutrients vs WOA23 data #########################
 
-kᴵ=10
-kᴾ=1e-7*1024.5 * 1e3 # unit conversion 1e3
-kᴺ=1.6e-6*1024.5 * 1e3 # unit conversion 1e3
-kᶠ=1e-10*1024.5 * 1e6 # unit conversion 1e6
+using NCDatasets
+dsP = Dataset("data/woa23_all_p00_01.nc")
+dsN = Dataset("data/woa23_all_n00_01.nc")
+lat = dsP["lat"][20:150]
+# lon = dsP["lon"][:]
+depth = dsP["depth"][:]
+PO4_obs = dsP["p_an"][155,20:150,:] # Objectively analyzed mean fields for moles_of_phosphate_per_unit_mass_in_sea_water
+NO3_obs = dsN["n_an"][155,20:150,:] # 25W
+
+function interpolate_column(col)
+    valid_indices = findall(!ismissing, col)
+    
+    # If column is all missing, return missing
+    if isempty(valid_indices)
+        return fill(missing, length(col))
+    end
+    
+    valid_values = collect(Float64, col[valid_indices])
+    
+    # Create interpolation with boundary conditions
+    itp = linear_interpolation(valid_indices, valid_values, 
+                             extrapolation_bc=Flat())  # Use Flat() extrapolation
+    
+    # Fill all indices
+    result = Vector{Union{Float64, Missing}}(undef, length(col))
+    for i in 1:length(col)
+        # Handle edge cases
+        if i < minimum(valid_indices)
+            result[i] = valid_values[1]  # Use first valid value
+        elseif i > maximum(valid_indices)
+            result[i] = valid_values[end]  # Use last valid value
+        else
+            result[i] = itp(i)
+        end
+    end
+    
+    return result
+end
+PO4_interpolated = hcat([interpolate_column(PO4_obs[:,j]) for j in 1:size(PO4_obs,2)]...)
+NO3_interpolated = hcat([interpolate_column(NO3_obs[:,j]) for j in 1:size(NO3_obs,2)]...)
+
+fig_can2 = Figure(size = (1000, 1000))
+
+ax_PO4 = Axis(fig_can2[1, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "[PO₄] (μM)", aspect = 1)
+hm_PO4 = heatmap!(ax_PO4, yt/1e3, zt, PO4_final.*1e3; colorrange = (0, 3),
+                colormap = colors6, interpolate = true)                 
+Colorbar(fig_can2[1, 2], hm_PO4; flipaxis = false)
+levels = range(0, 3, length=7) 
+contour!(ax_PO4, yt./1e3, zt, PO4_final.*1e3, levels = levels, color = :black)
+
+ax_PO4_obs = Axis(fig_can2[2, 1]; xlabel = "Latitude", ylabel = "z (m)", title = "[PO₄] (μM)", aspect = 1)
+hm_PO4_obs = heatmap!(ax_PO4_obs, lat, -depth, PO4_interpolated; colorrange = (0, 3),
+                colormap = colors6, interpolate = true)                 
+Colorbar(fig_can2[2, 2], hm_PO4_obs; flipaxis = false)
+ylims!(ax_PO4_obs, -4000, 0)
+contour!(ax_PO4_obs, lat, -depth, PO4_interpolated, levels = levels, color = :black)
+
+ax_NO3 = Axis(fig_can2[1, 3]; xlabel = "y (km)", ylabel = "z (m)", title = "[NO₃] (μM)", aspect = 1)
+hm_NO3 = heatmap!(ax_NO3, yt/1e3, zt, NO3_final.*1e3; colorrange = (0, 40),
+                colormap = colors8, interpolate = true)                 
+Colorbar(fig_can2[1, 4], hm_NO3; flipaxis = false)
+levels2 = range(0, 40, length=9) 
+contour!(ax_NO3, yt./1e3, zt, NO3_final.*1e3, levels = levels2, color = :black)
+
+ax_NO3_obs = Axis(fig_can2[2, 3]; xlabel = "Latitude", ylabel = "z (m)", title = "[NO₃] (μM)", aspect = 1)
+hm_NO3_obs = heatmap!(ax_NO3_obs, lat, -depth, NO3_interpolated; colorrange = (0, 40),
+                colormap = colors8, interpolate = true)                 
+Colorbar(fig_can2[2, 4], hm_NO3_obs; flipaxis = false)
+ylims!(ax_NO3_obs, -4000, 0)
+contour!(ax_NO3_obs, lat, -depth, NO3_interpolated, levels = levels2, color = :black)
+display(fig_can2)
+=#
+
+# ax_DOP = Axis(fig_can2[2, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "[DOP] (μM)", aspect = 1)
+# hm_DOP = heatmap!(ax_DOP, yt/1e3, zt, DOP_final.*1e3; colorrange = (0, 0.25),
+#                 colormap = colors5, interpolate = false)                 
+# Colorbar(fig_can2[2, 2], hm_DOP; flipaxis = false)
+
+# ax_POP = Axis(fig_can2[2, 3]; xlabel = "y (km)", ylabel = "z (m)", title = "[POP] (μM)", aspect = 1)
+# hm_POP = heatmap!(ax_POP, yt/1e3, zt, POP_final.*1e3; colorrange = (0, 0.006),
+#                 colormap = colors6, interpolate = false)                 
+# Colorbar(fig_can2[2, 4], hm_POP; flipaxis = false)
+
+########################################################################
+#=
+z_matrix = repeat(zt, 1, 500)
+kᴵ=30
+kᴾ=5e-7 * 1024.5  # mol P m⁻³ 
+kᴺ=7e-6 * 1024.5 
+kᶠ=1e-10 * 1024.5  
 
 incident_PAR = CenterField(grid) 
 surface_PAR(y,z) = 700 * sinpi(y/Ly) 
 set!(incident_PAR, surface_PAR)   
 fill_halo_regions!(incident_PAR, arch)
 I = incident_PAR[1,1:500,1:100] .* exp.(z_matrix' ./ 25)
+
 # I = 700 .* exp.(z_matrix' ./ 25)
 P = max.(0, PO4_final)
 N = max.(0, NO3_final)
@@ -328,139 +393,53 @@ light_lim = I ./ (I .+ kᴵ)
 p_lim = P ./ (P .+ kᴾ)
 n_lim = N ./ (N .+ kᴺ)
 f_lim = F ./ (F .+ kᶠ)
-min_lim_vals = min.(p_lim, n_lim, f_lim)  
-NCP_final= max.(0, μ_flat .* light_lim .* min_lim_vals)
-# NCP_result = μᵖ .* light_lim .* min_lim_vals 
-NCP_result .= NCP_final .*1e3 # mmol P m⁻³ d⁻¹
+all_lim = light_lim .* min.(p_lim, n_lim, f_lim)  
 
+############### Calculate Remin rates ###############
 z₀ = log(0.01)*25 
-rₛₑ = 0.5 #/day
-Remin_final = -0.84 .* 10 ./(z_matrix' .+ z₀) .* POP_final # mmol P m⁻³ d⁻¹
-# Remin_final = ifelse(z < -1990, rₛₑ .* POP_final, 0.1 .* POP_final)
-Remin_final[:,1] = rₛₑ .* POP_final[:,1] # sedimentary remin
+rₛₑ = 0.5 # /day
+wₛₙₖ = 10  # m/day
+Δz = 20  # Vertical grid spacing in meters
+POP_remin_final = -0.84 .* wₛₙₖ ./(z_matrix' .+ z₀) .* POP_final .*1e3 # mmol P m⁻³ d⁻¹
+POP_remin_final[:,1] = rₛₑ .* POP_final[:,1] .*1e3 # sedimentary remin in the bottom layer
 
-# tracer concentration and limitation terms
-fig_can = Figure(size = (1000, 800))
-
-# Light limitation
-# ax_l_lim = Axis(fig_can[1, 1]; xlabel = "y (km)", ylabel = "z (m)",title = "I/(I+kᵢ)", aspect = 1)
-# hm_l_lim = heatmap!(ax_l_lim, yw/1e3, zw, light_lim; colorrange = (0, 1), colormap = :tempo) 
-# Colorbar(fig_can[1, 2], hm_l_lim; flipaxis = false)
-# Zoom into surface
-ax_l_lim2 = Axis(fig_can[1, 1]; xlabel = "y (km)", ylabel = "z (m)",title = "Surface I/(I+kᵢ)", aspect = 1)
-hm_l_lim2 = heatmap!(ax_l_lim2, yw/1e3, zw[85:100], light_lim[:,85:100]; colorrange = (0, 1), colormap = :tempo) 
-Colorbar(fig_can[1, 2], hm_l_lim2; flipaxis = false)
-# NO3 limitation
-ax_n_lim = Axis(fig_can[2, 1]; xlabel = "y (km)", ylabel = "z (m)",title = "NO₃/(NO₃+kₙₒ₃)", aspect = 1)
-hm_n_lim = heatmap!(ax_n_lim, yw/1e3, zw, n_lim; colorrange = (0, 1), colormap = :tempo) 
-Colorbar(fig_can[2, 2], hm_n_lim; flipaxis = false)
-# PO4 limitation
-ax_p_lim = Axis(fig_can[2, 3]; xlabel = "y (km)", ylabel = "z (m)",title = "PO₄/(PO₄+kₚₒ₄)", aspect = 1)
-hm_p_lim = heatmap!(ax_p_lim, yw/1e3, zw, p_lim; colorrange = (0, 1), colormap = :tempo) 
-Colorbar(fig_can[2, 4], hm_p_lim; flipaxis = false)
-# Fe limitation
-ax_f_lim = Axis(fig_can[1, 3]; xlabel = "y (km)", ylabel = "z (m)",title = "Fe/(Fe+kᵢᵣₒₙ)", aspect = 1)
-hm_f_lim = heatmap!(ax_f_lim, yw/1e3, zw, f_lim; colorrange = (0, 1), colormap = :tempo) 
-Colorbar(fig_can[1, 4], hm_f_lim; flipaxis = false)
-# Fe limitation
-# ax_f_lim2 = Axis(fig_can[3, 3]; xlabel = "y (km)", ylabel = "z (m)",title = "Surface Fe/(Fe+kᵢᵣₒₙ)", aspect = 1)
-# hm_f_lim2 = heatmap!(ax_f_lim2, yw/1e3, zw[85:100], f_lim[:,85:100]; colorrange = (0, 1), colormap = :tempo) 
-# Colorbar(fig_can[3, 4], hm_f_lim2; flipaxis = false)
-
-display(fig_can)
-
-# PO4 concentrations VS WOA23
-fig_can2 = Figure(size = (600, 1000))
-data = PO4_final
-ax_PO4 = Axis(fig_can2[1, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "[PO₄] (μM)", aspect = 1)
-hm_PO4 = heatmap!(ax_PO4, yw/1e3, zw, data; colorrange = (0, 3),
-                colormap = colors6, interpolate = false)                 
-Colorbar(fig_can2[1, 2], hm_PO4; flipaxis = false)
-levels = range(0, 3, length=7) 
-contour!(ax_PO4, yw./1e3, zw[1:100], data, levels = levels, color = :black)
-
-data2 = NO3_final
-ax_NO3 = Axis(fig_can2[2, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "[NO₃] (μM)", aspect = 1)
-hm_NO3 = heatmap!(ax_NO3, yw/1e3, zw, data2; colorrange = (0, 40),
-                colormap = colors8, interpolate = false)                 
-Colorbar(fig_can2[2, 2], hm_NO3; flipaxis = false)
-levels2 = range(0, 40, length=9) 
-contour!(ax_NO3, yw./1e3, zw[1:100], data2, levels = levels2, color = :black)
-display(fig_can2)
-
-#=
-Fe_final = 1e6*interior(Fe_timeseries[end], 1, :, :)
-F = max.(0, Fe_final)
-kᶠ=1e-10*1024.5 * 1e6 
-f_lim = F ./ (F .+ kᶠ)
-
-fig_can2 = Figure(size = (800, 400))
-
-ax_Fe = Axis(fig_can2[1, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "[Fe] (nM)", aspect = 1)
-hm_Fe = heatmap!(ax_Fe, yw/1e3, zw, Fe_final; colorrange = (0,1),colormap = Reverse(:RdYlBu_6)) 
-Colorbar(fig_can2[1, 2], hm_Fe; flipaxis = false)
-contour!(ax_Fe, yw./1e3, zw[1:100], Fe_final, levels = 5, color = :black)
-
-ax_f_lim = Axis(fig_can2[1, 3]; xlabel = "y (km)", ylabel = "z (m)",title = "Fe/(Fe+kᵢᵣₒₙ)", aspect = 1)
-hm_f_lim = heatmap!(ax_f_lim, yw/1e3, zw, f_lim; colorrange = (0, 1), colormap = :tempo) 
-Colorbar(fig_can2[1, 4], hm_f_lim; flipaxis = false)
-contour!(ax_f_lim, yw/1e3, zw[1:100], f_lim, levels = 5, color = :black)
-display(fig_can2)
+DOP_remin_final = DOP_final.* (2/365.25) .*1e3 # mmol P m⁻³ d⁻¹
+total_remin_final = POP_remin_final .+ DOP_remin_final
 =#
-################################## Plot prod/remin rates ##################################
 
-fig_rate = Figure(size = (800, 1200))
+########################### Compare POC fluxes with observations ###########################
+#=
+using XLSX, JLD2, DataFrames
 
-ax_NCP = Axis(fig_rate[1, 1]; xlabel = "y (km)", ylabel = "z (m)",title = "Top NCP (mmol m⁻³ d⁻¹)", aspect = 1)
-hm_NCP = heatmap!(ax_NCP, yw/1e3, zw[85:100], NCP_result[:,85:100]; colorrange = (0,4e-2),colormap = :viridis) 
-Colorbar(fig_rate[1, 2], hm_NCP; flipaxis = false)
-
-ax_remin = Axis(fig_rate[1, 3]; xlabel = "y (km)", ylabel = "z (m)",title = "POP remin (mmol m⁻³ d⁻¹)", aspect = 1)
-hm_remin = heatmap!(ax_remin, yw/1e3, zw, Remin_final; colorrange = (0,1.2e-3),colormap = :viridis) 
-Colorbar(fig_rate[1, 4], hm_remin; flipaxis = false)
-
-avg_NCP = mean(NCP_result; dims = 1)
-ax_avg_NCP = Axis(fig_rate[2, 1:2]; xlabel = "Rate (mmol m⁻³ d⁻¹)", ylabel = "z (m)", title = "Ave. NCP")
-xlims!(ax_avg_NCP, -5e-4, 2.5e-2)
-lines!(ax_avg_NCP, vec(avg_NCP),zw[1:100], linewidth = 2)
-
-avg_R = mean(Remin_final; dims = 1)
-ax_avg_R = Axis(fig_rate[2, 3:4]; xlabel = "Rate (mmol m⁻³ d⁻¹)", ylabel = "z (m)", title = "Ave. POP Remin")
-xlims!(ax_avg_R, -1e-6, 1.5e-3)
-lines!(ax_avg_R, vec(avg_R),zw[1:100], linewidth = 2)
-
-total_NCP = sum(NCP_result*20; dims = 2) # mmol m⁻² d⁻¹
-ax_total_NCP = Axis(fig_rate[3, 1:2]; xlabel = "y (km)", ylabel = "Rate (mmol m⁻² d⁻¹)", title = "Integrated NCP")
-# xlims!(ax_avg_NCP, -1e-4, 0.5)
-lines!(ax_total_NCP, yw/1e3, vec(total_NCP),linewidth = 2)
-
-total_R = sum((Remin_final + DOP_final./30).*20; dims = 2)
-ax_total_R = Axis(fig_rate[3, 3:4]; xlabel = "y (km)", ylabel = "Rate (mmol m⁻² d⁻¹)", title = "Integrated (POP + DOP) Remin")
-# xlims!(ax_avg_R, -1e-6, 2e-3)
-lines!(ax_total_R, yw/1e3, vec(total_R),linewidth = 2)
-
-zi = zw[1:100]
+@load "data/POCflux_Cael2018.jld2" obs_POCflux
+obs_depth_Cael = obs_POCflux[:,1]
+obs_POC_flux_Cael = obs_POCflux[:,2]./ 12 .* 365.25 / 1e3 # mg C m⁻² d⁻¹ to mol C m⁻² y⁻¹
+@load "data/POCflux_Cael2018Martin.jld2" obs_POCflux
+obs_depth_Martin = obs_POCflux[:,1]
+obs_POC_flux_Martin = obs_POCflux[:,2]./ 12 .* 365.25 / 1e3 # mg C m⁻² d⁻¹ to mol C m⁻² y⁻¹
+ 
 # compare to Martin curve
-Remin_flux = vec(mean(10 .* POP_final; dims = 1))
+POP_flux = vec(mean(wₛₙₖ .* POP_final .*1e3; dims = 1))
 ref_grid_index = 91
-Martin_flux = Remin_flux[ref_grid_index]*((zi[ref_grid_index]+z₀)./(zi.+z₀)).^0.84
-Martin_flux[ref_grid_index:end] .= NaN
+Martin_flux = POP_flux[ref_grid_index]*((zt[ref_grid_index]+z₀)./(zt.+z₀)).^0.84
+Martin_flux[ref_grid_index+3:end] .= NaN
+model_POC_flux = POP_flux .* 117 .* 365.25  / 1e3# mmol P m⁻² d⁻¹ to mol C m⁻² y⁻¹ 
 
-ax_flux = Axis(fig_rate[4, 3:4]; xlabel = "POP flux (mmol m⁻² d⁻¹)", ylabel = "z (m)", title = "Flux comparison")
-xlims!(ax_flux, 0, 0.2)
-lines!(ax_flux, Remin_flux[2:100], zi[2:100], linewidth = 3, label = "Model")
-lines!(ax_flux, Martin_flux, zi, linewidth = 2, label = "Martin curve")
+fig_comp = Figure(size = (800, 500))
+
+ax_flux = Axis(fig_comp[1, 1]; xlabel = "POP flux (mmol P m⁻² d⁻¹)", ylabel = "z (m)", title = "POP flux")
+xlims!(ax_flux, 0, 0.05)
+lines!(ax_flux, POP_flux[2:100], zt[2:100], linewidth = 4, label = "Model")
+lines!(ax_flux, Martin_flux, zt, linewidth = 2, color = :red3, label = "Martin curve")
 axislegend(ax_flux, position = :rb)
 
-# Calculate e-ratio 
+ax_Cael= Axis(fig_comp[1, 2], xlabel = "POC flux (mol C m⁻² y⁻¹)", ylabel = "Depth (m)", title = "POC flux")
+scatter!(ax_Cael, obs_POC_flux_Cael, -obs_depth_Cael, marker = :circle, color = :grey, label = "Cael et al. (2018)")
+scatter!(ax_Cael, obs_POC_flux_Martin, obs_depth_Martin, marker = :circle, color = :red3, label = "Martin et al. (1987)")
+lines!(ax_Cael, model_POC_flux[2:100], zt[2:100], color = :royalblue3, linewidth = 3, label = "Model")
+xlims!(ax_Cael, 0, 3)
+ylims!(ax_Cael, -2000, 0)
+axislegend(ax_Cael, position = :rb)
 
-eratio_120 = 10 .* POP_final[:,95] ./ total_NCP # mmol m⁻² d⁻¹
-
-ax_eR = Axis(fig_rate[4, 1:2]; xlabel = "y (km)", ylabel = "e-ratio", title = "e-ratio (120 m)")
-ylims!(ax_eR, 0, 0.2)
-# Remove boundaries: 0 PAR = 0 NCP
-lines!(ax_eR, yw[3:498]/1e3, vec(eratio_120[3:498]), linewidth = 2)
-
-display(fig_rate)
-
+display(fig_comp)
 =#

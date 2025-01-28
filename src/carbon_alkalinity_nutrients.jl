@@ -45,29 +45,29 @@ end
 
 """
     CarbonAlkalinityNutrients(  reference_density                             = 1024.5,
-                                maximum_net_community_production_rate         = 1 / day,
-                                phosphate_half_saturation                     = 1e-7 * reference_density,
-                                nitrate_half_saturation                       = 1.6e-6 * reference_density,
+                                maximum_net_community_production_rate         = 4.e-3/365.25days,
+                                phosphate_half_saturation                     = 5.e-7 * reference_density,
+                                nitrate_half_saturation                       = 7.e-6 * reference_density,
                                 iron_half_saturation                          = 1e-10 * reference_density,
                                 incident_PAR                                  = 700.0,
-                                PAR_half_saturation                           = 10.0,
+                                PAR_half_saturation                           = 30.0,
                                 PAR_attenuation_scale                         = 25.0,
                                 PAR_percent                                   = 0.01,
                                 fraction_of_particulate_export                = 0.33,
-                                dissolved_organic_phosphorus_remin_timescale   = 1 / 30day,
-                                stoichoimetric_ratio_carbon_to_phosphate      = 106.0,
+                                dissolved_organic_phosphorus_remin_timescale   = 2. / 365.25day,
+                                stoichoimetric_ratio_carbon_to_phosphate      = 117.0,
                                 stoichoimetric_ratio_nitrate_to_phosphate     = 16.0,
                                 stoichoimetric_ratio_phosphate_to_oxygen      = 170.0,
                                 stoichoimetric_ratio_phosphate_to_iron        = 4.68e-4,
-                                stoichoimetric_ratio_carbon_to_nitrate        = 106 / 16,
-                                stoichoimetric_ratio_carbon_to_oxygen         = 106 / 170,
-                                stoichoimetric_ratio_carbon_to_iron           = 106 / 1.e-3,
+                                stoichoimetric_ratio_carbon_to_nitrate        = 117 / 16,
+                                stoichoimetric_ratio_carbon_to_oxygen         = 117 / 170,
+                                stoichoimetric_ratio_carbon_to_iron           = 117 / 4.68e-4,
                                 stoichoimetric_ratio_silicate_to_phosphate    = 15.0,
-                                rain_ratio_inorganic_to_organic_carbon        = 1e-1,
+                                rain_ratio_inorganic_to_organic_carbon        = 1e-2,
                                 option_of_particulate_remin                   = 1, 
                                 particulate_organic_phosphorus_remin_timescale = 0.03/day,
                                 particulate_organic_phosphorus_sedremin_timescale = 1/day,
-                                iron_scavenging_rate                          = 5e-4 / day,
+                                iron_scavenging_rate                          = 0.2 / 365.25days,
                                 ligand_concentration                          = 1e-9 * reference_density,
                                 ligand_stability_coefficient                  = 1e8,
                                 martin_curve_exponent                         = 0.84,
@@ -137,6 +137,7 @@ function CarbonAlkalinityNutrients(; grid,
             set!(maximum_net_community_production_rate, max_NCP)            
             fill_halo_regions!(maximum_net_community_production_rate)
     end
+
     if incident_PAR isa Number
         surface_PAR = incident_PAR            
         incident_PAR = CenterField(grid)            
@@ -162,12 +163,10 @@ function CarbonAlkalinityNutrients(; grid,
 
     return CarbonAlkalinityNutrients(convert(FT, reference_density),
                                      maximum_net_community_production_rate,
-                                     #convert(FT, maximum_net_community_production_rate),
                                      convert(FT, phosphate_half_saturation),
                                      convert(FT, nitrate_half_saturation),
                                      convert(FT, iron_half_saturation),
                                      incident_PAR,
-                                     #convert(FT, incident_PAR),
                                      convert(FT, PAR_half_saturation),
                                      convert(FT, PAR_attenuation_scale),
                                      convert(FT, PAR_percent),
@@ -287,7 +286,7 @@ end
         N =nitrate_concentration
         F =iron_concentration
 
-        # First, adjust the concentrations to be non-zero
+        # First, adjust the concentrations to be > 0
         I_nonzero = max(0, I)
         P_nonzero = max(0, P)
         N_nonzero = max(0, N)
@@ -319,28 +318,31 @@ Calculate remineralization of particulate organic phosphorus according to
 1) rate decreases with depth, 
 or 2) a first-order rate constant .
 """
-# @inline particulate_organic_phosphorus_remin(r, POP) = max(0, r * POP) # to avoid potential negative flux
+
 @inline function particulate_organic_phosphorus_remin(option_of_particulate_remin,
                                                     particulate_organic_phosphorus_remin_timescale, 
-                                                    particulate_organic_phosphorus_sedremin_timescale, 
+                                                    # particulate_organic_phosphorus_sedremin_timescale, 
                                                     martin_curve_exponent,
                                                     particulate_organic_phosphorus_sinking_velocity,
                                                     PAR_attenuation_scale,
-                                                    depth, percent_light,
+                                                    depth, # bottom_depth,
+                                                    percent_light,
                                                     particulate_organic_phosphorus_concentration)
 
         Rᵣ = option_of_particulate_remin                                  
         r = particulate_organic_phosphorus_remin_timescale
-        rₛₑ = particulate_organic_phosphorus_sedremin_timescale # sedimentary remin
+        # rₛₑ = particulate_organic_phosphorus_sedremin_timescale 
         b = martin_curve_exponent    
         wₛ = particulate_organic_phosphorus_sinking_velocity
         λ = PAR_attenuation_scale
         z  = depth
+        # z_btm = bottom_depth
         fᵢ= percent_light
         z₀ = log(fᵢ)*λ # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
         POP = particulate_organic_phosphorus_concentration
-    # TODO: change the depth limit with something like k == grid.Nz
-    return ifelse(z < -1980, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP)))
+
+    # return ifelse(z == z_btm, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP)))
+    return ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP))
 end
 
 """
@@ -427,7 +429,8 @@ Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
 
     return (Rᶜᴾ * (
                     dissolved_organic_phosphorus_remin(γ, DOP) +
-                    particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP) -
+                    # particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP) -
+                    particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP) -
                     (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
                 ) + particulate_inorganic_carbon_remin())
 end
@@ -467,7 +470,8 @@ Tracer sources and sinks for Alkalinity (ALK)
     return (-Rᴺᴾ * (
                 - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
                 dissolved_organic_phosphorus_remin(γ, DOP) +
-                particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
+                # particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
+                particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
         2 * particulate_inorganic_carbon_remin())
 end
 
@@ -505,7 +509,8 @@ Tracer sources and sinks for inorganic/dissolved Nitrate (NO₃).
     return (Rᴺᴾ * (
            - net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
            dissolved_organic_phosphorus_remin(γ, DOP) +
-           particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)))
+        #    particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)))
+           particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP)))
 end
 
 """
@@ -545,7 +550,8 @@ Tracer sources and sinks for dissolved iron (FeT).
     return (Rᶠᴾ * (
                 -   net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) 
                 +   dissolved_organic_phosphorus_remin(γ, DOP) 
-                +   particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
+                # +   particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
+                +   particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
             iron_sources() -
             iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lₜ, β))
     end
@@ -580,9 +586,10 @@ Tracer sources and sinks for dissolved iron (FeT).
     DOP = @inbounds fields.DOP[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
 
-    return (- net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
+    return (- net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
             dissolved_organic_phosphorus_remin(γ, DOP) +
-            particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP))
+            # particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP))
+            particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP))
 end
 
 """
@@ -609,7 +616,7 @@ Tracer sources and sinks for dissolved organic phosphorus (DOP).
     DOP = @inbounds fields.DOP[i, j, k]
 
     return (- dissolved_organic_phosphorus_remin(γ, DOP) +
-             (1 - α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ))
+             (1 - α) * net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ))
 end
 
 """
@@ -640,6 +647,7 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
     Feₜ = @inbounds fields.Fe[i, j, k]
     POP = @inbounds fields.POP[i, j, k]
 
-    return (α * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
-           particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP))
+    return (α * net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
+        #    particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP))
+           particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP))
 end
