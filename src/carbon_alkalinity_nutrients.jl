@@ -321,28 +321,28 @@ or 2) a first-order rate constant .
 
 @inline function particulate_organic_phosphorus_remin(option_of_particulate_remin,
                                                     particulate_organic_phosphorus_remin_timescale, 
-                                                    # particulate_organic_phosphorus_sedremin_timescale, 
+                                                    particulate_organic_phosphorus_sedremin_timescale, 
                                                     martin_curve_exponent,
                                                     particulate_organic_phosphorus_sinking_velocity,
                                                     PAR_attenuation_scale,
-                                                    depth, # bottom_depth,
+                                                    depth, bottom_depth,
                                                     percent_light,
                                                     particulate_organic_phosphorus_concentration)
 
         Rᵣ = option_of_particulate_remin                                  
         r = particulate_organic_phosphorus_remin_timescale
-        # rₛₑ = particulate_organic_phosphorus_sedremin_timescale 
+        rₛₑ = particulate_organic_phosphorus_sedremin_timescale 
         b = martin_curve_exponent    
         wₛ = particulate_organic_phosphorus_sinking_velocity
         λ = PAR_attenuation_scale
         z  = depth
-        # z_btm = bottom_depth
+        z_btm = bottom_depth
         fᵢ= percent_light
         z₀ = log(fᵢ)*λ # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
         POP = particulate_organic_phosphorus_concentration
 
-    # return ifelse(z == z_btm, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP)))
-    return ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP))
+    return ifelse(z == z_btm, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP)))
+    # return ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP))
 end
 
 """
@@ -419,6 +419,7 @@ Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
+    z_btm = znode(i, j, 1, grid, c, c, c)
     I = PAR(I₀[i, j, k], λ, z)
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
@@ -429,8 +430,7 @@ Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
 
     return (Rᶜᴾ * (
                     dissolved_organic_phosphorus_remin(γ, DOP) +
-                    # particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP) -
-                    particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP) -
+                    particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP) -
                     (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
                 ) + particulate_inorganic_carbon_remin())
 end
@@ -459,6 +459,7 @@ Tracer sources and sinks for Alkalinity (ALK)
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
+    z_btm = znode(i, j, 1, grid, c, c, c)
     I = PAR(I₀[i, j, k], λ, z)
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
@@ -470,8 +471,7 @@ Tracer sources and sinks for Alkalinity (ALK)
     return (-Rᴺᴾ * (
                 - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
                 dissolved_organic_phosphorus_remin(γ, DOP) +
-                # particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
-                particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
+                particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP)) +
         2 * particulate_inorganic_carbon_remin())
 end
 
@@ -498,6 +498,7 @@ Tracer sources and sinks for inorganic/dissolved Nitrate (NO₃).
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
+    z_btm = znode(i, j, 1, grid, c, c, c)
     I = PAR(I₀[i, j, k], λ, z)
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
@@ -509,8 +510,7 @@ Tracer sources and sinks for inorganic/dissolved Nitrate (NO₃).
     return (Rᴺᴾ * (
            - net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
            dissolved_organic_phosphorus_remin(γ, DOP) +
-        #    particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)))
-           particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP)))
+           particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP)))
 end
 
 """
@@ -539,6 +539,7 @@ Tracer sources and sinks for dissolved iron (FeT).
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
+    z_btm = znode(i, j, 1, grid, c, c, c)
     I = PAR(I₀[i, j, k], λ, z)
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
@@ -550,8 +551,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     return (Rᶠᴾ * (
                 -   net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) 
                 +   dissolved_organic_phosphorus_remin(γ, DOP) 
-                # +   particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
-                +   particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
+                +   particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP)) +
             iron_sources() -
             iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lₜ, β))
     end
@@ -578,6 +578,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
+    z_btm = znode(i, j, 1, grid, c, c, c)
     I = PAR(I₀[i, j, k], λ, z)
     
     PO₄ = @inbounds fields.PO₄[i, j, k]
@@ -588,8 +589,7 @@ Tracer sources and sinks for dissolved iron (FeT).
 
     return (- net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
             dissolved_organic_phosphorus_remin(γ, DOP) +
-            # particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP))
-            particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP))
+            particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP))
 end
 
 """
@@ -640,6 +640,7 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
+    z_btm = znode(i, j, 1, grid, c, c, c)
     I = PAR(I₀[i, j, k], λ, z)
 
     PO₄ = @inbounds fields.PO₄[i, j, k]
@@ -648,6 +649,5 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
     POP = @inbounds fields.POP[i, j, k]
 
     return (α * net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
-        #    particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, fᵢ, POP))
-           particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP))
+           particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP))
 end

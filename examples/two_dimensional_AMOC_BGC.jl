@@ -14,7 +14,6 @@ using Oceananigans.Models.HydrostaticFreeSurfaceModels:
                     PrescribedVelocityFields
 using Oceananigans.TurbulenceClosures: VerticallyImplicitTimeDiscretization
 using Oceananigans: TendencyCallsite
-# using Oceananigans.Advection: FluxFormAdvection
 
 Ny = 500 
 Nz = 200
@@ -33,7 +32,7 @@ grid = RectilinearGrid(arch,
 deltaN = 1000kilometers   # North downwelling width
 deltaS = 2000kilometers  # South upwelling width
 deltaZ = 1000     # Vertical asymmetry
-Ψᵢ(y, z)  = - 12 * ((1 - exp(-y / deltaS)) * (1 - exp(-(Ly - y) / deltaN)) * 
+Ψᵢ(y, z)  = - 10 * ((1 - exp(-y / deltaS)) * (1 - exp(-(Ly - y) / deltaN)) * 
             sinpi(z / Lz) * exp(z/deltaZ))
 
 # Ψᵢ(y, z) = 10*(y/Ly) * sinpi(-z/Lz) * exp((2/Lz)*z) * (1-exp((y-Ly)/(0.2*Ly)))
@@ -84,8 +83,8 @@ fill_halo_regions!(incident_PAR, arch)
 model = HydrostaticFreeSurfaceModel(grid = grid,
                                     biogeochemistry = CarbonAlkalinityNutrients(; grid,
                                                                         maximum_net_community_production_rate  = maximum_net_community_production_rate,
-                                                                        incident_PAR = incident_PAR),
-                                                                        #particulate_organic_phosphorus_sedremin_timescale = 0.1 / day),
+                                                                        incident_PAR = incident_PAR,
+                                                                        particulate_organic_phosphorus_sedremin_timescale = 0.1 / day),
                                                                         #iron_scavenging_rate = 0),
                                     velocities = PrescribedVelocityFields(; u, v, w),
                                     tracers = (:DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
@@ -94,9 +93,9 @@ model = HydrostaticFreeSurfaceModel(grid = grid,
                                     buoyancy = nothing,
                                     closure = (tracer_vertical_closure, tracer_horizontal_closure))
 
-set!(model, DIC=2.1, ALK=2.35, NO₃=2.4e-2, PO₄=1.7e-3, DOP=0, POP=0, Fe = 6e-7) # mol PO₄ m⁻³
+set!(model, DIC=2.1, ALK=2.35, NO₃=2.2e-2, PO₄=1.6e-3, DOP=0, POP=0, Fe = 6e-7) # mol PO₄ m⁻³
 
-simulation = Simulation(model; Δt = 1day, stop_time=365.25days) 
+simulation = Simulation(model; Δt = 1day, stop_time=365.25*3days) 
 
 # Define a callback to zero out Fe tendency
 function modify_tendency!(model)
@@ -123,7 +122,7 @@ outputs = (v = model.velocities.v,
 simulation.output_writers[:simple_output] =
         JLD2OutputWriter(model, outputs, 
                         schedule = TimeInterval(365.25days), 
-                        filename = "AMOC_test4",
+                        filename = "AMOC_test",
                         overwrite_existing = true)
 
 # simulation.output_writers[:checkpointer] = Checkpointer(model2,
@@ -136,7 +135,7 @@ run!(simulation) # , pickup = false)
 #################################### Visualize ####################################
 
 filepath = simulation.output_writers[:simple_output].filepath
-# filepath = "./AMOC91.jld2"
+# filepath = "./AMOC93.jld2"
 
 v_timeseries = FieldTimeSeries(filepath, "v")
 w_timeseries = FieldTimeSeries(filepath, "w")
@@ -153,7 +152,7 @@ Fe_timeseries = FieldTimeSeries(filepath, "Fe")
 NO3_timeseries = FieldTimeSeries(filepath, "NO₃")
 
 n = Observable(1)
-title = @lift @sprintf("t = Year %d", times[$n] / 365.25days) 
+title = @lift @sprintf("t = Year %d x 50", times[$n] / (50*365.25days)) 
 # title = @lift @sprintf("t = Day %d0", times[$n] / 10days) 
 
 # convert unit from m/s to cm/s:
@@ -185,11 +184,11 @@ Colorbar(fig[2, 2], hm_s; flipaxis = false)
 contour!(ax_s, yv./1e3, zw, Ψ, levels = 10, color = :black)
 
 ax_v = Axis(fig[2, 3]; xlabel = "y (km)", ylabel = "z (m)",title = "v (t) (cm s⁻¹)", aspect = 1)
-hm_v = heatmap!(ax_v, yw./1e3, zw, vₙ; colorrange = (-2.2,2.2), colormap = :balance) 
+hm_v = heatmap!(ax_v, yw./1e3, zw, vₙ; colorrange = (-2,2), colormap = :balance) 
 Colorbar(fig[2, 4], hm_v; flipaxis = false)
 
 ax_w = Axis(fig[2, 5]; xlabel = "y (km)", ylabel = "z (m)", title = "w (t) (cm s⁻¹)", aspect = 1)
-hm_w = heatmap!(ax_w, yw./1e3, zw, wₙ; colorrange = (-6e-4, 6e-4), colormap = :balance) 
+hm_w = heatmap!(ax_w, yw./1e3, zw, wₙ; colorrange = (-5e-4, 5e-4), colormap = :balance) 
 Colorbar(fig[2, 6], hm_w; flipaxis = false)
 
 ax_PO4 = Axis(fig[3, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "[PO₄] (μM)", aspect = 1)
@@ -207,7 +206,7 @@ hm_Fe = heatmap!(ax_Fe, yw/1e3, zw, Feₙ; colorrange = (0,1),colormap = colors6
 Colorbar(fig[3, 6], hm_Fe; flipaxis = false)
 
 ax_POP = Axis(fig[4, 3]; xlabel = "y (km)", ylabel = "z (m)", title = "[POP] (μM)", aspect = 1)
-hm_POP = heatmap!(ax_POP, yw/1e3, zw, POPₙ; colorrange = (0,0.006),colormap = :rainbow1) 
+hm_POP = heatmap!(ax_POP, yw/1e3, zw, POPₙ; colorrange = (0,0.01),colormap = :rainbow1) 
 Colorbar(fig[4, 4], hm_POP; flipaxis = false)
 
 ax_avg_PO4 = Axis(fig[4, 1:2]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", title = "Average [PO₄] (μM)", yaxisposition = :right)
@@ -215,14 +214,14 @@ xlims!(ax_avg_PO4, 0, 3)
 PO4_prof = lines!(ax_avg_PO4, avg_PO4ₙ[][1, :], zt)
 
 ax_avg_POP = Axis(fig[4, 5:6]; xlabel = "[POP] (μM)", ylabel = "z (m)", title = "Average [POP] (μM)",yaxisposition = :right)
-xlims!(ax_avg_POP, 0, 0.005)
+xlims!(ax_avg_POP, 0, 0.01)
 POP_prof = lines!(ax_avg_POP, avg_POPₙ[][1, :], zt)
 
 fig[1, 1:6] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "AMOC_test4.mp4", frames, framerate=10) do i
+record(fig, "AMOC_test.mp4", frames, framerate=10) do i
     n[] = i
     PO4_prof[1] = avg_PO4ₙ[][1, :]
     POP_prof[1] = avg_POPₙ[][1, :]
@@ -275,6 +274,7 @@ axislegend(ax_single, position = :rt)
 display(fig_sum)
 =#
 
+
 ################################# Load final data ################################
 
 # POP_snd = 1e3*interior(POP_timeseries[end-1], 1, :, :)
@@ -287,7 +287,7 @@ Fe_final = interior(Fe_timeseries[end], 1, :, :)
 
 ###################### Plot model nutrients vs WOA23 data #########################
 
-using NCDatasets
+using NCDatasets, Interpolations
 dsP = Dataset("data/woa23_all_p00_01.nc")
 dsN = Dataset("data/woa23_all_n00_01.nc")
 lat = dsP["lat"][20:150]
@@ -359,6 +359,7 @@ ylims!(ax_NO3_obs, -4000, 0)
 contour!(ax_NO3_obs, lat, -depth, NO3_interpolated, levels = levels2, color = :black)
 display(fig_can2)
 =#
+
 
 # ax_DOP = Axis(fig_can2[2, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "[DOP] (μM)", aspect = 1)
 # hm_DOP = heatmap!(ax_DOP, yt/1e3, zt, DOP_final.*1e3; colorrange = (0, 0.25),
