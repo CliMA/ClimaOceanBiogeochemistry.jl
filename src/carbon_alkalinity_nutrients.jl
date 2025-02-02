@@ -14,11 +14,11 @@ const c = Center()
 
 struct CarbonAlkalinityNutrients{FT, W, S} <: AbstractBiogeochemistry
     reference_density                             :: FT
-    maximum_net_community_production_rate         :: S # FT # mol PO₄ m⁻³ s⁻¹
+    maximum_net_community_production_rate         :: S # mol PO₄ m⁻³ s⁻¹
     phosphate_half_saturation                     :: FT # mol PO₄ m⁻³
     nitrate_half_saturation                       :: FT # mol NO₃ m⁻³
     iron_half_saturation                          :: FT # mol Fe m⁻³
-    incident_PAR                                  :: S # FT # W m⁻²
+    incident_PAR                                  :: S # W m⁻²
     PAR_half_saturation                           :: FT  # W m⁻²
     PAR_attenuation_scale                         :: FT  # m
     PAR_percent                                   :: FT  # m
@@ -66,7 +66,7 @@ end
                                 rain_ratio_inorganic_to_organic_carbon        = 1e-2,
                                 option_of_particulate_remin                   = 1, 
                                 particulate_organic_phosphorus_remin_timescale = 0.03/day,
-                                particulate_organic_phosphorus_sedremin_timescale = 1/day,
+                                particulate_organic_phosphorus_sedremin_timescale = 0.5/day,
                                 iron_scavenging_rate                          = 0.2 / 365.25days,
                                 ligand_concentration                          = 1e-9 * reference_density,
                                 ligand_stability_coefficient                  = 1e8,
@@ -124,7 +124,7 @@ function CarbonAlkalinityNutrients(; grid,
                                    rain_ratio_inorganic_to_organic_carbon       = 1e-2,
                                    option_of_particulate_remin                  = 1, # r decrease with depth = 1; "power law" function = 2
                                    particulate_organic_phosphorus_remin_timescale= 0.03 / day, 
-                                   particulate_organic_phosphorus_sedremin_timescale= 1 / day, 
+                                   particulate_organic_phosphorus_sedremin_timescale = 0.5 / day, 
                                    iron_scavenging_rate                         = 0.2 / 365.25days, # s⁻¹
                                    ligand_concentration                         = 1e-9 * reference_density, # mol L m⁻³
                                    ligand_stability_coefficient                 = 1e8,
@@ -132,16 +132,20 @@ function CarbonAlkalinityNutrients(; grid,
                                    particulate_organic_phosphorus_sinking_velocity  = -10.0 / day)
 
     if maximum_net_community_production_rate isa Number
-            max_NCP = maximum_net_community_production_rate            
-            maximum_net_community_production_rate = CenterField(grid)            
-            set!(maximum_net_community_production_rate, max_NCP)            
-            fill_halo_regions!(maximum_net_community_production_rate)
+        max_NCP = maximum_net_community_production_rate            
+        maximum_net_community_production_rate = CenterField(grid)            
+        set!(maximum_net_community_production_rate, max_NCP)            
+        fill_halo_regions!(maximum_net_community_production_rate)
+    elseif maximum_net_community_production_rate isa Field
+        fill_halo_regions!(maximum_net_community_production_rate)
     end
 
     if incident_PAR isa Number
         surface_PAR = incident_PAR            
         incident_PAR = CenterField(grid)            
         set!(incident_PAR, surface_PAR)            
+        fill_halo_regions!(incident_PAR)
+    elseif incident_PAR isa Field
         fill_halo_regions!(incident_PAR)
     end
 
@@ -151,11 +155,8 @@ function CarbonAlkalinityNutrients(; grid,
             bcs = FieldBoundaryConditions(grid, (Center, Center, Face),
                                         top=no_penetration, 
                                         bottom=no_penetration)
-
             particulate_organic_phosphorus_sinking_velocity = ZFaceField(grid, boundary_conditions = bcs)
-
             set!(particulate_organic_phosphorus_sinking_velocity, w₀)
-
             fill_halo_regions!(particulate_organic_phosphorus_sinking_velocity)
     end
                             
@@ -188,7 +189,7 @@ function CarbonAlkalinityNutrients(; grid,
                                      convert(FT, ligand_concentration),
                                      convert(FT, ligand_stability_coefficient),
                                      convert(FT, martin_curve_exponent),
-                                     particulate_organic_phosphorus_sinking_velocity,
+                                     particulate_organic_phosphorus_sinking_velocity
                                      )
 end
     
@@ -431,7 +432,7 @@ Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
     return (Rᶜᴾ * (
                     dissolved_organic_phosphorus_remin(γ, DOP) +
                     particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP) -
-                    (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
+                    (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
                 ) + particulate_inorganic_carbon_remin())
 end
 
@@ -469,7 +470,7 @@ Tracer sources and sinks for Alkalinity (ALK)
     POP = @inbounds fields.POP[i, j, k]
 
     return (-Rᴺᴾ * (
-                - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
+                - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
                 dissolved_organic_phosphorus_remin(γ, DOP) +
                 particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP)) +
         2 * particulate_inorganic_carbon_remin())
@@ -549,7 +550,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     POP = @inbounds fields.POP[i, j, k]
 
     return (Rᶠᴾ * (
-                -   net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) 
+                -   net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) 
                 +   dissolved_organic_phosphorus_remin(γ, DOP) 
                 +   particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP)) +
             iron_sources() -

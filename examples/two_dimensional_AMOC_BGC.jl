@@ -28,15 +28,12 @@ grid = RectilinearGrid(arch,
                        z = (-Lz, 0),
                        topology=(Flat, Bounded, Bounded))
 
-# Set streamfunction
-deltaN = 1000kilometers   # North downwelling width
-deltaS = 2000kilometers  # South upwelling width
-deltaZ = 1000     # Vertical asymmetry
-Ψᵢ(y, z)  = - 10 * ((1 - exp(-y / deltaS)) * (1 - exp(-(Ly - y) / deltaN)) * 
+deltaN = 500kilometers   # North downwelling width
+deltaS = 3000kilometers  # South upwelling width
+deltaZ = 2000     # Vertical asymmetry
+Ψᵢ(y, z)  = - 7 * ((1 - exp(-y / deltaS)) * (1 - exp(-(Ly - y) / deltaN)) * 
             sinpi(z / Lz) * exp(z/deltaZ))
 
-# Ψᵢ(y, z) = 10*(y/Ly) * sinpi(-z/Lz) * exp((2/Lz)*z) * (1-exp((y-Ly)/(0.2*Ly)))
-# Ψᵢ(x, z) = 0.1 * sinpi(x/Lx) * sinpi(-z/Lz) * exp((2/Lz)*z) * exp((2/Lx)*x)
 Ψ = Field{Center, Face, Face}(grid)
 set!(Ψ, Ψᵢ)
 fill_halo_regions!(Ψ, arch)
@@ -68,23 +65,24 @@ tracer_horizontal_closure = HorizontalScalarDiffusivity(κ=(DIC=1e3,ALK=1e3,PO�
 # F_forcing = Forcing(Fe_input)
 
 # Set max NCP as a function of latitude (y)
-maximum_net_community_production_rate = CenterField(grid)
-maxNCP(y,z) = (8e-6 + sinpi(y/Ly) * 8e-5)/day
+# maximum_net_community_production_rate = CenterField(grid)
+maximum_net_community_production_rate =  Field{Nothing, Center, Center}(grid)
+maxNCP(y,z) = (2e-5 + sinpi(y/Ly) * 8e-5)/day
 set!(maximum_net_community_production_rate, maxNCP)
-fill_halo_regions!(maximum_net_community_production_rate, arch)
+# fill_halo_regions!(maximum_net_community_production_rate, arch)
 
 # Set PAR as a function of latitude
-incident_PAR = CenterField(grid) 
+# incident_PAR = CenterField(grid) 
+incident_PAR =  Field{Nothing, Center, Center}(grid)
 surface_PAR(y,z) = 700 * sinpi(y/Ly) 
 set!(incident_PAR, surface_PAR)   
-fill_halo_regions!(incident_PAR, arch)
+# fill_halo_regions!(incident_PAR, arch)
 
 # Model
 model = HydrostaticFreeSurfaceModel(grid = grid,
                                     biogeochemistry = CarbonAlkalinityNutrients(; grid,
                                                                         maximum_net_community_production_rate  = maximum_net_community_production_rate,
-                                                                        incident_PAR = incident_PAR,
-                                                                        particulate_organic_phosphorus_sedremin_timescale = 0.1 / day),
+                                                                        incident_PAR = incident_PAR),
                                                                         #iron_scavenging_rate = 0),
                                     velocities = PrescribedVelocityFields(; u, v, w),
                                     tracers = (:DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
@@ -95,7 +93,7 @@ model = HydrostaticFreeSurfaceModel(grid = grid,
 
 set!(model, DIC=2.1, ALK=2.35, NO₃=2.2e-2, PO₄=1.6e-3, DOP=0, POP=0, Fe = 6e-7) # mol PO₄ m⁻³
 
-simulation = Simulation(model; Δt = 1day, stop_time=365.25*3days) 
+simulation = Simulation(model; Δt = 1day, stop_time=200days) 
 
 # Define a callback to zero out Fe tendency
 function modify_tendency!(model)
@@ -106,9 +104,9 @@ simulation.callbacks[:modify_Fe] = Callback(modify_tendency!,
                                             callsite = TendencyCallsite())
 
 # Print the progress 
-progress(sim) = @printf("Iteration: %d, time: %s, total(P): %.2e \n",
-            iteration(sim), prettytime(sim),
-            sum(model.tracers.PO₄) + sum(model.tracers.POP) + sum(model.tracers.DOP))
+progress(sim) = @printf("Iteration: %d, time: %s \n", # total(P): %.2e
+            iteration(sim), prettytime(sim))
+            #sum(model.tracers.PO₄) + sum(model.tracers.POP) + sum(model.tracers.DOP))
 add_callback!(simulation, progress, IterationInterval(100))
 
 outputs = (v = model.velocities.v,
@@ -121,7 +119,7 @@ outputs = (v = model.velocities.v,
 
 simulation.output_writers[:simple_output] =
         JLD2OutputWriter(model, outputs, 
-                        schedule = TimeInterval(365.25days), 
+                        schedule = TimeInterval(100days), 
                         filename = "AMOC_test",
                         overwrite_existing = true)
 
@@ -134,8 +132,9 @@ run!(simulation) # , pickup = false)
 
 #################################### Visualize ####################################
 
-filepath = simulation.output_writers[:simple_output].filepath
-# filepath = "./AMOC93.jld2"
+# filepath = simulation.output_writers[:simple_output].filepath
+
+filepath = "./AMOC_test.jld2"
 
 v_timeseries = FieldTimeSeries(filepath, "v")
 w_timeseries = FieldTimeSeries(filepath, "w")
@@ -152,8 +151,8 @@ Fe_timeseries = FieldTimeSeries(filepath, "Fe")
 NO3_timeseries = FieldTimeSeries(filepath, "NO₃")
 
 n = Observable(1)
-title = @lift @sprintf("t = Year %d x 50", times[$n] / (50*365.25days)) 
-# title = @lift @sprintf("t = Day %d0", times[$n] / 10days) 
+# title = @lift @sprintf("t = Year %d x 50", times[$n] / (50*365.25days)) 
+title = @lift @sprintf("t = Day %d00", times[$n] / 100days) 
 
 # convert unit from m/s to cm/s:
 vₙ = @lift 100*interior(v_timeseries[$n], 1, :, :)
@@ -175,7 +174,6 @@ colors5 = cgrad(:RdYlBu, 5, categorical=true, rev=true)
 colors6 = cgrad(:RdYlBu, 6, categorical=true, rev=true) 
 colors8 = cgrad(:RdYlBu, 8, categorical=true, rev=true)
 
-
 fig = Figure(size = (1500, 1500))
 
 ax_s = Axis(fig[2, 1]; xlabel = "y (km)", ylabel = "z (m)",title = "Stream function (m² s⁻¹)", aspect = 1)
@@ -184,7 +182,7 @@ Colorbar(fig[2, 2], hm_s; flipaxis = false)
 contour!(ax_s, yv./1e3, zw, Ψ, levels = 10, color = :black)
 
 ax_v = Axis(fig[2, 3]; xlabel = "y (km)", ylabel = "z (m)",title = "v (t) (cm s⁻¹)", aspect = 1)
-hm_v = heatmap!(ax_v, yw./1e3, zw, vₙ; colorrange = (-2,2), colormap = :balance) 
+hm_v = heatmap!(ax_v, yw./1e3, zw, vₙ; colorrange = (-1, 1), colormap = :balance) 
 Colorbar(fig[2, 4], hm_v; flipaxis = false)
 
 ax_w = Axis(fig[2, 5]; xlabel = "y (km)", ylabel = "z (m)", title = "w (t) (cm s⁻¹)", aspect = 1)
@@ -206,7 +204,7 @@ hm_Fe = heatmap!(ax_Fe, yw/1e3, zw, Feₙ; colorrange = (0,1),colormap = colors6
 Colorbar(fig[3, 6], hm_Fe; flipaxis = false)
 
 ax_POP = Axis(fig[4, 3]; xlabel = "y (km)", ylabel = "z (m)", title = "[POP] (μM)", aspect = 1)
-hm_POP = heatmap!(ax_POP, yw/1e3, zw, POPₙ; colorrange = (0,0.01),colormap = :rainbow1) 
+hm_POP = heatmap!(ax_POP, yw/1e3, zw, POPₙ; colorrange = (0,0.0075),colormap = :rainbow1) 
 Colorbar(fig[4, 4], hm_POP; flipaxis = false)
 
 ax_avg_PO4 = Axis(fig[4, 1:2]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", title = "Average [PO₄] (μM)", yaxisposition = :right)
@@ -214,7 +212,7 @@ xlims!(ax_avg_PO4, 0, 3)
 PO4_prof = lines!(ax_avg_PO4, avg_PO4ₙ[][1, :], zt)
 
 ax_avg_POP = Axis(fig[4, 5:6]; xlabel = "[POP] (μM)", ylabel = "z (m)", title = "Average [POP] (μM)",yaxisposition = :right)
-xlims!(ax_avg_POP, 0, 0.01)
+xlims!(ax_avg_POP, 0, 0.0075)
 POP_prof = lines!(ax_avg_POP, avg_POPₙ[][1, :], zt)
 
 fig[1, 1:6] = Label(fig, title, tellwidth=false)
@@ -229,7 +227,8 @@ end
 nothing #hide
 
 
-#= Comfirm steady-state
+#= 
+###################### Comfirm steady-state ###################### 
 num_timesteps = 41 # number of time slices saved
 PO4_sum_vector = zeros(Float64, num_timesteps)
 DOP_sum_vector = zeros(Float64, num_timesteps)
@@ -274,19 +273,8 @@ axislegend(ax_single, position = :rt)
 display(fig_sum)
 =#
 
-
-################################# Load final data ################################
-
-# POP_snd = 1e3*interior(POP_timeseries[end-1], 1, :, :)
-#=
-PO4_final = interior(PO4_timeseries[end], 1, :, :)
-NO3_final = interior(NO3_timeseries[end], 1, :, :)
-POP_final = interior(POP_timeseries[end], 1, :, :)
-DOP_final = interior(DOP_timeseries[end], 1, :, :)
-Fe_final = interior(Fe_timeseries[end], 1, :, :)
-
 ###################### Plot model nutrients vs WOA23 data #########################
-
+#=
 using NCDatasets, Interpolations
 dsP = Dataset("data/woa23_all_p00_01.nc")
 dsN = Dataset("data/woa23_all_n00_01.nc")
@@ -327,6 +315,15 @@ function interpolate_column(col)
 end
 PO4_interpolated = hcat([interpolate_column(PO4_obs[:,j]) for j in 1:size(PO4_obs,2)]...)
 NO3_interpolated = hcat([interpolate_column(NO3_obs[:,j]) for j in 1:size(NO3_obs,2)]...)
+
+################################# Load final data ################################
+# POP_snd = 1e3*interior(POP_timeseries[end-1], 1, :, :)
+
+PO4_final = interior(PO4_timeseries[end], 1, :, :)
+NO3_final = interior(NO3_timeseries[end], 1, :, :)
+POP_final = interior(POP_timeseries[end], 1, :, :)
+DOP_final = interior(DOP_timeseries[end], 1, :, :)
+Fe_final = interior(Fe_timeseries[end], 1, :, :)
 
 fig_can2 = Figure(size = (1000, 1000))
 
@@ -421,25 +418,25 @@ obs_POC_flux_Martin = obs_POCflux[:,2]./ 12 .* 365.25 / 1e3 # mg C m⁻² d⁻¹
  
 # compare to Martin curve
 POP_flux = vec(mean(wₛₙₖ .* POP_final .*1e3; dims = 1))
-ref_grid_index = 91
+ref_grid_index = 192
 Martin_flux = POP_flux[ref_grid_index]*((zt[ref_grid_index]+z₀)./(zt.+z₀)).^0.84
-Martin_flux[ref_grid_index+3:end] .= NaN
+# Martin_flux[ref_grid_index+3:end] .= NaN
 model_POC_flux = POP_flux .* 117 .* 365.25  / 1e3# mmol P m⁻² d⁻¹ to mol C m⁻² y⁻¹ 
 
 fig_comp = Figure(size = (800, 500))
 
 ax_flux = Axis(fig_comp[1, 1]; xlabel = "POP flux (mmol P m⁻² d⁻¹)", ylabel = "z (m)", title = "POP flux")
-xlims!(ax_flux, 0, 0.05)
-lines!(ax_flux, POP_flux[2:100], zt[2:100], linewidth = 4, label = "Model")
+xlims!(ax_flux, 0, 0.065)
+lines!(ax_flux, POP_flux[2:200], zt[2:200], linewidth = 4, label = "Model")
 lines!(ax_flux, Martin_flux, zt, linewidth = 2, color = :red3, label = "Martin curve")
 axislegend(ax_flux, position = :rb)
 
 ax_Cael= Axis(fig_comp[1, 2], xlabel = "POC flux (mol C m⁻² y⁻¹)", ylabel = "Depth (m)", title = "POC flux")
 scatter!(ax_Cael, obs_POC_flux_Cael, -obs_depth_Cael, marker = :circle, color = :grey, label = "Cael et al. (2018)")
 scatter!(ax_Cael, obs_POC_flux_Martin, obs_depth_Martin, marker = :circle, color = :red3, label = "Martin et al. (1987)")
-lines!(ax_Cael, model_POC_flux[2:100], zt[2:100], color = :royalblue3, linewidth = 3, label = "Model")
+lines!(ax_Cael, model_POC_flux[2:200], zt[2:200], color = :royalblue3, linewidth = 3, label = "Model")
 xlims!(ax_Cael, 0, 3)
-ylims!(ax_Cael, -2000, 0)
+ylims!(ax_Cael, -4000, 0)
 axislegend(ax_Cael, position = :rb)
 
 display(fig_comp)

@@ -14,10 +14,10 @@ using Oceananigans.Fields: ZeroField, CenterField, FunctionField
 using Oceananigans.BoundaryConditions: fill_halo_regions!
 using Oceananigans: TendencyCallsite
 
-const Ny = 500 
-const Nz = 100
-const Ly = 15000kilometers   # m
-const Lz = 2000           # m
+Ny = 500 
+Nz = 200
+Ly = 15000kilometers   # m
+Lz = 4000           # m
 
 arch = CPU()
 # We use a two-dimensional grid, with a `Flat` `y`-direction:
@@ -29,10 +29,10 @@ grid = RectilinearGrid(arch,
 
 ############################## Physical circulation ############################## 
 # Set streamfunction
-deltaN = 200kilometers   # North downwelling width
-deltaS = 2000kilometers  # South upwelling width
-deltaZ = -1000     # Vertical asymmetry
-Ψᵢ(y, z)  = - ((1 - exp(-y / deltaS)) * (1 - exp(-(Ly - y) / deltaN)) * 
+deltaN = 500kilometers   # North downwelling width
+deltaS = 3000kilometers  # South upwelling width
+deltaZ = 1000     # Vertical asymmetry
+Ψᵢ(y, z)  = - 7 * ((1 - exp(-y / deltaS)) * (1 - exp(-(Ly - y) / deltaN)) * 
             sinpi(z / Lz) * exp(z/deltaZ))
 
 Ψ = Field{Center, Face, Face}(grid)
@@ -53,7 +53,7 @@ fill_halo_regions!(u, arch)
 
 ############################# Diffusivity ############################# 
 
-kz(y,z,t) = 1e-4 + 5e-3 * (tanh((z+(75+25*cospi(2*(t/day)/365.25)))/20)+1) + 1e-2 * exp(-(z+2000)/50)
+kz(y,z,t) = 1e-4 + 5e-3 * (tanh((z+(100 + (t % 10days == 0 ? 200 : 0)))/20)+1) + 1e-2 * exp(-(z+4000)/50)
 tracer_vertical_closure = VerticalScalarDiffusivity(VerticallyImplicitTimeDiscretization(), 
                                         κ=(DIC=kz,ALK=kz,PO₄=kz,NO₃=kz,DOP=kz,POP=kz,Fe=0))
 tracer_horizontal_closure = HorizontalScalarDiffusivity(
@@ -65,7 +65,7 @@ tracer_horizontal_closure = HorizontalScalarDiffusivity(
 # F_forcing = Forcing(Fe_input)
 
 maximum_net_community_production_rate = CenterField(grid) 
-maxNCP(y,z) = (8e-6 + sinpi(y/Ly) * 8e-5)/day
+maxNCP(y,z) = (2e-5 + sinpi(y/Ly) * 8e-5)/day
 set!(maximum_net_community_production_rate, maxNCP)   
 fill_halo_regions!(maximum_net_community_production_rate, arch)
 
@@ -116,10 +116,10 @@ model2 = HydrostaticFreeSurfaceModel(grid = grid,
                                      buoyancy = nothing,
                                      closure = (tracer_vertical_closure, tracer_horizontal_closure))
 
-set!(model2, DIC=2.1, ALK=2.35, NO₃=2.4e-2, PO₄=1.7e-3, DOP=0, POP=0, Fe = 6e-7) # mol PO₄ m⁻³
+set!(model2, DIC=2.1, ALK=2.35, NO₃=2.4e-2, PO₄=1.6e-3, DOP=0, POP=0, Fe = 6e-7) # mol PO₄ m⁻³
 
 spinup_time = 365.25*2000days
-perturbation_time = 1000days
+perturbation_time = 500days
 simulation2 = Simulation(model2; Δt = 1days, stop_time=spinup_time+perturbation_time) 
 
 # Define a callback to zero out Fe tendency
@@ -141,13 +141,13 @@ outputs = (v = model2.velocities.v,
 
 simulation2.output_writers[:simple_output] =
             JLD2OutputWriter(model2, outputs, 
-                            schedule = TimeInterval(10days), 
-                            filename = "AMOC87_perturb",
+                            schedule = TimeInterval(1days), 
+                            filename = "AMOC115_300m10d",
                             overwrite_existing = true)
 
 simulation2.output_writers[:checkpointer] = Checkpointer(model2,
             schedule = TimeInterval(perturbation_time),
-            prefix = "AMOC87_checkpoint",
+            prefix = "AMOC115_checkpoint",
             overwrite_existing = false)
 
 run!(simulation2, pickup = true)
@@ -296,7 +296,7 @@ DOP_init = 1e3*interior(DOP_timeseries[1], 1, :, :)
 # sum(PO4_init.+POP_init.+DOP_init)
 
 n = Observable(1)
-title = @lift @sprintf("t = Day %d0", ((times[$n]- 365.25*2000days) / 10days)) 
+title = @lift @sprintf("t = Day %d", ((times[$n]- 365.25*2000days) / 1days)) 
 
 diff_PO4 = @lift 1e3*(interior(PO4_timeseries[$n], 1, :, :) .- interior(PO4_timeseries[1], 1, :, :))
 diff_POP = @lift 1e3*(interior(POP_timeseries[$n], 1, :, :) .- interior(POP_timeseries[1], 1, :, :))
@@ -304,13 +304,13 @@ diff_DOP = @lift 1e3*(interior(DOP_timeseries[$n], 1, :, :) .- interior(DOP_time
 # sum(diff_PO4)
 
 # One upwelling station
-up_PO4ₙ = @lift 1e3*interior(PO4_timeseries[$n], 1, 10, :)
-up_DOPₙ = @lift 1e3*interior(DOP_timeseries[$n], 1, 10, :)
-up_POPₙ = @lift 1e3*interior(POP_timeseries[$n], 1, 10, :)
+# up_PO4ₙ = @lift 1e3*interior(PO4_timeseries[$n], 1, 10, :)
+# up_DOPₙ = @lift 1e3*interior(DOP_timeseries[$n], 1, 10, :)
+# up_POPₙ = @lift 1e3*interior(POP_timeseries[$n], 1, 10, :)
 
-init_up_PO4ₙ = 1e3*interior(PO4_timeseries[1], 1, 10, :)
-init_up_POPₙ = 1e3*interior(POP_timeseries[1], 1, 10, :)
-init_up_DOPₙ = 1e3*interior(DOP_timeseries[1], 1, 10, :)
+# init_up_PO4ₙ = 1e3*interior(PO4_timeseries[1], 1, 10, :)
+# init_up_POPₙ = 1e3*interior(POP_timeseries[1], 1, 10, :)
+# init_up_DOPₙ = 1e3*interior(DOP_timeseries[1], 1, 10, :)
 
 # One downwelling station
 down_PO4ₙ = @lift 1e3*interior(PO4_timeseries[$n], 1, 300, :)
@@ -321,83 +321,113 @@ init_down_PO4ₙ = 1e3*interior(PO4_timeseries[1], 1, 300, :)
 init_down_POPₙ = 1e3*interior(POP_timeseries[1], 1, 300, :)
 init_down_DOPₙ = 1e3*interior(DOP_timeseries[1], 1, 300, :)
 
-t= collect(0:10days:1000days)
+t= collect(0:1days:500days)
 kz_profiles = Matrix{Float64}(undef, length(zw), length(t))
 for (i, t_val) in enumerate(t)
     kz_profiles[:, i] = [kz(0, z_val, t_val) for z_val in zw]
 end
 
-fig_compare = Figure(size=(1200, 900))
+fig_compare = Figure(size=(1000, 900))
 
 ax_kz = Axis(fig_compare[2, 1], xlabel = "kz (m² s⁻¹)", ylabel = "z (m)", title = "Temporal Variation of kz")
 kz_prof = lines!(ax_kz, kz_profiles[:, 1], zw)
 
 # Row 1: final - initial
 ax_PO4 = Axis(fig_compare[2, 2]; xlabel = "y (km)", ylabel = "z (m)", title = "Δ[PO₄] (μM)", aspect = 1)
-hm_PO4 = heatmap!(ax_PO4, yw/1e3, zw, diff_PO4; colorrange = (-0.25,0.25),colormap = :balance) 
+hm_PO4 = heatmap!(ax_PO4, yw/1e3, zw, diff_PO4; colorrange = (-0.4,0.4),colormap = :balance) 
 Colorbar(fig_compare[2, 3], hm_PO4; flipaxis = false)
 
 ax_POP = Axis(fig_compare[3, 2]; xlabel = "y (km)", ylabel = "z (m)", title = "Δ[POP] (μM)", aspect = 1)
-hm_POP = heatmap!(ax_POP, yw/1e3, zw, diff_POP; colorrange = (-0.002,0.002),colormap = :balance) 
+hm_POP = heatmap!(ax_POP, yw/1e3, zw, diff_POP; colorrange = (-0.004,0.004),colormap = :balance) 
 Colorbar(fig_compare[3, 3], hm_POP; flipaxis = false)
 
 ax_DOP = Axis(fig_compare[4, 2]; xlabel = "y (km)", ylabel = "z (m)", title = "Δ[DOP] (μM)", aspect = 1)
-hm_DOP = heatmap!(ax_DOP, yw/1e3, zw, diff_DOP; colorrange = (-0.05,0.05),colormap = :balance) 
+hm_DOP = heatmap!(ax_DOP, yw/1e3, zw, diff_DOP; colorrange = (-0.09,0.09),colormap = :balance) 
 Colorbar(fig_compare[4, 3], hm_DOP; flipaxis = false)
 
 # Row 2: upwelling site
-up_PO4 = Axis(fig_compare[2, 4]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", yaxisposition = :left)
-xlims!(up_PO4, 1.5, 2.5)
-lines!(up_PO4, init_up_PO4ₙ, zw[1:100],color = :red, linestyle = :dash, label = "Initial")
-PO4_up = lines!(up_PO4, up_PO4ₙ[], zw[1:100], label = "Dynamic")
-axislegend(up_PO4, position = :lb)
+# up_PO4 = Axis(fig_compare[2, 4]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", yaxisposition = :left)
+# xlims!(up_PO4, 1.5, 2.5)
+# lines!(up_PO4, init_up_PO4ₙ, zw[1:100],color = :red, linestyle = :dash, label = "Initial")
+# PO4_up = lines!(up_PO4, up_PO4ₙ[], zw[1:100], label = "Dynamic")
+# axislegend(up_PO4, position = :lb)
 
-up_POP = Axis(fig_compare[3, 4]; xlabel = "[POP] (μM)", ylabel = "z (m)", yaxisposition = :left)
-xlims!(up_POP, 0, 0.0015)
-lines!(up_POP, init_up_POPₙ, zw[1:100],color = :red, linestyle = :dash, label = "Initial")
-POP_up = lines!(up_POP, up_POPₙ[], zw[1:100], label = "Dynamic")
-axislegend(up_POP, position = :rb)
+# up_POP = Axis(fig_compare[3, 4]; xlabel = "[POP] (μM)", ylabel = "z (m)", yaxisposition = :left)
+# xlims!(up_POP, 0, 0.0015)
+# lines!(up_POP, init_up_POPₙ, zw[1:100],color = :red, linestyle = :dash, label = "Initial")
+# POP_up = lines!(up_POP, up_POPₙ[], zw[1:100], label = "Dynamic")
+# axislegend(up_POP, position = :rb)
 
-up_DOP = Axis(fig_compare[4, 4]; xlabel = "[DOP] (μM)", ylabel = "z (m)", yaxisposition = :left)
-xlims!(up_DOP, 0, 0.06)
-lines!(up_DOP, init_up_DOPₙ, zw[1:100],color = :red, linestyle = :dash, label = "Initial")
-DOP_up = lines!(up_DOP, up_DOPₙ[], zw[1:100], label = "Dynamic")
-axislegend(up_DOP, position = :rb)
+# up_DOP = Axis(fig_compare[4, 4]; xlabel = "[DOP] (μM)", ylabel = "z (m)", yaxisposition = :left)
+# xlims!(up_DOP, 0, 0.06)
+# lines!(up_DOP, init_up_DOPₙ, zw[1:100],color = :red, linestyle = :dash, label = "Initial")
+# DOP_up = lines!(up_DOP, up_DOPₙ[], zw[1:100], label = "Dynamic")
+# axislegend(up_DOP, position = :rb)
 
 # Row 3: downwelling site
-down_PO4 = Axis(fig_compare[2, 5]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", yaxisposition = :left)
+down_PO4 = Axis(fig_compare[2, 4]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", yaxisposition = :left)
 xlims!(down_PO4, 0, 2.5)
-lines!(down_PO4, init_down_PO4ₙ, zw[1:100],color = :red, linestyle = :dash, label = "Initial")
-PO4_down = lines!(down_PO4, down_PO4ₙ[], zw[1:100], label = "Dynamic")
+lines!(down_PO4, init_down_PO4ₙ, zw[1:200],color = :red, linestyle = :dash, label = "Initial")
+PO4_down = lines!(down_PO4, down_PO4ₙ[], zw[1:200], label = "Dynamic")
 axislegend(down_PO4, position = :lb)
 
-down_POP = Axis(fig_compare[3, 5]; xlabel = "[POP] (μM)", ylabel = "z (m)", yaxisposition = :left)
-xlims!(down_POP, 0, 0.005)
-lines!(down_POP, init_down_POPₙ, zw[1:100],color = :red, linestyle = :dash, label = "Initial")
-POP_down = lines!(down_POP, down_POPₙ[], zw[1:100], label = "Dynamic")
+down_POP = Axis(fig_compare[3, 4]; xlabel = "[POP] (μM)", ylabel = "z (m)", yaxisposition = :left)
+xlims!(down_POP, 0, 0.01)
+lines!(down_POP, init_down_POPₙ, zw[1:200],color = :red, linestyle = :dash, label = "Initial")
+POP_down = lines!(down_POP, down_POPₙ[], zw[1:200], label = "Dynamic")
 axislegend(down_POP, position = :rb)
 
-down_DOP = Axis(fig_compare[4, 5]; xlabel = "[DOP] (μM)", ylabel = "z (m)", yaxisposition = :left)
-xlims!(down_DOP, 0, 0.2)
-lines!(down_DOP, init_down_DOPₙ, zw[1:100],color = :red, linestyle = :dash, label = "Initial")
-DOP_down = lines!(down_DOP, down_DOPₙ[], zw[1:100], label = "Dynamic")
+down_DOP = Axis(fig_compare[4, 4]; xlabel = "[DOP] (μM)", ylabel = "z (m)", yaxisposition = :left)
+xlims!(down_DOP, 0, 0.25)
+lines!(down_DOP, init_down_DOPₙ, zw[1:200],color = :red, linestyle = :dash, label = "Initial")
+DOP_down = lines!(down_DOP, down_DOPₙ[], zw[1:200], label = "Dynamic")
 axislegend(down_DOP, position = :rb)
 
-fig_compare[1, 1:5] = Label(fig_compare, title, tellwidth=false)
+fig_compare[1, 1:4] = Label(fig_compare, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig_compare, "AMOC87_varyMLD.mp4.mp4", frames, framerate=20) do i
+record(fig_compare, "AMOC115_300m10d.mp4.mp4", frames, framerate=20) do i
     n[] = i
-    PO4_up[1] = up_PO4ₙ[]#[1, :]
-    POP_up[1] = up_POPₙ[]
-    DOP_up[1] = up_DOPₙ[]
+    # PO4_up[1] = up_PO4ₙ[]#[1, :]
+    # POP_up[1] = up_POPₙ[]
+    # DOP_up[1] = up_DOPₙ[]
     kz_prof[1]= kz_profiles[:,i]
     PO4_down[1] = down_PO4ₙ[]
     POP_down[1] = down_POPₙ[]
     DOP_down[1] = down_DOPₙ[]
 end
 nothing #hide
+
+######################## Fluxes vs Final: fit to Martin curve #############################
+
+end_down_POPₙ = 1e3*interior(POP_timeseries[end], 1, 300, :)
+wₛₙₖ = 10 # m/day
+z₀ = log(0.01)*25 
+
+# initial and end flux: model
+init_POP_flux = wₛₙₖ .* init_down_POPₙ
+end_POP_flux = wₛₙₖ .* end_down_POPₙ
+
+# initial and end flux: Martin
+ref_grid_index = 191
+init_Martin_flux = init_POP_flux[ref_grid_index]*((zw[ref_grid_index]+z₀)./(zw.+z₀)).^0.84
+# init_Martin_flux[ref_grid_index+3:end] .= NaN
+
+end_Martin_flux = end_POP_flux[ref_grid_index]*((zw[ref_grid_index]+z₀)./(zw.+z₀)).^0.84
+# end_Martin_flux[ref_grid_index+3:end] .= NaN
+
+fig_comp = Figure(size = (500, 500))
+
+ax_flux = Axis(fig_comp[1, 1]; xlabel = "POP flux (mmol P m⁻² d⁻¹)", ylabel = "z (m)", title = "POP flux")
+xlims!(ax_flux, 0, 0.1)
+lines!(ax_flux, init_POP_flux[2:200], zw[2:200], linewidth = 3, color = :red, label = "Model (initial)")
+lines!(ax_flux, init_Martin_flux, zw, linewidth = 4, color = :black, linestyle=:dash, label = "Martin (initial)")
+lines!(ax_flux, end_POP_flux[2:200], zw[2:200], linewidth = 3, color = :blue, label = "Model (final)")
+lines!(ax_flux, end_Martin_flux, zw, linewidth = 4, color = :grey, linestyle=:dash, label = "Martin (final)")
+axislegend(ax_flux, position = :rb)
+display(fig_comp)
+
 
 ################################# Plot fluxes ################################# 
 #=
