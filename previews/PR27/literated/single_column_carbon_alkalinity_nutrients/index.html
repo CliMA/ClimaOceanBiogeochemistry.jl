@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Single column carbon, alkalinity, nutrients · ClimaOceanBiogeochemistry.jl</title><meta name="title" content="Single column carbon, alkalinity, nutrients · ClimaOceanBiogeochemistry.jl"/><meta property="og:title" content="Single column carbon, alkalinity, nutrients · ClimaOceanBiogeochemistry.jl"/><meta property="twitter:title" content="Single column carbon, alkalinity, nutrients · ClimaOceanBiogeochemistry.jl"/><meta name="description" content="Documentation for ClimaOceanBiogeochemistry.jl."/><meta property="og:description" content="Documentation for ClimaOceanBiogeochemistry.jl."/><meta property="twitter:description" content="Documentation for ClimaOceanBiogeochemistry.jl."/><meta property="og:url" content="https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/literated/single_column_carbon_alkalinity_nutrients/"/><meta property="twitter:url" content="https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/literated/single_column_carbon_alkalinity_nutrients/"/><link rel="canonical" href="https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/literated/single_column_carbon_alkalinity_nutrients/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">ClimaOceanBiogeochemistry.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../single_column_nutrients_plankton_bacteria_detritus/">Single column nutrients, plankton, bacteria, detritus</a></li><li class="is-active"><a class="tocitem" href>Single column carbon, alkalinity, nutrients</a><ul class="internal"><li><a class="tocitem" href="#A-single-column-grid"><span>A single column grid</span></a></li><li><a class="tocitem" href="#Convection-then-quiet"><span>Convection then quiet</span></a></li><li><a class="tocitem" href="#Initial-conditions"><span>Initial conditions</span></a></li><li><a class="tocitem" href="#A-simulation-of-physical-biological-interaction"><span>A simulation of physical-biological interaction</span></a></li><li><a class="tocitem" href="#Visualization"><span>Visualization</span></a></li></ul></li><li><a class="tocitem" href="../simple_plankton_growth_death/">Simple plankton growth and death</a></li></ul></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../../library/outline/">Contents</a></li><li><a class="tocitem" href="../../library/public/">Public</a></li><li><a class="tocitem" href="../../library/internals/">Private</a></li><li><a class="tocitem" href="../../library/function_index/">Function index</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Single column carbon, alkalinity, nutrients</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Single column carbon, alkalinity, nutrients</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/CliMA/ClimaOceanBiogeochemistry.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/CliMA/ClimaOceanBiogeochemistry.jl/blob/main/examples/single_column_carbon_alkalinity_nutrients.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Nutrients,-plankton,-bacteria,-detritus"><a class="docs-heading-anchor" href="#Nutrients,-plankton,-bacteria,-detritus">Nutrients, plankton, bacteria, detritus</a><a id="Nutrients,-plankton,-bacteria,-detritus-1"></a><a class="docs-heading-anchor-permalink" href="#Nutrients,-plankton,-bacteria,-detritus" title="Permalink"></a></h1><p>This example illustrates how to use ClimaOceanBiogeochemistry&#39;s <code>CarbonAlkalinityNutrients</code> model in a single column context.</p><pre><code class="language-julia hljs">using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
+
+using Oceananigans
+using Oceananigans.Units
+using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
+
+using Printf
+using CairoMakie</code></pre><h2 id="A-single-column-grid"><a class="docs-heading-anchor" href="#A-single-column-grid">A single column grid</a><a id="A-single-column-grid-1"></a><a class="docs-heading-anchor-permalink" href="#A-single-column-grid" title="Permalink"></a></h2><p>We set up a single column grid with 4 m grid spacing that&#39;s 256 m deep:</p><pre><code class="language-julia hljs">grid = RectilinearGrid(size = 64,
+                       z = (-256meters, 0),
+                       topology = (Flat, Flat, Bounded))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1×1×64 RectilinearGrid{Float64, Oceananigans.Grids.Flat, Oceananigans.Grids.Flat, Oceananigans.Grids.Bounded} on Oceananigans.Architectures.CPU with 0×0×3 halo
+├── Flat x
+├── Flat y
+└── Bounded  z ∈ [-256.0, 0.0]    regularly spaced with Δz=4.0</code></pre><h2 id="Convection-then-quiet"><a class="docs-heading-anchor" href="#Convection-then-quiet">Convection then quiet</a><a id="Convection-then-quiet-1"></a><a class="docs-heading-anchor-permalink" href="#Convection-then-quiet" title="Permalink"></a></h2><p>To illustrate the dynamics of <code>CarbonAlkalinityNutrients</code>, we set up a physical scenario in which strong convection drives turbulent mixing for 4 days, and then abruptly shuts off. Once the convective turbulence dies down, plankton start to grow.</p><pre><code class="language-julia hljs">Qᵇ(t) = ifelse(t &lt; 4days, 1e-7, 0.0)
+b_bcs = FieldBoundaryConditions(top = FluxBoundaryCondition(Qᵇ))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Oceananigans.FieldBoundaryConditions, with boundary conditions
+├── west: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── east: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── south: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── north: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── bottom: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── top: FluxBoundaryCondition: ContinuousBoundaryFunction Qᵇ at (Nothing, Nothing, Nothing)
+└── immersed: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)</code></pre><p>We put the pieces together. The important line here is <code>biogeochemistry = CarbonAlkalinityNutrients()</code>. We use all default parameters.</p><pre><code class="language-julia hljs">model = HydrostaticFreeSurfaceModel(; grid,
+                                    biogeochemistry = CarbonAlkalinityNutrients(),
+                                    closure = CATKEVerticalDiffusivity(),
+                                    tracers = (:b, :e),
+                                    buoyancy = BuoyancyTracer(),
+                                    boundary_conditions = (; b=b_bcs))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">HydrostaticFreeSurfaceModel{CPU, RectilinearGrid}(time = 0 seconds, iteration = 0)
+├── grid: 1×1×64 RectilinearGrid{Float64, Oceananigans.Grids.Flat, Oceananigans.Grids.Flat, Oceananigans.Grids.Bounded} on Oceananigans.Architectures.CPU with 0×0×3 halo
+├── timestepper: QuasiAdamsBashforth2TimeStepper
+├── tracers: (b, e, DIC, Alk, PO₄, NO₃, DOP, Fe)
+├── closure: CATKEVerticalDiffusivity{VerticallyImplicitTimeDiscretization}
+├── buoyancy: Oceananigans.BuoyancyModels.BuoyancyTracer with ĝ = NegativeZDirection()
+├── advection scheme: 
+│   ├── momentum: Centered reconstruction order 2
+│   ├── b: Nothing
+│   ├── e: Nothing
+│   ├── DIC: Nothing
+│   ├── Alk: Nothing
+│   ├── PO₄: Nothing
+│   ├── NO₃: Nothing
+│   ├── DOP: Nothing
+│   └── Fe: Nothing
+└── coriolis: Nothing</code></pre><h2 id="Initial-conditions"><a class="docs-heading-anchor" href="#Initial-conditions">Initial conditions</a><a id="Initial-conditions-1"></a><a class="docs-heading-anchor-permalink" href="#Initial-conditions" title="Permalink"></a></h2><p>We initialize the model with reasonable nutrients, detritus, and a nutrient mixed layer.</p><pre><code class="language-julia hljs">N₀ = 1e-1 # Surface nutrient concentration
+D₀ = 1e-1 # Surface detritus concentration
+dᴺ = 50.0 # Nutrient mixed layer depth
+N² = 1e-5 # Buoyancy gradient, s⁻²
+
+bᵢ(z) = N² * z
+Nᵢ(z) = N₀ * max(1, exp(-(z + dᴺ) / 100))
+Dᵢ(z) = D₀ * exp(z / 10)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Dᵢ (generic function with 1 method)</code></pre><p>set!(model, b=bᵢ, P=1e-1, B=1e-1, D=Dᵢ, N=Nᵢ, e=1e-6)</p><pre><code class="language-julia hljs">set!(model, b=bᵢ, e=1e-6)</code></pre><h2 id="A-simulation-of-physical-biological-interaction"><a class="docs-heading-anchor" href="#A-simulation-of-physical-biological-interaction">A simulation of physical-biological interaction</a><a id="A-simulation-of-physical-biological-interaction-1"></a><a class="docs-heading-anchor-permalink" href="#A-simulation-of-physical-biological-interaction" title="Permalink"></a></h2><p>We construct a simple simulation that emits a message every 10 iterations and outputs tracer fields.</p><pre><code class="language-julia hljs">simulation = Simulation(model, Δt=10minutes, stop_time=12days)
+
+progress(sim) = @printf(&quot;Iteration: %d, time: %s\n&quot;, iteration(sim), prettytime(sim))
+simulation.callbacks[:progress] = Callback(progress, IterationInterval(10))
+
+filename = &quot;single_column_carbon_alkalinity_nutrients.jld2&quot;
+
+simulation.output_writers[:fields] = JLD2OutputWriter(model, model.tracers;
+                                                      filename,
+                                                      schedule = TimeInterval(20minutes),
+                                                      overwrite_existing = true)
+
+run!(simulation)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr36"><span class="sgr1">[ Info: </span></span>Initializing simulation...
+Iteration: 0, time: 0 seconds
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>    ... simulation initialization complete (2.591 seconds)
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Executing initial time step...
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>    ... initial time step complete (29.959 seconds).
+Iteration: 10, time: 1.667 hours
+Iteration: 20, time: 3.333 hours
+Iteration: 30, time: 5 hours
+Iteration: 40, time: 6.667 hours
+Iteration: 50, time: 8.333 hours
+Iteration: 60, time: 10 hours
+Iteration: 70, time: 11.667 hours
+Iteration: 80, time: 13.333 hours
+Iteration: 90, time: 15 hours
+Iteration: 100, time: 16.667 hours
+Iteration: 110, time: 18.333 hours
+Iteration: 120, time: 20 hours
+Iteration: 130, time: 21.667 hours
+Iteration: 140, time: 23.333 hours
+Iteration: 150, time: 1.042 days
+Iteration: 160, time: 1.111 days
+Iteration: 170, time: 1.181 days
+Iteration: 180, time: 1.250 days
+Iteration: 190, time: 1.319 days
+Iteration: 200, time: 1.389 days
+Iteration: 210, time: 1.458 days
+Iteration: 220, time: 1.528 days
+Iteration: 230, time: 1.597 days
+Iteration: 240, time: 1.667 days
+Iteration: 250, time: 1.736 days
+Iteration: 260, time: 1.806 days
+Iteration: 270, time: 1.875 days
+Iteration: 280, time: 1.944 days
+Iteration: 290, time: 2.014 days
+Iteration: 300, time: 2.083 days
+Iteration: 310, time: 2.153 days
+Iteration: 320, time: 2.222 days
+Iteration: 330, time: 2.292 days
+Iteration: 340, time: 2.361 days
+Iteration: 350, time: 2.431 days
+Iteration: 360, time: 2.500 days
+Iteration: 370, time: 2.569 days
+Iteration: 380, time: 2.639 days
+Iteration: 390, time: 2.708 days
+Iteration: 400, time: 2.778 days
+Iteration: 410, time: 2.847 days
+Iteration: 420, time: 2.917 days
+Iteration: 430, time: 2.986 days
+Iteration: 440, time: 3.056 days
+Iteration: 450, time: 3.125 days
+Iteration: 460, time: 3.194 days
+Iteration: 470, time: 3.264 days
+Iteration: 480, time: 3.333 days
+Iteration: 490, time: 3.403 days
+Iteration: 500, time: 3.472 days
+Iteration: 510, time: 3.542 days
+Iteration: 520, time: 3.611 days
+Iteration: 530, time: 3.681 days
+Iteration: 540, time: 3.750 days
+Iteration: 550, time: 3.819 days
+Iteration: 560, time: 3.889 days
+Iteration: 570, time: 3.958 days
+Iteration: 580, time: 4.028 days
+Iteration: 590, time: 4.097 days
+Iteration: 600, time: 4.167 days
+Iteration: 610, time: 4.236 days
+Iteration: 620, time: 4.306 days
+Iteration: 630, time: 4.375 days
+Iteration: 640, time: 4.444 days
+Iteration: 650, time: 4.514 days
+Iteration: 660, time: 4.583 days
+Iteration: 670, time: 4.653 days
+Iteration: 680, time: 4.722 days
+Iteration: 690, time: 4.792 days
+Iteration: 700, time: 4.861 days
+Iteration: 710, time: 4.931 days
+Iteration: 720, time: 5 days
+Iteration: 730, time: 5.069 days
+Iteration: 740, time: 5.139 days
+Iteration: 750, time: 5.208 days
+Iteration: 760, time: 5.278 days
+Iteration: 770, time: 5.347 days
+Iteration: 780, time: 5.417 days
+Iteration: 790, time: 5.486 days
+Iteration: 800, time: 5.556 days
+Iteration: 810, time: 5.625 days
+Iteration: 820, time: 5.694 days
+Iteration: 830, time: 5.764 days
+Iteration: 840, time: 5.833 days
+Iteration: 850, time: 5.903 days
+Iteration: 860, time: 5.972 days
+Iteration: 870, time: 6.042 days
+Iteration: 880, time: 6.111 days
+Iteration: 890, time: 6.181 days
+Iteration: 900, time: 6.250 days
+Iteration: 910, time: 6.319 days
+Iteration: 920, time: 6.389 days
+Iteration: 930, time: 6.458 days
+Iteration: 940, time: 6.528 days
+Iteration: 950, time: 6.597 days
+Iteration: 960, time: 6.667 days
+Iteration: 970, time: 6.736 days
+Iteration: 980, time: 6.806 days
+Iteration: 990, time: 6.875 days
+Iteration: 1000, time: 6.944 days
+Iteration: 1010, time: 7.014 days
+Iteration: 1020, time: 7.083 days
+Iteration: 1030, time: 7.153 days
+Iteration: 1040, time: 7.222 days
+Iteration: 1050, time: 7.292 days
+Iteration: 1060, time: 7.361 days
+Iteration: 1070, time: 7.431 days
+Iteration: 1080, time: 7.500 days
+Iteration: 1090, time: 7.569 days
+Iteration: 1100, time: 7.639 days
+Iteration: 1110, time: 7.708 days
+Iteration: 1120, time: 7.778 days
+Iteration: 1130, time: 7.847 days
+Iteration: 1140, time: 7.917 days
+Iteration: 1150, time: 7.986 days
+Iteration: 1160, time: 8.056 days
+Iteration: 1170, time: 8.125 days
+Iteration: 1180, time: 8.194 days
+Iteration: 1190, time: 8.264 days
+Iteration: 1200, time: 8.333 days
+Iteration: 1210, time: 8.403 days
+Iteration: 1220, time: 8.472 days
+Iteration: 1230, time: 8.542 days
+Iteration: 1240, time: 8.611 days
+Iteration: 1250, time: 8.681 days
+Iteration: 1260, time: 8.750 days
+Iteration: 1270, time: 8.819 days
+Iteration: 1280, time: 8.889 days
+Iteration: 1290, time: 8.958 days
+Iteration: 1300, time: 9.028 days
+Iteration: 1310, time: 9.097 days
+Iteration: 1320, time: 9.167 days
+Iteration: 1330, time: 9.236 days
+Iteration: 1340, time: 9.306 days
+Iteration: 1350, time: 9.375 days
+Iteration: 1360, time: 9.444 days
+Iteration: 1370, time: 9.514 days
+Iteration: 1380, time: 9.583 days
+Iteration: 1390, time: 9.653 days
+Iteration: 1400, time: 9.722 days
+Iteration: 1410, time: 9.792 days
+Iteration: 1420, time: 9.861 days
+Iteration: 1430, time: 9.931 days
+Iteration: 1440, time: 10 days
+Iteration: 1450, time: 10.069 days
+Iteration: 1460, time: 10.139 days
+Iteration: 1470, time: 10.208 days
+Iteration: 1480, time: 10.278 days
+Iteration: 1490, time: 10.347 days
+Iteration: 1500, time: 10.417 days
+Iteration: 1510, time: 10.486 days
+Iteration: 1520, time: 10.556 days
+Iteration: 1530, time: 10.625 days
+Iteration: 1540, time: 10.694 days
+Iteration: 1550, time: 10.764 days
+Iteration: 1560, time: 10.833 days
+Iteration: 1570, time: 10.903 days
+Iteration: 1580, time: 10.972 days
+Iteration: 1590, time: 11.042 days
+Iteration: 1600, time: 11.111 days
+Iteration: 1610, time: 11.181 days
+Iteration: 1620, time: 11.250 days
+Iteration: 1630, time: 11.319 days
+Iteration: 1640, time: 11.389 days
+Iteration: 1650, time: 11.458 days
+Iteration: 1660, time: 11.528 days
+Iteration: 1670, time: 11.597 days
+Iteration: 1680, time: 11.667 days
+Iteration: 1690, time: 11.736 days
+Iteration: 1700, time: 11.806 days
+Iteration: 1710, time: 11.875 days
+Iteration: 1720, time: 11.944 days
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Simulation is stopping after running for 39.884 seconds.
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Simulation time 12 days equals or exceeds stop time 12 days.</code></pre><h2 id="Visualization"><a class="docs-heading-anchor" href="#Visualization">Visualization</a><a id="Visualization-1"></a><a class="docs-heading-anchor-permalink" href="#Visualization" title="Permalink"></a></h2><p>All that&#39;s left is to visualize the results.</p><pre><code class="language-julia hljs">bt   = FieldTimeSeries(filename, &quot;b&quot;)
+et   = FieldTimeSeries(filename, &quot;e&quot;)
+DICt = FieldTimeSeries(filename, &quot;DIC&quot;)
+Alkt = FieldTimeSeries(filename, &quot;Alk&quot;)
+PO₄t = FieldTimeSeries(filename, &quot;PO₄&quot;)
+NO₃t = FieldTimeSeries(filename, &quot;NO₃&quot;)
+DOPt = FieldTimeSeries(filename, &quot;DOP&quot;)
+Fet  = FieldTimeSeries(filename, &quot;Fe&quot;)
+
+t = bt.times
+nt = length(t)
+z = znodes(bt)
+
+fig = Figure(size=(1200, 600))
+
+axb = Axis(fig[1, 1], xlabel=&quot;Buoyancy (m² s⁻³)&quot;, ylabel=&quot;z (m)&quot;)
+axe = Axis(fig[1, 2], xlabel=&quot;Turbulent kinetic energy (m² s²)&quot;)
+axP = Axis(fig[1, 3], xlabel=&quot;Concentration (mmol)&quot;)
+axN = Axis(fig[1, 4], xlabel=&quot;Nutrient concentration (mmol)&quot;)
+
+xlims!(axe, -1e-5, 1e-3)
+xlims!(axP, 0, 0.2)
+
+slider = Slider(fig[2, 1:4], range=1:nt, startvalue=1)
+n = slider.value
+
+title = @lift @sprintf(&quot;Convecting plankton at t = %d hours&quot;, t[$n] / hour)
+Label(fig[0, 1:4], title)
+
+bn = @lift interior(bt[$n], 1, 1, :)
+en = @lift interior(et[$n], 1, 1, :)
+DICn = @lift interior(DICt[$n], 1, 1, :)
+Alkn = @lift interior(Alkt[$n], 1, 1, :)
+PO₄n = @lift interior(PO₄t[$n], 1, 1, :)
+NO₃n = @lift interior(NO₃t[$n], 1, 1, :)
+DOPn = @lift interior(DOPt[$n], 1, 1, :)
+Fen  = @lift interior(Fet[$n], 1, 1, :)
+
+lines!(axb, bn, z)
+lines!(axe, en, z)
+
+lines!(axP, DICn, z, label=&quot;DIC&quot;)
+lines!(axP, PO₄n, z, label=&quot;Phosphate&quot;)
+lines!(axP, Fen, z, label=&quot;Iron&quot;)
+axislegend(axP)
+
+lines!(axN, DOPn, z)
+
+record(fig, &quot;carbon_alkalinity_nutrients.mp4&quot;, 1:nt, framerate=24) do nn
+    n[] = nn
+end</code></pre><p><video src="../carbon_alkalinity_nutrients.mp4" controls="true" title><a href="../carbon_alkalinity_nutrients.mp4"></a></video></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../single_column_nutrients_plankton_bacteria_detritus/">« Single column nutrients, plankton, bacteria, detritus</a><a class="docs-footer-nextpage" href="../simple_plankton_growth_death/">Simple plankton growth and death »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.3.0 on <span class="colophon-date" title="Tuesday 26 March 2024 20:26">Tuesday 26 March 2024</span>. Using Julia version 1.10.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

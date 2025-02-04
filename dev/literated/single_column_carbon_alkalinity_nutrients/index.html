@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Single column carbon, alkalinity, nutrients · ClimaOceanBiogeochemistry.jl</title><meta name="title" content="Single column carbon, alkalinity, nutrients · ClimaOceanBiogeochemistry.jl"/><meta property="og:title" content="Single column carbon, alkalinity, nutrients · ClimaOceanBiogeochemistry.jl"/><meta property="twitter:title" content="Single column carbon, alkalinity, nutrients · ClimaOceanBiogeochemistry.jl"/><meta name="description" content="Documentation for ClimaOceanBiogeochemistry.jl."/><meta property="og:description" content="Documentation for ClimaOceanBiogeochemistry.jl."/><meta property="twitter:description" content="Documentation for ClimaOceanBiogeochemistry.jl."/><meta property="og:url" content="https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/literated/single_column_carbon_alkalinity_nutrients/"/><meta property="twitter:url" content="https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/literated/single_column_carbon_alkalinity_nutrients/"/><link rel="canonical" href="https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/literated/single_column_carbon_alkalinity_nutrients/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">ClimaOceanBiogeochemistry.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../single_column_nutrients_plankton_bacteria_detritus/">Single column nutrients, plankton, bacteria, detritus</a></li><li class="is-active"><a class="tocitem" href>Single column carbon, alkalinity, nutrients</a><ul class="internal"><li><a class="tocitem" href="#A-single-column-grid"><span>A single column grid</span></a></li><li><a class="tocitem" href="#Buoyancy-that-depends-on-temperature-and-salinity"><span>Buoyancy that depends on temperature and salinity</span></a></li><li><a class="tocitem" href="#Boundary-conditions"><span>Boundary conditions</span></a></li><li><a class="tocitem" href="#We-put-the-pieces-together"><span>We put the pieces together</span></a></li><li><a class="tocitem" href="#Initial-conditions"><span>Initial conditions</span></a></li><li><a class="tocitem" href="#A-simulation-of-physical-biological-interaction"><span>A simulation of physical-biological interaction</span></a></li><li><a class="tocitem" href="#Run-the-example"><span>Run the example</span></a></li><li><a class="tocitem" href="#Visualization"><span>Visualization</span></a></li></ul></li><li><a class="tocitem" href="../soda_outgassing/">Soda outgassing</a></li><li><a class="tocitem" href="../simple_plankton_growth_death/">Simple plankton growth and death</a></li></ul></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../../library/outline/">Contents</a></li><li><a class="tocitem" href="../../library/public/">Public</a></li><li><a class="tocitem" href="../../library/internals/">Private</a></li><li><a class="tocitem" href="../../library/function_index/">Function index</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Single column carbon, alkalinity, nutrients</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Single column carbon, alkalinity, nutrients</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/CliMA/ClimaOceanBiogeochemistry.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/CliMA/ClimaOceanBiogeochemistry.jl/blob/main/examples/single_column_carbon_alkalinity_nutrients.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Simple-carbon-cycle-biogeochemistry-model"><a class="docs-heading-anchor" href="#Simple-carbon-cycle-biogeochemistry-model">Simple carbon cycle biogeochemistry model</a><a id="Simple-carbon-cycle-biogeochemistry-model-1"></a><a class="docs-heading-anchor-permalink" href="#Simple-carbon-cycle-biogeochemistry-model" title="Permalink"></a></h1><p>This example illustrates how to use ClimaOceanBiogeochemistry&#39;s <code>CarbonAlkalinityNutrients</code> model in a single column context.</p><pre><code class="language-julia hljs">using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
+using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
+using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonSystemParameters, CarbonSolverParameters, CarbonCoefficientParameters
+
+using Oceananigans
+using Oceananigans.Units
+using Oceananigans.TurbulenceClosures: CATKEVerticalDiffusivity
+
+using Adapt
+using KernelAbstractions: @kernel, @index
+using Oceananigans.Utils: launch!
+using Printf
+using CairoMakie
+
+arch = CPU()</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Oceananigans.Architectures.CPU()</code></pre><h2 id="A-single-column-grid"><a class="docs-heading-anchor" href="#A-single-column-grid">A single column grid</a><a id="A-single-column-grid-1"></a><a class="docs-heading-anchor-permalink" href="#A-single-column-grid" title="Permalink"></a></h2><p>We set up a single column grid with 4 m grid spacing that&#39;s 256 m deep:</p><pre><code class="language-julia hljs">grid = RectilinearGrid(
+    arch,
+    size = 512,
+    z = (-4096, 0),
+    topology = (
+        Flat, Flat, Bounded
+     ),
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1×1×512 RectilinearGrid{Float64, Oceananigans.Grids.Flat, Oceananigans.Grids.Flat, Oceananigans.Grids.Bounded} on Oceananigans.Architectures.CPU with 0×0×3 halo
+├── Flat x
+├── Flat y
+└── Bounded  z ∈ [-4096.0, 0.0]   regularly spaced with Δz=8.0</code></pre><h2 id="Buoyancy-that-depends-on-temperature-and-salinity"><a class="docs-heading-anchor" href="#Buoyancy-that-depends-on-temperature-and-salinity">Buoyancy that depends on temperature and salinity</a><a id="Buoyancy-that-depends-on-temperature-and-salinity-1"></a><a class="docs-heading-anchor-permalink" href="#Buoyancy-that-depends-on-temperature-and-salinity" title="Permalink"></a></h2><p>We use the <code>SeawaterBuoyancy</code> model with a linear equation of state, where thermal expansion</p><pre><code class="language-julia hljs">αᵀ = 2e-4
+#and haline contraction
+βˢ = 8e-4</code></pre><h2 id="Boundary-conditions"><a class="docs-heading-anchor" href="#Boundary-conditions">Boundary conditions</a><a id="Boundary-conditions-1"></a><a class="docs-heading-anchor-permalink" href="#Boundary-conditions" title="Permalink"></a></h2><p>We calculate the surface temperature flux associated with surface cooling of 200 W m⁻², reference density <code>ρₒ</code>, and heat capacity <code>cᴾ</code>, To illustrate the dynamics of <code>CarbonAlkalinityNutrients</code>, this strong convection drives turbulent mixing for 4 days, and then abruptly shuts off. Once the convective turbulence dies down, plankton start to grow.</p><pre><code class="language-julia hljs">Qʰ = 200.0  # W m⁻², surface _heat_ flux
+ρₒ = 1026.0 # kg m⁻³, average density at the surface of the world ocean
+cᴾ = 3991.0 # J K⁻¹ kg⁻¹, typical heat capacity for seawater
+
+Qᵀ(t) = ifelse(t &lt; 30days, Qʰ / (ρₒ * cᴾ), 0.0) # K m s⁻¹, surface _temperature_ flux
+
+T_bcs = FieldBoundaryConditions(
+    top = FluxBoundaryCondition(Qᵀ)
+    )</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Oceananigans.FieldBoundaryConditions, with boundary conditions
+├── west: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── east: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── south: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── north: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── bottom: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── top: FluxBoundaryCondition: ContinuousBoundaryFunction Qᵀ at (Nothing, Nothing, Nothing)
+└── immersed: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)</code></pre><p>For air-sea CO₂ fluxes, we use a FluxBoundaryCondition for the &quot;top&quot; of the DIC tracer. We&#39;ll write a callback to calculate the flux every time step.</p><pre><code class="language-julia hljs">co₂_flux = Field{Center, Center, Nothing}(grid)
+
+dic_bcs  = FieldBoundaryConditions(
+    top = FluxBoundaryCondition(co₂_flux)
+    )
+
+# These are filled in compute_co₂_flux!
+ocean_pCO₂ = Field{Center, Center, Nothing}(grid)
+atmos_pCO₂ = Field{Center, Center, Nothing}(grid)
+pH         = Field{Center, Center, Nothing}(grid)
+set!(pH, 8.0)
+
+cmhr⁻¹_per_ms⁻¹ = 1 / 3.6e5 # conversion factor from cm/hr to m/s
+
+# Supply some coefficients and external data for the CO₂ flux calculation
+Base.@kwdef struct CO₂_flux_parameters
+    surface_wind_speed   = 10. # ms⁻¹
+    applied_pressure     = 0.0 # atm
+    atmospheric_pCO₂     = 280e-6 # atm
+    exchange_coefficient = 0.337 # cm hr⁻¹
+    reference_density    = 1024.5 # kg m⁻³
+end
+adapt_structure(
+    to, cp::CO₂_flux_parameters
+    ) = CO₂_flux_parameters(
+           adapt(to, cp.surface_wind_speed),
+           adapt(to, cp.applied_pressure),
+           adapt(to, cp.atmospheric_pCO₂),
+           adapt(to, cp.exchange_coefficient),
+           adapt(to, cp.reference_density),
+)
+
+&quot;&quot;&quot;
+    compute_schmidt_dic(
+        grid,
+        schmidt_number_dic,
+        temperature,
+        )
+
+Compute the Schmidt number for dissolved inorganic carbon (DIC) based on the temperature Θᶜ (in degrees Celsius).
+
+Arguments:
+- `grid::RectilinearGrid`: The model grid.
+- `schmidt_number_dic::Field{Center, Center, Nothing}`: The computed Schmidt number for DIC.
+- `temperature::Field{Center, Center, Nothing}`: Temperature in degrees Celsius.
+- `kˢᶜ::CarbonCoefficientParameters`: The parameters for the Schmidt number calculation.
+&quot;&quot;&quot;
+@kernel function compute_schmidt_dic!(
+    grid,
+    schmidt_number_dic,
+    temperature,
+    kˢᶜ = CarbonCoefficientParameters(
+            a₀ = 2116.8,
+            a₁ = 136.25,
+            a₂ = 4.7353,
+            a₃ = 9.2307e-2,
+            a₄ = 7.555e-4,
+            a₅ = 660.0,
+        ),
+    )
+
+    i, j = @index(Global, NTuple)
+    k = size(grid, 3)
+
+    schmidt_number_dic[i, j, 1] =  (
+         kˢᶜ.a₀ -
+         kˢᶜ.a₁ * temperature[i, j, k] +
+         kˢᶜ.a₂ * temperature[i, j, k]^2 -
+         kˢᶜ.a₃ * temperature[i, j, k]^3 +
+         kˢᶜ.a₄ * temperature[i, j, k]^4
+    ) /  kˢᶜ.a₅
+end
+
+&quot;&quot;&quot;
+    compute_piston_velocity(
+        grid,
+        piston_velocity,
+        surface_wind_speed,
+        exchange_coefficient,
+        schmidt_number,
+        )
+
+Compute the piston velocity for gas exchange at the ocean surface.
+
+Arguments:
+- `grid::RectilinearGrid`: The model grid.
+- `piston_velocity::Field{Center, Center, Nothing}`: The computed piston velocity.
+- `surface_wind_speed::Field{Center, Center, Nothing}`: The wind speed at the ocean surface.
+- `exchange_coefficient::Float64`: The gas exchange coefficient.
+- `schmidt_number::Field{Center, Center, Nothing}`: The Schmidt number.
+&quot;&quot;&quot;
+@kernel function compute_piston_velocity!(
+    grid,
+    piston_velocity,
+    surface_wind_speed,
+    exchange_coefficient,
+    schmidt_number
+    )
+
+    i, j = @index(Global, NTuple)
+
+    piston_velocity[i, j, 1] = exchange_coefficient[i, j, 1] *
+                               surface_wind_speed[i, j, 1]^2 /
+                               sqrt(schmidt_number[i, j, 1])
+end
+
+&quot;&quot;&quot;
+    solve_ocean_pCO₂!(
+        grid,
+        reference_density,
+        ocean_pCO₂,
+        atmospheric_CO₂_solubility,
+        oceanic_CO₂_solubility,
+        Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ
+        )
+
+Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
+
+Arguments:
+- `grid::RectilinearGrid`: The model grid.
+- `reference_density::Float64`: The reference density of seawater.
+- `ocean_pCO₂::Field{Center, Center, Nothing}`: The computed oceanic pCO₂.
+- `atmospheric_CO₂_solubility::Field{Center, Center, Nothing}`: The solubility of CO₂ in the atmosphere.
+- `oceanic_CO₂_solubility::Field{Center, Center, Nothing}`: The solubility of CO₂ in the ocean.
+- `Θᶜ::Field{Center, Center, Nothing}`: Temperature in degrees Celsius.
+- `Sᴬ::Field{Center, Center, Nothing}`: Salinity in PSU.
+- `Δpᵦₐᵣ::Field{Center, Center, Nothing}`: Applied pressure in atm.
+- `Cᵀ::Field{Center, Center, Nothing}`: Total dissolved inorganic carbon (DIC) in mol kg⁻¹.
+- `Aᵀ::Field{Center, Center, Nothing}`: Total alkalinity (ALK) in mol kg⁻¹.
+- `Pᵀ::Field{Center, Center, Nothing}`: Phosphate concentration in mol kg⁻¹.
+- `pH::Field{Center, Center, Center}`: The computed pH.
+- `pCO₂ᵃᵗᵐ::Field{Center, Center, Nothing}`: The partial pressure of CO₂ in the atmosphere.
+&quot;&quot;&quot;
+@kernel function solve_ocean_pCO₂!(
+    grid,
+    solver_params,
+    reference_density,
+    ocean_pCO₂,
+    atmospheric_CO₂_solubility,
+    oceanic_CO₂_solubility,
+    temperature,
+    salinity,
+    applied_pressure_bar,
+    DIC,
+    ALK,
+    PO4,
+    pH,
+    atmosphere_pCO₂
+    )
+
+    i, j = @index(Global, NTuple)
+    k = size(grid, 3)
+
+    # compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
+    CarbonSolved = UniversalRobustCarbonSystem(;
+                        pH      = pH[i, j, 1],
+                        pCO₂ᵃᵗᵐ = atmosphere_pCO₂[i, j, 1],
+                        Θᶜ      = temperature[i, j, k],
+                        Sᴬ      = salinity[i, j, k],
+                        Δpᵦₐᵣ   = applied_pressure_bar[i, j, 1],
+                        Cᵀ      = DIC[i, j, k]/reference_density,
+                        Aᵀ      = ALK[i, j, k]/reference_density,
+                        Pᵀ      = PO4[i, j, k]/reference_density,
+                        solver_params...,
+    )
+
+    ocean_pCO₂[i, j, 1]                 = CarbonSolved.pCO₂ᵒᶜᵉ
+    atmospheric_CO₂_solubility[i, j, 1] = CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ
+    oceanic_CO₂_solubility[i, j, 1]     = CarbonSolved.Pᵈⁱᶜₖₛₒₗₒ
+    pH[i, j, 1]                         = CarbonSolved.pH
+end
+
+&quot;&quot;&quot;
+    compute_CO₂_flux(
+        grid,
+        CO₂_flux,
+        piston_velocity,
+        atmospheric_pCO₂,
+        oceanic_pCO₂,
+        atmospheric_CO₂_solubility,
+        oceanic_CO₂_solubility,
+        reference_density
+    )
+
+Compute the flux of CO₂ between the atmosphere and the ocean.
+
+Arguments:
+- `grid::RectilinearGrid`: The model grid.
+- `reference_density::Float64`: The reference density of seawater.
+- `CO₂_flux::Field{Center, Center, Nothing}`: The computed CO₂ flux.
+- `piston_velocity::Field{Center, Center, Nothing}`: The piston velocity for gas exchange at the ocean surface.
+- `atmospheric_pCO₂::Float64`: The partial pressure of CO₂ in the atmosphere.
+- `oceanic_pCO₂::Field{Center, Center, Nothing}`: The partial pressure of CO₂ in the ocean.
+- `atmospheric_CO₂_solubility::Field{Center, Center, Nothing}`: The solubility of CO₂ in the atmosphere.
+- `oceanic_CO₂_solubility::Field{Center, Center, Nothing}`: The solubility of CO₂ in the ocean.
+
+Notes:
+The convention is that a positive flux is upwards (outgassing), and a negative flux is downwards (uptake).
+&quot;&quot;&quot;
+@kernel function compute_CO₂_flux!(
+    grid,
+    reference_density,
+    CO₂_flux,
+    piston_velocity,
+    atmospheric_pCO₂,
+    oceanic_pCO₂,
+    atmospheric_CO₂_solubility,
+    oceanic_CO₂_solubility,
+    )
+    i, j = @index(Global, NTuple)
+
+    # compute CO₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards)
+    CO₂_flux[i, j, 1] = - piston_velocity[i, j, 1] * (
+                 atmospheric_pCO₂[i, j, 1] * atmospheric_CO₂_solubility[i, j, 1] -
+                 oceanic_pCO₂[i, j, 1]     * oceanic_CO₂_solubility[i, j, 1]
+            ) * reference_density # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
+end
+
+&quot;&quot;&quot;
+    calculate_air_sea_carbon_exchange!(simulation; solver_params = ())
+
+Returns the tendency of DIC in the top layer due to air-sea CO₂ flux
+using the piston velocity formulation of Wanninkhof (1992) and the
+solubility/activity of CO₂ in seawater.
+&quot;&quot;&quot;
+@inline function calculate_air_sea_carbon_exchange!(simulation, solver_params = ())
+    grid = simulation.model.grid
+
+# get coefficients from CO₂_flux_parameters struct
+# I really want the option to take these from the model
+    (; surface_wind_speed,
+        applied_pressure,
+        atmospheric_pCO₂,
+        exchange_coefficient,
+        reference_density,
+        ) = CO₂_flux_parameters()
+
+    # Access model fields
+    CO₂_flux = simulation.model.tracers.DIC.boundary_conditions.top.condition
+    temperature = simulation.model.tracers.T
+    salinity    = simulation.model.tracers.S
+    DIC         = simulation.model.tracers.DIC
+    ALK         = simulation.model.tracers.ALK
+    PO₄         = simulation.model.tracers.PO₄
+
+    # compute schmidt number for DIC
+    schmidt_dic = Field{Center, Center, Nothing}(grid)
+    set!(schmidt_dic, 0)
+
+    kernel_args = (
+        grid,
+        schmidt_dic,
+        temperature,
+    )
+
+    launch!(arch,
+	    grid,
+	    :xy,
+	    compute_schmidt_dic!,
+	    kernel_args...,
+    )
+
+    # compute gas exchange coefficient/piston velocity and correct with Schmidt number
+    wind_speed = Field{Center, Center, Nothing}(grid)
+    set!(wind_speed, surface_wind_speed)
+
+    average_exchange_coefficient = Field{Center, Center, Nothing}(grid)
+    set!(average_exchange_coefficient, exchange_coefficient*cmhr⁻¹_per_ms⁻¹)
+
+    piston_velocity = Field{Center, Center, Nothing}(grid)
+    set!(piston_velocity, 0)
+
+    kernel_args = (
+        grid,
+        piston_velocity,
+        wind_speed,
+        average_exchange_coefficient,
+        schmidt_dic,
+        )
+
+    # This is a 2d only kernel, so no need for custom kernel_size to handle slicing of 3d inputs
+    launch!(arch,
+	    grid,
+	    :xy,
+	    compute_piston_velocity!,
+	    kernel_args...,
+    )
+
+    # compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
+    set!(atmos_pCO₂, atmospheric_pCO₂)
+
+    applied_pressure_bar = Field{Center, Center, Nothing}(grid)
+    set!(applied_pressure_bar, applied_pressure)
+
+    atmospheric_CO₂_solubility = Field{Center, Center, Nothing}(grid)
+    oceanic_CO₂_solubility     = Field{Center, Center, Nothing}(grid)
+
+    kernel_args = (
+        grid,
+        solver_params,
+        reference_density,
+        ocean_pCO₂,
+        atmospheric_CO₂_solubility,
+        oceanic_CO₂_solubility,
+        temperature,
+        salinity,
+        applied_pressure_bar,
+        DIC,
+        ALK,
+        PO₄,
+        pH,
+        atmos_pCO₂,
+        )
+
+    launch!(arch,
+	    grid,
+	    :xy,
+	    solve_ocean_pCO₂!,
+	    kernel_args...,
+    )
+
+    # compute CO₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards)
+    kernel_args = (
+        grid,
+        reference_density,
+        CO₂_flux,
+        piston_velocity,
+        atmos_pCO₂,
+        ocean_pCO₂,
+        atmospheric_CO₂_solubility,
+        oceanic_CO₂_solubility,
+        )
+
+    launch!(arch,
+	    grid,
+	    :xy,
+	    compute_CO₂_flux!,
+	    kernel_args...,
+    )
+    return nothing
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Main.calculate_air_sea_carbon_exchange!</code></pre><h2 id="We-put-the-pieces-together"><a class="docs-heading-anchor" href="#We-put-the-pieces-together">We put the pieces together</a><a id="We-put-the-pieces-together-1"></a><a class="docs-heading-anchor-permalink" href="#We-put-the-pieces-together" title="Permalink"></a></h2><p>The important line here is <code>biogeochemistry = CarbonAlkalinityNutrients(; grid)</code>. We adjust some of the parameters of the model to make the simulation more interesting.</p><pre><code class="language-julia hljs">model = HydrostaticFreeSurfaceModel(;
+    grid,
+    biogeochemistry     = CarbonAlkalinityNutrients(; grid,
+                            maximum_net_community_production_rate = 1/365.25day,
+                            PAR_attenuation_scale = 100.,
+                            particulate_organic_phosphorus_sinking_velocity = -10 / day,
+                            ),
+    closure             = ScalarDiffusivity(κ=1e-4),
+    tracers             = (
+        :T, :S, :DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe
+        ),
+    tracer_advection    = WENO(),
+    buoyancy            = SeawaterBuoyancy(
+        equation_of_state  = LinearEquationOfState(
+            thermal_expansion  = αᵀ,
+            haline_contraction = βˢ
+            ),
+        ),
+    boundary_conditions = (;
+        T=T_bcs, DIC=dic_bcs
+        ),
+    )</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">HydrostaticFreeSurfaceModel{CPU, RectilinearGrid}(time = 0 seconds, iteration = 0)
+├── grid: 1×1×512 RectilinearGrid{Float64, Oceananigans.Grids.Flat, Oceananigans.Grids.Flat, Oceananigans.Grids.Bounded} on Oceananigans.Architectures.CPU with 0×0×3 halo
+├── timestepper: QuasiAdamsBashforth2TimeStepper
+├── tracers: (T, S, DIC, ALK, PO₄, NO₃, DOP, POP, Fe)
+├── closure: ScalarDiffusivity{ExplicitTimeDiscretization}(ν=0.0, κ=(T=0.0001, S=0.0001, DIC=0.0001, ALK=0.0001, PO₄=0.0001, NO₃=0.0001, DOP=0.0001, POP=0.0001, Fe=0.0001))
+├── buoyancy: SeawaterBuoyancy with g=9.80665 and LinearEquationOfState(thermal_expansion=0.0002, haline_contraction=0.0008) with ĝ = NegativeZDirection()
+├── advection scheme: 
+│   ├── momentum: Centered reconstruction order 2
+│   ├── T: WENO reconstruction order 5
+│   ├── S: WENO reconstruction order 5
+│   ├── DIC: WENO reconstruction order 5
+│   ├── ALK: WENO reconstruction order 5
+│   ├── PO₄: WENO reconstruction order 5
+│   ├── NO₃: WENO reconstruction order 5
+│   ├── DOP: WENO reconstruction order 5
+│   ├── POP: WENO reconstruction order 5
+│   └── Fe: WENO reconstruction order 5
+└── coriolis: Nothing</code></pre><h2 id="Initial-conditions"><a class="docs-heading-anchor" href="#Initial-conditions">Initial conditions</a><a id="Initial-conditions-1"></a><a class="docs-heading-anchor-permalink" href="#Initial-conditions" title="Permalink"></a></h2><p>Temperature initial condition: a stable density gradient with random noise superposed. Random noise damped at top and bottom we also impose a temperature gradient <code>dTdz</code></p><pre><code class="language-julia hljs">dTdz = 0.02 # K m⁻¹
+
+# Random noise
+Ξ(z) = randn() * z / model.grid.Lz * (1 + z / model.grid.Lz)
+zᶜʳⁱᵗ = -500
+fᶻ = dTdz * model.grid.Lz * 1e-6</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">8.192e-5</code></pre><p>Temperature profile</p><pre><code class="language-julia hljs">Tᵢ(z) = ifelse(
+                z &gt; zᶜʳⁱᵗ,
+                20 + dTdz * z + fᶻ * Ξ(z),
+                20 + dTdz * zᶜʳⁱᵗ + fᶻ * Ξ(z),
+        )</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Tᵢ (generic function with 1 method)</code></pre><p>We initialize the model with reasonable salinity and carbon/alkalinity/nutrient concentrations</p><pre><code class="language-julia hljs">Sᵢ(z)   = 35.0  # psu
+DICᵢ(z) = 2.1   # mol/m³
+ALKᵢ(z) = 2.35   # mol/m³
+PO₄ᵢ(z) = 2.5e-3 # mol/m³
+NO₃ᵢ(z) = 42e-3  # mol/m³
+DOPᵢ(z) = 0.0    # mol/m³
+POPᵢ(z) = 0.0    # mol/m³
+Feᵢ(z)  = 2.e-6  # mol/m³
+
+set!(
+    model,
+    T   = Tᵢ,
+    S   = Sᵢ,
+    DIC = DICᵢ,
+    ALK = ALKᵢ,
+    PO₄ = PO₄ᵢ,
+    NO₃ = NO₃ᵢ,
+    DOP = DOPᵢ,
+    POP = POPᵢ,
+    Fe  = Feᵢ
+    )</code></pre><h2 id="A-simulation-of-physical-biological-interaction"><a class="docs-heading-anchor" href="#A-simulation-of-physical-biological-interaction">A simulation of physical-biological interaction</a><a id="A-simulation-of-physical-biological-interaction-1"></a><a class="docs-heading-anchor-permalink" href="#A-simulation-of-physical-biological-interaction" title="Permalink"></a></h2><p>We run the simulation for 30 days with a time-step of 10 minutes.</p><pre><code class="language-julia hljs">simulation = Simulation(
+    model,
+    Δt=1minute,
+    stop_time=365.25days
+    )</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Simulation of HydrostaticFreeSurfaceModel{CPU, RectilinearGrid}(time = 0 seconds, iteration = 0)
+├── Next time step: 1 minute
+├── Elapsed wall time: 0 seconds
+├── Wall time per iteration: NaN days
+├── Stop time: 365.250 days
+├── Stop iteration : Inf
+├── Wall time limit: Inf
+├── Callbacks: OrderedDict with 4 entries:
+│   ├── stop_time_exceeded =&gt; Callback of stop_time_exceeded on IterationInterval(1)
+│   ├── stop_iteration_exceeded =&gt; Callback of stop_iteration_exceeded on IterationInterval(1)
+│   ├── wall_time_limit_exceeded =&gt; Callback of wall_time_limit_exceeded on IterationInterval(1)
+│   └── nan_checker =&gt; Callback of NaNChecker for u on IterationInterval(100)
+├── Output writers: OrderedDict with no entries
+└── Diagnostics: OrderedDict with no entries</code></pre><p>We add a <code>TimeStepWizard</code> callback to adapt the simulation&#39;s time-step...</p><pre><code class="language-julia hljs">wizard = TimeStepWizard(
+    cfl=0.2,
+    max_change=1.1,
+    max_Δt=60minutes
+    )
+
+simulation.callbacks[:wizard] = Callback(
+    wizard,
+    IterationInterval(100),
+    )</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Callback of TimeStepWizard(cfl=0.2, max_Δt=3600.0, min_Δt=0.0) on IterationInterval(100)</code></pre><p>...and we emit a message with information on DIC, ALK, and CO₂ flux tendencies.</p><pre><code class="language-julia hljs">DIC₀ = Field{Center, Center, Nothing}(grid)
+ALK₀ = Field{Center, Center, Nothing}(grid)
+&quot;&quot;&quot;
+Function to print DIC, ALK, and CO₂ flux tendency during the simulation
+&quot;&quot;&quot;
+function progress(simulation)
+    @printf(&quot;Iteration: %d, time: %s\n&quot;,
+        iteration(simulation),
+        prettytime(simulation),
+        )
+    Nz = size(simulation.model.grid, 3)
+
+    if iteration(simulation) == 1
+        # Establish and set initial values for the anomaly fields
+        DIC₀[1, 1, 1] = simulation.model.tracers.DIC[1, 1, Nz]
+        ALK₀[1, 1, 1] = simulation.model.tracers.ALK[1, 1, Nz]
+    else
+        @printf(&quot;Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n&quot;,
+            ((simulation.model.tracers.DIC[1, 1, grid.Nz]-
+                DIC₀[1, 1, 1])/simulation.model.timestepper.previous_Δt
+                ) * 1e7)
+        @printf(&quot;Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n&quot;,
+            ((simulation.model.tracers.ALK[1, 1, grid.Nz]-
+                ALK₀[1, 1, 1])/simulation.model.timestepper.previous_Δt
+                ) * 1e7)
+        @printf(&quot;Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): %.12f\n&quot;,
+            (simulation.model.tracers.DIC.boundary_conditions.top.condition[1,1]
+            ) * 1e7)
+
+        # update the anomaly fields
+        DIC₀[1, 1, 1] = simulation.model.tracers.DIC[1, 1, Nz]
+        ALK₀[1, 1, 1] = simulation.model.tracers.ALK[1, 1, Nz]
+    end
+end
+
+simulation.callbacks[:progress] = Callback(
+    progress,
+    IterationInterval(100),
+    )</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Callback of progress on IterationInterval(100)</code></pre><p>Dont forget to add the callback to compute the CO₂ flux</p><pre><code class="language-julia hljs">add_callback!(simulation, calculate_air_sea_carbon_exchange!)</code></pre><p>Output writer</p><pre><code class="language-julia hljs">filename = &quot;single_column_carbon_alkalinity_nutrients.jld2&quot;
+fout=10days
+simulation.output_writers[:fields] = JLD2OutputWriter(
+    model, model.tracers;
+    filename,
+    schedule = TimeInterval(fout),
+    overwrite_existing = true,
+    )
+
+filename_diags = &quot;single_column_carbon_alkalinity_nutrients_co2flux.jld2&quot;
+
+outputs = (; co₂_flux, ocean_pCO₂, atmos_pCO₂)
+simulation.output_writers[:jld2] = JLD2OutputWriter(
+    model, outputs;
+    filename = filename_diags,
+    schedule = TimeInterval(fout),
+    overwrite_existing = true,
+    )</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">JLD2OutputWriter scheduled on TimeInterval(10 days):
+├── filepath: ./single_column_carbon_alkalinity_nutrients_co2flux.jld2
+├── 3 outputs: (co₂_flux, ocean_pCO₂, atmos_pCO₂)
+├── array type: Array{Float64}
+├── including: [:grid, :coriolis, :buoyancy, :closure]
+├── file_splitting: NoFileSplitting
+└── file size: 0.0 B</code></pre><h2 id="Run-the-example"><a class="docs-heading-anchor" href="#Run-the-example">Run the example</a><a id="Run-the-example-1"></a><a class="docs-heading-anchor-permalink" href="#Run-the-example" title="Permalink"></a></h2><pre><code class="language-julia hljs">run!(simulation)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr36"><span class="sgr1">[ Info: </span></span>Initializing simulation...
+Iteration: 0, time: 0 seconds
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.000000000000
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.000000000000
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): 0.000000000000
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>    ... simulation initialization complete (5.832 seconds)
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Executing initial time step...
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>    ... initial time step complete (8.059 seconds).
+Iteration: 100, time: 1.833 hours
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -927.481444637013
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 124.861741691809
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): 0.987999171098
+Iteration: 200, time: 3.850 hours
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -907.480403627323
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 122.749952207693
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): 0.629241970652
+Iteration: 300, time: 6.068 hours
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -886.033241874562
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 120.448926249885
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): 0.262845030328
+Iteration: 400, time: 8.509 hours
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -863.063663390147
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 117.944046911893
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -0.109456675490
+Iteration: 500, time: 11.193 hours
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -838.494913248095
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 115.220226069828
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -0.485761104574
+Iteration: 600, time: 14.145 hours
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -812.251214802154
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 112.262129202863
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -0.864024581738
+Iteration: 700, time: 17.393 hours
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -784.259648998695
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 109.054499526079
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -1.242092424417
+Iteration: 800, time: 20.966 hours
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -754.452841378176
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 105.582608568019
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -1.617733853664
+Iteration: 900, time: 1.037 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -722.772689396665
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 101.832864036326
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -1.988680056859
+Iteration: 1000, time: 1.217 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -689.175384206632
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 97.793608153543
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -2.352664121866
+Iteration: 1100, time: 1.416 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -653.637981547509
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 93.456139150823
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -2.707461513787
+Iteration: 1200, time: 1.634 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -616.166739956182
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 88.815983097832
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.050929820409
+Iteration: 1300, time: 1.873 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -576.807352661919
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 83.874430187035
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.381046646822
+Iteration: 1400, time: 2.137 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -535.657022871254
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 78.640324937191
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.695944778818
+Iteration: 1500, time: 2.427 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -492.878025575249
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 73.132057386156
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.993944028950
+Iteration: 1600, time: 2.746 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -448.711934816237
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 67.379638360720
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.273579493489
+Iteration: 1700, time: 3.097 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -403.493077501600
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 61.426656954622
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.533626252381
+Iteration: 1800, time: 3.483 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -357.659007574442
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 55.331813007120
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.773120789031
+Iteration: 1900, time: 3.908 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -311.754946840681
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 49.169601168914
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.991379513443
+Iteration: 2000, time: 4.375 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -266.428491103330
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 43.029634414194
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.188014677384
+Iteration: 2100, time: 4.889 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -222.410898627900
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 37.014097464288
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.362947663568
+Iteration: 2200, time: 5.454 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -180.482409573946
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 31.232975882129
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.516419128255
+Iteration: 2300, time: 6.076 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -141.421536732875
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 25.797048450360
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.648994788494
+Iteration: 2400, time: 6.760 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -105.941988187420
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 20.809140941139
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.761564822226
+Iteration: 2500, time: 7.513 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -74.625096110526
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 16.354717988911
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.855334023224
+Iteration: 2600, time: 8.340 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -47.858969011792
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 12.493350017292
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.931799269180
+Iteration: 2700, time: 9.251 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -25.796503704797
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 9.252721635832
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.992710887538
+Iteration: 2800, time: 10.250 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): -8.341054896175
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 6.616866974326
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -6.039946937492
+Iteration: 2900, time: 11.352 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 4.812608070367
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 4.579534139292
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -6.075734354839
+Iteration: 3000, time: 12.564 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 14.216296230741
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 3.041771646961
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -6.102074250281
+Iteration: 3100, time: 13.897 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 20.464200375947
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.937438157290
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -6.120999416579
+Iteration: 3200, time: 15.363 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 24.218744298186
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.180130585539
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -6.134382412168
+Iteration: 3300, time: 16.976 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 26.116555218612
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.685915932254
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -6.143858607648
+Iteration: 3400, time: 18.750 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 26.718432590151
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.380177672896
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -6.150776350178
+Iteration: 3500, time: 20.683 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 26.233351497748
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.200312474656
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -6.156135800052
+Iteration: 3600, time: 22.830 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 25.753425669930
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.104368626712
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -6.160789516988
+Iteration: 3700, time: 25.191 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 24.761105114962
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.053893826731
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -6.165189369335
+Iteration: 3800, time: 27.789 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 23.661745482188
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.029886175340
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -6.169651938394
+Iteration: 3900, time: 30.629 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 22.354553070413
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.019245252289
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -6.131167799423
+Iteration: 4000, time: 33.772 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 19.953468909825
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.015107347395
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.951321205612
+Iteration: 4100, time: 37.229 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 17.587635326627
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.013517985684
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.802011600694
+Iteration: 4200, time: 41.027 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 15.799679618456
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.012940571906
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.669704074506
+Iteration: 4300, time: 45.193 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 14.382460445444
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.012746863420
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.547362804390
+Iteration: 4400, time: 49.360 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 13.195691117908
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.012639882911
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.440617052614
+Iteration: 4500, time: 53.500 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 12.145541225023
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.012479033166
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.345627438734
+Iteration: 4600, time: 57.667 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 11.401278379657
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.012484928920
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.258478080037
+Iteration: 4700, time: 61.833 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 10.687412835357
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.012410138745
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.178061205117
+Iteration: 4800, time: 66 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 10.061030476965
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.012334862895
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.103163814608
+Iteration: 4900, time: 70.167 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 9.505053811626
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.012259055985
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -5.032906213539
+Iteration: 5000, time: 74.333 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 9.007015432271
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.012182834248
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.966626222645
+Iteration: 5100, time: 78.500 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 8.557490942546
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.012106327068
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.903810344799
+Iteration: 5200, time: 82.667 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 8.149162034085
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.012029648213
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.844050579794
+Iteration: 5300, time: 86.833 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 7.776222607461
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.011952893194
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.787016118180
+Iteration: 5400, time: 91 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 7.433984619976
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.011876141569
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.732434102943
+Iteration: 5500, time: 95.167 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 7.118606653170
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.011799459872
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.680076149193
+Iteration: 5600, time: 99.333 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 6.826901259563
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.011722903972
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.629748649382
+Iteration: 5700, time: 103.500 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 6.556194741295
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.011646521060
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.581285642437
+Iteration: 5800, time: 107.667 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 6.304222895928
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.011570351144
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.534543464789
+Iteration: 5900, time: 111.833 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 6.069052075345
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.011494428326
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.489396668059
+Iteration: 6000, time: 116 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 5.849018455746
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.011418781683
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.445734855260
+Iteration: 6100, time: 120.167 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 5.642680661918
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.011343436180
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.403460194953
+Iteration: 6200, time: 124.333 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 5.448782349689
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.011268413224
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.362485443823
+Iteration: 6300, time: 128.500 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 5.266222324928
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.011193731212
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.322732355991
+Iteration: 6400, time: 132.667 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 5.094030442399
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.011119405989
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.284130390359
+Iteration: 6500, time: 136.833 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 4.931347990149
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.011045451186
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.246615650341
+Iteration: 6600, time: 141 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 4.777411592728
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.010971878532
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.210130006746
+Iteration: 6700, time: 145.167 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 4.631539901932
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.010898698108
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.174620366473
+Iteration: 6800, time: 149.333 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 4.493122515665
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.010825918559
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.140038058309
+Iteration: 6900, time: 153.500 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 4.361610692498
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.010753547275
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.106338313619
+Iteration: 7000, time: 157.667 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 4.236509524455
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.010681590554
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.073479824483
+Iteration: 7100, time: 161.833 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 4.117371302288
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.010610053736
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.041424365553
+Iteration: 7200, time: 166 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 4.003789862509
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.010538941299
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -4.010136468645
+Iteration: 7300, time: 170.167 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 3.895395747337
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.010468256972
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.979583141291
+Iteration: 7400, time: 174.333 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 3.791852041951
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.010398003837
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.949733622133
+Iteration: 7500, time: 178.500 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 3.692850778845
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.010328184369
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.920559167376
+Iteration: 7600, time: 182.667 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 3.598109819468
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.010258800528
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.892032863547
+Iteration: 7700, time: 186.833 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 3.507370139548
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.010189853813
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.864129462681
+Iteration: 7800, time: 191 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 3.420393457290
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.010121345289
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.836825236670
+Iteration: 7900, time: 195.167 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 3.336960154049
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.010053275650
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.810097848100
+Iteration: 8000, time: 199.333 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 3.256867445530
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009985645281
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.783926235298
+Iteration: 8100, time: 203.500 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 3.179927768370
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009918454252
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.758290509722
+Iteration: 8200, time: 207.667 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 3.105967352558
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009851702356
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.733171864049
+Iteration: 8300, time: 211.833 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 3.034824954757
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009785389162
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.708552489637
+Iteration: 8400, time: 216 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.966350731426
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009719514006
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.684415502173
+Iteration: 8500, time: 220.167 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.900405233751
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009654076037
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.660744874532
+Iteration: 8600, time: 224.333 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.836858508991
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009589074233
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.637525375984
+Iteration: 8700, time: 228.500 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.775589295213
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009524507417
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.614742517016
+Iteration: 8800, time: 232.667 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.716484297987
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009460374235
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.592382499137
+Iteration: 8900, time: 236.833 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.659437539423
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009396673248
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.570432169117
+Iteration: 9000, time: 241 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.604349770942
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009333402873
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.548878977167
+Iteration: 9100, time: 245.167 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.551127942798
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009270561439
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.527710938655
+Iteration: 9200, time: 249.333 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.499684723566
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009208147179
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.506916598987
+Iteration: 9300, time: 253.500 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.449938064500
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009146158217
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.486485001332
+Iteration: 9400, time: 257.667 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.401810803543
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009084592646
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.466405656897
+Iteration: 9500, time: 261.833 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.355230305054
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.009023448438
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.446668517522
+Iteration: 9600, time: 266 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.310128131194
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008962723540
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.427263950356
+Iteration: 9700, time: 270.167 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.266439742121
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008902415840
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.408182714427
+Iteration: 9800, time: 274.333 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.224104221613
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008842523152
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.389415938925
+Iteration: 9900, time: 278.500 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.183064025930
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008783043280
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.370955103051
+Iteration: 10000, time: 282.667 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.143264753497
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008723973953
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.352792017286
+Iteration: 10100, time: 286.833 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.104654933365
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008665312905
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.334918805959
+Iteration: 10200, time: 291 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.067185830705
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008607057797
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.317327891003
+Iteration: 10300, time: 295.167 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 2.030811267772
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008549206300
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.300011976795
+Iteration: 10400, time: 299.333 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.995487458845
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008491756044
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.282964035996
+Iteration: 10500, time: 303.500 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.961172857852
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008434704620
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.266177296307
+Iteration: 10600, time: 307.667 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.927828017667
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008378049643
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.249645228067
+Iteration: 10700, time: 311.833 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.895415459860
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008321788678
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.233361532622
+Iteration: 10800, time: 316 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.863899554179
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008265919289
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.217320131422
+Iteration: 10900, time: 320.167 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.833246406739
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008210439031
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.201515155770
+Iteration: 11000, time: 324.333 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.803423756360
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008155345452
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.185940937184
+Iteration: 11100, time: 328.500 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.774400878205
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008100636103
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.170591998328
+Iteration: 11200, time: 332.667 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.746148494238
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.008046308487
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.155463044471
+Iteration: 11300, time: 336.833 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.718638689880
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.007992360153
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.140548955428
+Iteration: 11400, time: 341 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.691844836326
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.007938788633
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.125844777960
+Iteration: 11500, time: 345.167 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.665741518265
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.007885591442
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.111345718591
+Iteration: 11600, time: 349.333 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.640304466233
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.007832766126
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.097047136822
+Iteration: 11700, time: 353.500 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.615510493619
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.007780310201
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.082944538713
+Iteration: 11800, time: 357.667 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.591337437713
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.007728221209
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.069033570801
+Iteration: 11900, time: 361.833 days
+Surface DIC tendency (x10⁻⁷ mol m⁻³ s⁻¹): 1.567764104533
+Surface ALK tendency (x10⁻⁷ mol m⁻³ s⁻¹): 0.007676496669
+Surface CO₂ flux (x10⁻⁷ mol m⁻³ s⁻¹): -3.055310014343
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Simulation is stopping after running for 43.721 seconds.
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Simulation time 365.250 days equals or exceeds stop time 365.250 days.</code></pre><h2 id="Visualization"><a class="docs-heading-anchor" href="#Visualization">Visualization</a><a id="Visualization-1"></a><a class="docs-heading-anchor-permalink" href="#Visualization" title="Permalink"></a></h2><p>All that&#39;s left is to visualize the results.</p><pre><code class="language-julia hljs">Tt   = FieldTimeSeries(filename, &quot;T&quot;)
+St   = FieldTimeSeries(filename, &quot;S&quot;)
+DICt = FieldTimeSeries(filename, &quot;DIC&quot;)
+Alkt = FieldTimeSeries(filename, &quot;ALK&quot;)
+PO₄t = FieldTimeSeries(filename, &quot;PO₄&quot;)
+NO₃t = FieldTimeSeries(filename, &quot;NO₃&quot;)
+DOPt = FieldTimeSeries(filename, &quot;DOP&quot;)
+POPt = FieldTimeSeries(filename, &quot;POP&quot;)
+Fet  = FieldTimeSeries(filename, &quot;Fe&quot;)
+CO₂t = FieldTimeSeries(filename_diags, &quot;co₂_flux&quot;)
+apCO₂t = FieldTimeSeries(filename_diags, &quot;atmos_pCO₂&quot;)
+opCO₂t = FieldTimeSeries(filename_diags, &quot;ocean_pCO₂&quot;)
+
+tt = Tt.times
+nt = length(tt)
+z  = znodes(Tt)
+
+CO₂_flux_time_series   = [CO₂t[1, 1, 1, i] for i in 1:nt]
+pCO₂_ocean_time_series = [opCO₂t[1, 1, 1, i] for i in 1:nt]
+pCO₂_atmos_time_series = [apCO₂t[1, 1, 1, i] for i in 1:nt]
+
+fig = Figure(size=(1200, 1200))
+n = Observable(1)
+
+axb = Axis(
+    fig[1:4, 1],
+    xlabel=&quot;Temperature (K)&quot;,
+    ylabel=&quot;z (m)&quot;,
+    )
+axC = Axis(
+    fig[1:4, 2],
+    xlabel=&quot;DIC/ALK Concentration (mol m⁻³)&quot;,
+    )
+axN = Axis(
+    fig[1:4, 3],
+    xlabel=&quot;Inorganic Nutrient concentration (mol m⁻³)&quot;,
+    )
+axD = Axis(
+    fig[1:4, 4],
+    xlabel=&quot;Organic Nutrient concentration (mol m⁻³)&quot;,
+    )
+axF = Axis(
+    fig[5:6, 1:4],
+    ylabel=&quot;Air-sea CO₂ fluxes (x1e7 mol m⁻² s⁻¹)&quot;,
+    xlabel=&quot;Time (days)&quot;,
+    )
+axP = Axis(
+    fig[5:6, 1:4],
+    ylabel=&quot;pCO₂ (μatm)&quot;,
+    yticklabelcolor = :red,
+    yaxisposition = :right,
+    )
+
+xlims!(axb, 7, 21)
+xlims!(axC, 1.8, 2.6)
+xlims!(axN, -5, 75)
+xlims!(axD, -50, 250)
+xlims!(axF, -1, 1+simulation.stop_time/days)
+xlims!(axP, -1, 1+simulation.stop_time/days)
+ylims!(axF, -8, 2)
+ylims!(axP, 0, 500)
+
+#slider = Slider(fig[2, 1:4], range=1:nt, startvalue=1)
+#n = slider.value
+
+title = @lift @sprintf(
+    &quot;Convecting nutrients at t = %d days&quot;, tt[$n] / days
+    )
+Label(fig[0, 1:4], title)
+
+Tn = @lift interior(Tt[$n], 1, 1, :)
+DICn = @lift interior(DICt[$n], 1, 1, :)
+Alkn = @lift interior(Alkt[$n], 1, 1, :)
+PO₄n = @lift interior(PO₄t[$n], 1, 1, :) * 16 * 1e3
+NO₃n = @lift interior(NO₃t[$n], 1, 1, :) * 1e3
+DOPn = @lift interior(DOPt[$n], 1, 1, :) * 1e6
+POPn = @lift interior(POPt[$n], 1, 1, :) * 1e6
+Fen  = @lift interior(Fet[$n],  1, 1, :) * 1e7
+CO₂_flux_points = Observable(
+    Point2f[(tt[1],
+    (CO₂_flux_time_series[1] * 1e7))]
+    )
+pCO₂_ocean_points = Observable(
+    Point2f[(tt[1],
+    (pCO₂_ocean_time_series[1] * 1e6))]
+    )
+pCO₂_atmos_points = Observable(
+    Point2f[(tt[1],
+    (pCO₂_atmos_time_series[1] * 1e6))]
+    )
+
+lines!(axb, Tn,   z)
+lines!(axC, DICn, z, label=&quot;DIC&quot;)
+lines!(axC, Alkn, z, label=&quot;ALK&quot;)
+lines!(axN, PO₄n, z, label=&quot;Phosphate (x16e-3)&quot;)
+lines!(axN, NO₃n, z, label=&quot;Nitrate (x1e-3)&quot;)
+lines!(axN, Fen,  z, label=&quot;Iron (x1e-7)&quot;)
+lines!(axD, DOPn, z, label=&quot;DOP (x1e-6)&quot;)
+lines!(axD, POPn, z, label=&quot;POP (x1e-6)&quot;)
+
+scatter!(axP,
+    pCO₂_ocean_points;
+    marker = :circle,
+    markersize = 4,
+    color = :blue,
+    label=&quot;ocean pCO₂&quot;,
+    )
+scatter!(axP,
+    pCO₂_atmos_points;
+    marker = :circle,
+    markersize = 4,
+    color = :red,
+    label=&quot;atmos pCO₂&quot;,
+    )
+scatter!(axF,
+    CO₂_flux_points;
+    marker = :circle,
+    markersize = 4,
+    color = :black,
+    )
+
+axislegend(axC,position=:cb)
+axislegend(axN,position=:cb)
+axislegend(axD,position=:cb)
+axislegend(axP,position=:rt)
+
+record(fig,
+    &quot;single_column_carbon_alkalinity_nutrients.mp4&quot;,
+    1:nt,
+    framerate=64
+    ) do nn
+    n[] = nn
+    new_point = Point2(
+        tt[nn] / days,
+        (CO₂_flux_time_series[nn] * 1e7),
+        )
+    CO₂_flux_points[]  = push!(
+        CO₂_flux_points[],
+        new_point,
+        )
+
+    new_point = Point2(
+        tt[nn] / days,
+        (pCO₂_ocean_time_series[nn] * 1e6),
+        )
+    pCO₂_ocean_points[]  = push!(
+        pCO₂_ocean_points[],
+        new_point,
+        )
+
+    new_point = Point2(
+        tt[nn] / days,
+        (pCO₂_atmos_time_series[nn] * 1e6),
+        )
+    pCO₂_atmos_points[]  = push!(
+        pCO₂_atmos_points[],
+        new_point,
+        )
+end
+fig</code></pre><img src="9ecc003e.png" alt="Example block output"/><p><video src="../single_column_carbon_alkalinity_nutrients.mp4" controls="true" title><a href="../single_column_carbon_alkalinity_nutrients.mp4"></a></video></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../single_column_nutrients_plankton_bacteria_detritus/">« Single column nutrients, plankton, bacteria, detritus</a><a class="docs-footer-nextpage" href="../soda_outgassing/">Soda outgassing »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Tuesday 14 January 2025 15:49">Tuesday 14 January 2025</span>. Using Julia version 1.10.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
