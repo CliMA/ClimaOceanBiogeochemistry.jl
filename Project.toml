@@ -5,18 +5,20 @@ version = "0.1.0"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
+CFTime = "179af706-886a-5703-950a-314cd64e0468"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+ClimaOcean = "0376089a-ecfe-4b0e-a64f-9c555d74d754"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 Oceananigans = "9e8cae18-63c1-5223-a75c-80ca9d6e9a09"
+OrthogonalSphericalShellGrids = "c2be9673-fb75-4747-82dc-aa2bb9f4aed0"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 RootSolvers = "7181ea78-2dcb-4de3-ab41-2b8ab5a31e74"
 
 [compat]
-Oceananigans = "0.90.11"
-RootSolvers = "0.3"
+Oceananigans = "0.90.11 - 0.99"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
