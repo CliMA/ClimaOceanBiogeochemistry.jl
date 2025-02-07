@@ -91,9 +91,12 @@ model = HydrostaticFreeSurfaceModel(grid = grid,
                                     buoyancy = nothing,
                                     closure = (tracer_vertical_closure, tracer_horizontal_closure))
 
-set!(model, DIC=2.1, ALK=2.35, NO₃=2.2e-2, PO₄=1.6e-3, DOP=0, POP=0, Fe = 6e-7) # mol PO₄ m⁻³
+set!(model, DIC=2.1, ALK=2.35, NO₃=2.4e-2, PO₄=1.6e-3, DOP=0, POP=0, Fe = 6e-7) # mol PO₄ m⁻³
 
-simulation = Simulation(model; Δt = 1day, stop_time=200days) 
+spinup_time = 365.25*2000days
+compute_time = 20days
+
+simulation = Simulation(model; Δt = 1day, stop_time=spinup_time+compute_time) 
 
 # Define a callback to zero out Fe tendency
 function modify_tendency!(model)
@@ -115,26 +118,28 @@ outputs = (v = model.velocities.v,
             DOP = model.tracers.DOP,
             POP = model.tracers.POP,
             NO₃ = model.tracers.NO₃,
-            Fe = model.tracers.Fe)
+            Fe = model.tracers.Fe,
+            NCP = model.biogeochemistry.NCP,
+            Premin = model.biogeochemistry.Premin,
+            Dremin = model.biogeochemistry.Dremin)
 
 simulation.output_writers[:simple_output] =
         JLD2OutputWriter(model, outputs, 
-                        schedule = TimeInterval(100days), 
-                        filename = "AMOC_test",
-                        overwrite_existing = true)
+                        schedule = TimeInterval(10days), 
+                        filename = "AMOC_auxiliary",
+                        overwrite_existing = false)
 
-# simulation.output_writers[:checkpointer] = Checkpointer(model2,
-#             schedule = TimeInterval(180days),
-#             prefix = "AMOC26_checkpoint",
-#             overwrite_existing = false)
+simulation.output_writers[:checkpointer] = Checkpointer(model,
+            schedule = TimeInterval(compute_time),
+            prefix = "AMOC115_checkpoint",
+            overwrite_existing = false)
         
-run!(simulation) # , pickup = false)
+run!(simulation, pickup = true)
 
 #################################### Visualize ####################################
 
-# filepath = simulation.output_writers[:simple_output].filepath
-
-filepath = "./AMOC_test.jld2"
+filepath = simulation.output_writers[:simple_output].filepath
+# filepath = "./AMOC117.jld2"
 
 v_timeseries = FieldTimeSeries(filepath, "v")
 w_timeseries = FieldTimeSeries(filepath, "w")
@@ -152,7 +157,7 @@ NO3_timeseries = FieldTimeSeries(filepath, "NO₃")
 
 n = Observable(1)
 # title = @lift @sprintf("t = Year %d x 50", times[$n] / (50*365.25days)) 
-title = @lift @sprintf("t = Day %d00", times[$n] / 100days) 
+title = @lift @sprintf("t = Day %d0", times[$n] / 10days) 
 
 # convert unit from m/s to cm/s:
 vₙ = @lift 100*interior(v_timeseries[$n], 1, :, :)

@@ -2,7 +2,7 @@
 
 julia_version = "1.10.5"
 manifest_format = "2.0"
-project_hash = "8dea9456fb7d7a842dea7e8c19f2e6a7630d7303"
+project_hash = "662ef7e7a831fdc2ae43f5665f0d25e893795fde"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "30bb95a372787af850addf28ac937f1be7b79173"
@@ -1161,10 +1161,10 @@ uuid = "9c1d0b0a-7046-5b2e-a33f-ea22f176ac7e"
 version = "0.2.1+0"
 
 [[deps.KernelAbstractions]]
-deps = ["Adapt", "Atomix", "InteractiveUtils", "MacroTools", "PrecompileTools", "Requires", "StaticArrays", "UUIDs", "UnsafeAtomics", "UnsafeAtomicsLLVM"]
-git-tree-sha1 = "e73a077abc7fe798fe940deabe30ef6c66bdde52"
+deps = ["Adapt", "Atomix", "InteractiveUtils", "MacroTools", "PrecompileTools", "Requires", "StaticArrays", "UUIDs"]
+git-tree-sha1 = "d5bc0b079382e89bfa91433639bc74b9f9e17ae7"
 uuid = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
-version = "0.9.29"
+version = "0.9.33"
 
     [deps.KernelAbstractions.extensions]
     EnzymeExt = "EnzymeCore"
@@ -2415,12 +2415,6 @@ version = "0.1.6"
 [[deps.UnsafeAtomics]]
 git-tree-sha1 = "6331ac3440856ea1988316b46045303bef658278"
 uuid = "013be700-e6cd-48c3-b4a1-df204f14c38f"
-version = "0.2.1"
-
-[[deps.UnsafeAtomicsLLVM]]
-deps = ["LLVM", "UnsafeAtomics"]
-git-tree-sha1 = "2d17fabcd17e67d7625ce9c531fb9f40b7c42ce4"
-uuid = "d80eeb9a-aca5-4d75-85e5-170c8b632249"
 version = "0.2.1"
 
 [[deps.UpdateJulia]]
