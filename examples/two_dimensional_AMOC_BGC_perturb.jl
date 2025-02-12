@@ -53,7 +53,10 @@ fill_halo_regions!(u, arch)
 
 ############################# Diffusivity ############################# 
 
-kz(y,z,t) = 1e-4 + 5e-3 * (tanh((z+(100 + (t % 10days == 0 ? 200 : 0)))/20)+1) + 1e-2 * exp(-(z+4000)/50)
+# Seasonal: 100+50*sinpi(2*(t/day)/365.25)
+# Single: (t % 10days == 0 ? 200 : 0)
+# Initialize the perturbation after Day 1 (not Day 0): 365.25*2000 + 1
+kz(y,z,t) = 1e-4 + 5e-3 * (tanh((z+(100+50*sinpi(2*(t/day-(365.25*2000 + 1))/(365/12))))/20)+1) + 1e-2 * exp(-(z+4000)/50)
 tracer_vertical_closure = VerticalScalarDiffusivity(VerticallyImplicitTimeDiscretization(), 
                                         κ=(DIC=kz,ALK=kz,PO₄=kz,NO₃=kz,DOP=kz,POP=kz,Fe=0))
 tracer_horizontal_closure = HorizontalScalarDiffusivity(
@@ -119,7 +122,7 @@ model2 = HydrostaticFreeSurfaceModel(grid = grid,
 set!(model2, DIC=2.1, ALK=2.35, NO₃=2.4e-2, PO₄=1.6e-3, DOP=0, POP=0, Fe = 6e-7) # mol PO₄ m⁻³
 
 spinup_time = 365.25*2000days
-perturbation_time = 500days
+perturbation_time =366days
 simulation2 = Simulation(model2; Δt = 1days, stop_time=spinup_time+perturbation_time) 
 
 # Define a callback to zero out Fe tendency
@@ -137,76 +140,28 @@ outputs = (v = model2.velocities.v,
             DOP = model2.tracers.DOP,
             POP = model2.tracers.POP,
             NO₃ = model2.tracers.NO₃,
-            Fe = model2.tracers.Fe)
+            Fe = model2.tracers.Fe,
+            NCP = model2.biogeochemistry.NCP,
+            Premin = model2.biogeochemistry.Premin,
+            Dremin = model2.biogeochemistry.Dremin)
 
 simulation2.output_writers[:simple_output] =
             JLD2OutputWriter(model2, outputs, 
                             schedule = TimeInterval(1days), 
-                            filename = "AMOC115_300m10d",
-                            overwrite_existing = true)
+                            filename = "AMOC115_12perY",
+                            overwrite_existing = true)   
 
 simulation2.output_writers[:checkpointer] = Checkpointer(model2,
             schedule = TimeInterval(perturbation_time),
             prefix = "AMOC115_checkpoint",
             overwrite_existing = false)
-
+            
 run!(simulation2, pickup = true)
 
-############################## Model 3: New equilibrium ############################## 
-#=
-model3 = HydrostaticFreeSurfaceModel(grid = grid,
-                                    biogeochemistry = CarbonAlkalinityNutrients(; grid,
-                                                                        maximum_net_community_production_rate  = 2e-5/day,
-                                                                        # incident_PAR = incident_PAR,
-                                                                        particulate_organic_phosphorus_sedremin_timescale = 0.5 / day),
-                                                                        #iron_scavenging_rate = 0),
-                                    velocities = PrescribedVelocityFields(; u, v, w),
-                                    tracers = (:DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe),
-                                    # forcing=(; Fe=F_forcing),
-                                    coriolis = nothing,
-                                    buoyancy = nothing,
-                                    closure = (tracer_vertical_closure, tracer_horizontal_closure))
-
-set!(model2, DIC=2.1, ALK=2.35, NO₃=2.5e-2, PO₄=1.5e-3, DOP=0, POP=0, Fe = Feᵢ) # mol PO₄ m⁻³
-
-spinup_time = 365.25*2000days
-perturbation_time = 10days
-new_eq_time = 365.25days
-simulation3 = Simulation(model3; Δt = 1days, stop_time=spinup_time+perturbation_time+new_eq_time) 
-
-# Define a callback to zero out Fe tendency
-function modify_tendency!(model3)
-        model3.timestepper.Gⁿ.Fe .= 0
-        return nothing
-end                                        
-simulation3.callbacks[:modify_Fe] = Callback(modify_tendency!, 
-                                            callsite = TendencyCallsite())
-
-outputs = (v = model3.velocities.v,
-            w = model3.velocities.w,
-            PO₄= model3.tracers.PO₄,
-            DOP = model3.tracers.DOP,
-            POP = model3.tracers.POP,
-            NO₃ = model3.tracers.NO₃,
-            Fe = model3.tracers.Fe)
-
-simulation3.output_writers[:simple_output] =
-            JLD2OutputWriter(model3, outputs, 
-                            schedule = TimeInterval(1days), 
-                            filename = "AMOC28_neweq",
-                            overwrite_existing = true)
-
-simulation3.output_writers[:checkpointer] = Checkpointer(model3,
-            schedule = TimeInterval(new_eq_time),
-            prefix = "AMOC28_checkpoint",
-            overwrite_existing = false)
-
-run!(simulation3, pickup = true)
-=#
 #################################### Video of all tracers ####################################
 
 filepath = simulation2.output_writers[:simple_output].filepath
-# filepath = "./AMOC25.jld2"
+# filepath = "./AMOC115_seasonal.jld2"
 
 PO4_timeseries = FieldTimeSeries(filepath, "PO₄")
 times = PO4_timeseries.times
@@ -215,6 +170,11 @@ POP_timeseries = FieldTimeSeries(filepath, "POP")
 DOP_timeseries = FieldTimeSeries(filepath, "DOP")
 Fe_timeseries = FieldTimeSeries(filepath, "Fe")
 NO3_timeseries = FieldTimeSeries(filepath, "NO₃")
+
+NCP_timeseries = FieldTimeSeries(filepath, "NCP")
+Premin_timeseries = FieldTimeSeries(filepath, "Premin")
+Dremin_timeseries = FieldTimeSeries(filepath, "Dremin")
+
 #=
 n = Observable(1)
 # title = @lift @sprintf("t = Year %d0", times[$n] / 3652.5days) 
@@ -283,124 +243,224 @@ record(fig, "AMOC28_perturb.mp4", frames, framerate=40) do i
 end
 nothing #hide
 =#
-############################## Compare initial vs final ##############################
+############################## Compare concentration variatons ##############################
 
 # PO4_last = 1e3*interior(PO4_timeseries[end], 1, :, :) 
 # POP_last = 1e3*interior(POP_timeseries[end], 1, :, :) 
 # DOP_last = 1e3*interior(DOP_timeseries[end], 1, :, :) 
 # sum(PO4_last.+POP_last.+DOP_last)
 
+n = Observable(1)
+title = @lift @sprintf("t = Day %d", ((times[$n] - 365.25*2000days) / 1days)-1) 
+
 PO4_init = 1e3*interior(PO4_timeseries[1], 1, :, :) 
 POP_init = 1e3*interior(POP_timeseries[1], 1, :, :) 
 DOP_init = 1e3*interior(DOP_timeseries[1], 1, :, :)
-# sum(PO4_init.+POP_init.+DOP_init)
-
-n = Observable(1)
-title = @lift @sprintf("t = Day %d", ((times[$n]- 365.25*2000days) / 1days)) 
 
 diff_PO4 = @lift 1e3*(interior(PO4_timeseries[$n], 1, :, :) .- interior(PO4_timeseries[1], 1, :, :))
 diff_POP = @lift 1e3*(interior(POP_timeseries[$n], 1, :, :) .- interior(POP_timeseries[1], 1, :, :))
 diff_DOP = @lift 1e3*(interior(DOP_timeseries[$n], 1, :, :) .- interior(DOP_timeseries[1], 1, :, :))
-# sum(diff_PO4)
 
-# One upwelling station
-# up_PO4ₙ = @lift 1e3*interior(PO4_timeseries[$n], 1, 10, :)
-# up_DOPₙ = @lift 1e3*interior(DOP_timeseries[$n], 1, 10, :)
-# up_POPₙ = @lift 1e3*interior(POP_timeseries[$n], 1, 10, :)
+# flux = (10m/d)*[POP]
+avg_POP_flux_init = mean(1e4*interior(POP_timeseries[1], 1, :, :) , dims=1) 
+avg_POP_fluxₙ = @lift mean(1e4*interior(POP_timeseries[$n], 1, :, :), dims=1) 
 
-# init_up_PO4ₙ = 1e3*interior(PO4_timeseries[1], 1, 10, :)
-# init_up_POPₙ = 1e3*interior(POP_timeseries[1], 1, 10, :)
-# init_up_DOPₙ = 1e3*interior(DOP_timeseries[1], 1, 10, :)
+POP_flux_init = 1e4*interior(POP_timeseries[1], 1, :, :) 
+POP_fluxₙ = @lift 1e4*interior(POP_timeseries[$n], 1, :, :)
 
-# One downwelling station
-down_PO4ₙ = @lift 1e3*interior(PO4_timeseries[$n], 1, 300, :)
-down_POPₙ = @lift 1e3*interior(POP_timeseries[$n], 1, 300, :)
-down_DOPₙ = @lift 1e3*interior(DOP_timeseries[$n], 1, 300, :)
+z₀ = log(0.01)*25 
+Martin_factor = ((zw[190] .+ z₀) ./ (zw .+ z₀)).^0.84
 
-init_down_PO4ₙ = 1e3*interior(PO4_timeseries[1], 1, 300, :)
-init_down_POPₙ = 1e3*interior(POP_timeseries[1], 1, 300, :)
-init_down_DOPₙ = 1e3*interior(DOP_timeseries[1], 1, 300, :)
+# 1D avergae profile
+avg_Martin_fluxₙ = @lift($avg_POP_fluxₙ[190] .* Martin_factor)
 
-t= collect(0:1days:500days)
+# 2D heatmap
+Martin_fluxₙ = Observable(similar(POP_fluxₙ[]))  
+
+Martin_fluxₙ = @lift begin
+    matrix = Observable(similar($POP_fluxₙ))
+    for i in 1:200
+        matrix[][:, i] .= $POP_fluxₙ[:, 190] .* $Martin_factor[i]
+    end
+    return matrix
+end
+diff_Martin = @lift ($POP_fluxₙ .- $Martin_fluxₙ[])
+
+# One station
+# up_PO4ₙ = @lift 1e3*interior(PO4_timeseries[$n], 1, 250, :)
+# up_DOPₙ = @lift 1e3*interior(DOP_timeseries[$n], 1, 250, :)
+# up_POPₙ = @lift 1e3*interior(POP_timeseries[$n], 1, 250, :)
+
+# init_up_PO4ₙ = 1e3*interior(PO4_timeseries[1], 1, 250, :)
+# init_up_POPₙ = 1e3*interior(POP_timeseries[1], 1, 250, :)
+# init_up_DOPₙ = 1e3*interior(DOP_timeseries[1], 1, 250, :)
+
+
+t= collect(0:1days:perturbation_time)
 kz_profiles = Matrix{Float64}(undef, length(zw), length(t))
 for (i, t_val) in enumerate(t)
     kz_profiles[:, i] = [kz(0, z_val, t_val) for z_val in zw]
 end
 
-fig_compare = Figure(size=(1000, 900))
+fig_compare = Figure(size=(1000, 1000))
 
-ax_kz = Axis(fig_compare[2, 1], xlabel = "kz (m² s⁻¹)", ylabel = "z (m)", title = "Temporal Variation of kz")
+ax_kz = Axis(fig_compare[2, 1:2], xlabel = "kz (m² s⁻¹)", ylabel = "z (m)", title = "Temporal Variation of kz")
 kz_prof = lines!(ax_kz, kz_profiles[:, 1], zw)
+ylims!(ax_kz, -1000, 0)
 
-# Row 1: final - initial
-ax_PO4 = Axis(fig_compare[2, 2]; xlabel = "y (km)", ylabel = "z (m)", title = "Δ[PO₄] (μM)", aspect = 1)
-hm_PO4 = heatmap!(ax_PO4, yw/1e3, zw, diff_PO4; colorrange = (-0.4,0.4),colormap = :balance) 
-Colorbar(fig_compare[2, 3], hm_PO4; flipaxis = false)
+# Column 1: tracers final - initial
+ax_PO4 = Axis(fig_compare[2, 3]; xlabel = "y (km)", ylabel = "z (m)", title = "Δ[PO₄] (μM)", aspect = 1)
+hm_PO4 = heatmap!(ax_PO4, yw/1e3, zw, diff_PO4; colorrange = (-0.2,0.2),colormap = :balance) 
+Colorbar(fig_compare[2, 4], hm_PO4; flipaxis = false)
+ylims!(ax_PO4, -1000, 0)
 
-ax_POP = Axis(fig_compare[3, 2]; xlabel = "y (km)", ylabel = "z (m)", title = "Δ[POP] (μM)", aspect = 1)
-hm_POP = heatmap!(ax_POP, yw/1e3, zw, diff_POP; colorrange = (-0.004,0.004),colormap = :balance) 
-Colorbar(fig_compare[3, 3], hm_POP; flipaxis = false)
+ax_POP = Axis(fig_compare[3, 3]; xlabel = "y (km)", ylabel = "z (m)", title = "Δ[POP] (μM)", aspect = 1)
+hm_POP = heatmap!(ax_POP, yw/1e3, zw, diff_POP; colorrange = (-0.002,0.002),colormap = :balance) 
+Colorbar(fig_compare[3, 4], hm_POP; flipaxis = false)
+ylims!(ax_POP, -1000, 0)
 
-ax_DOP = Axis(fig_compare[4, 2]; xlabel = "y (km)", ylabel = "z (m)", title = "Δ[DOP] (μM)", aspect = 1)
-hm_DOP = heatmap!(ax_DOP, yw/1e3, zw, diff_DOP; colorrange = (-0.09,0.09),colormap = :balance) 
-Colorbar(fig_compare[4, 3], hm_DOP; flipaxis = false)
+ax_DOP = Axis(fig_compare[4, 3]; xlabel = "y (km)", ylabel = "z (m)", title = "Δ[DOP] (μM)", aspect = 1)
+hm_DOP = heatmap!(ax_DOP, yw/1e3, zw, diff_DOP; colorrange = (-0.07,0.07),colormap = :balance) 
+Colorbar(fig_compare[4, 4], hm_DOP; flipaxis = false)
+ylims!(ax_DOP, -1000, 0)
 
-# Row 2: upwelling site
-# up_PO4 = Axis(fig_compare[2, 4]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", yaxisposition = :left)
-# xlims!(up_PO4, 1.5, 2.5)
-# lines!(up_PO4, init_up_PO4ₙ, zw[1:100],color = :red, linestyle = :dash, label = "Initial")
-# PO4_up = lines!(up_PO4, up_PO4ₙ[], zw[1:100], label = "Dynamic")
-# axislegend(up_PO4, position = :lb)
+# POP flux 
+ax_avg_POP_flux = Axis(fig_compare[3, 1:2]; xlabel = "POP flux (mmol m⁻² d⁻¹)", ylabel = "z (m)", title = "Average POP flux")
+lines!(ax_avg_POP_flux, vec(avg_POP_flux_init), zw, color = :grey, linewidth = 1, label = "Initial")
+POP_flux_prof = lines!(ax_avg_POP_flux, avg_POP_fluxₙ[][1,:], zw,  linewidth = 2, label = "Dynamic")
+Martin_flux_prof = lines!(ax_avg_POP_flux, avg_Martin_fluxₙ[], zw, color = :red,  linewidth = 2, linestyle = :dash, label = "Martin")
+ylims!(ax_avg_POP_flux, -1000, 0)
+xlims!(ax_avg_POP_flux, 0, 0.08)
+axislegend(ax_avg_POP_flux, position = :rb)
 
-# up_POP = Axis(fig_compare[3, 4]; xlabel = "[POP] (μM)", ylabel = "z (m)", yaxisposition = :left)
-# xlims!(up_POP, 0, 0.0015)
-# lines!(up_POP, init_up_POPₙ, zw[1:100],color = :red, linestyle = :dash, label = "Initial")
-# POP_up = lines!(up_POP, up_POPₙ[], zw[1:100], label = "Dynamic")
-# axislegend(up_POP, position = :rb)
-
-# up_DOP = Axis(fig_compare[4, 4]; xlabel = "[DOP] (μM)", ylabel = "z (m)", yaxisposition = :left)
-# xlims!(up_DOP, 0, 0.06)
-# lines!(up_DOP, init_up_DOPₙ, zw[1:100],color = :red, linestyle = :dash, label = "Initial")
-# DOP_up = lines!(up_DOP, up_DOPₙ[], zw[1:100], label = "Dynamic")
-# axislegend(up_DOP, position = :rb)
-
-# Row 3: downwelling site
-down_PO4 = Axis(fig_compare[2, 4]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", yaxisposition = :left)
-xlims!(down_PO4, 0, 2.5)
-lines!(down_PO4, init_down_PO4ₙ, zw[1:200],color = :red, linestyle = :dash, label = "Initial")
-PO4_down = lines!(down_PO4, down_PO4ₙ[], zw[1:200], label = "Dynamic")
-axislegend(down_PO4, position = :lb)
-
-down_POP = Axis(fig_compare[3, 4]; xlabel = "[POP] (μM)", ylabel = "z (m)", yaxisposition = :left)
-xlims!(down_POP, 0, 0.01)
-lines!(down_POP, init_down_POPₙ, zw[1:200],color = :red, linestyle = :dash, label = "Initial")
-POP_down = lines!(down_POP, down_POPₙ[], zw[1:200], label = "Dynamic")
-axislegend(down_POP, position = :rb)
-
-down_DOP = Axis(fig_compare[4, 4]; xlabel = "[DOP] (μM)", ylabel = "z (m)", yaxisposition = :left)
-xlims!(down_DOP, 0, 0.25)
-lines!(down_DOP, init_down_DOPₙ, zw[1:200],color = :red, linestyle = :dash, label = "Initial")
-DOP_down = lines!(down_DOP, down_DOPₙ[], zw[1:200], label = "Dynamic")
-axislegend(down_DOP, position = :rb)
+# diff POP flux - Martin
+ax_diffMartin = Axis(fig_compare[4, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "Δ(POP flux): True - Martin", aspect = 1)
+hm_diffMartin = heatmap!(ax_diffMartin, yw/1e3, zw, diff_Martin; colorrange = (-7e-3,7e-3),colormap = :balance) 
+Colorbar(fig_compare[4, 2], hm_diffMartin; flipaxis = false)
+ylims!(ax_diffMartin, -1000, -200)
 
 fig_compare[1, 1:4] = Label(fig_compare, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig_compare, "AMOC115_300m10d.mp4.mp4", frames, framerate=20) do i
+record(fig_compare, "AMOC115_12perY_conc.mp4", frames, framerate=50) do i
     n[] = i
-    # PO4_up[1] = up_PO4ₙ[]#[1, :]
-    # POP_up[1] = up_POPₙ[]
-    # DOP_up[1] = up_DOPₙ[]
     kz_prof[1]= kz_profiles[:,i]
-    PO4_down[1] = down_PO4ₙ[]
-    POP_down[1] = down_POPₙ[]
-    DOP_down[1] = down_DOPₙ[]
+    POP_flux_prof[1] = avg_POP_fluxₙ[][1,:]
+    Martin_flux_prof[1] = avg_Martin_fluxₙ[]
 end
 nothing #hide
 
-######################## Fluxes vs Final: fit to Martin curve #############################
+######################## Compare rate variatons ####################
 
+NCP_init = Observable(1days*1e3*interior(NCP_timeseries[1], 1, :, :) )
+Premin_init = Observable(1days*1e3*interior(Premin_timeseries[1], 1, :, :))
+Dremin_init = Observable(1days*1e3*interior(Dremin_timeseries[1], 1, :, :) )
+
+n = Observable(1)
+title = @lift @sprintf("t = Day %d", ((times[$n] - 365.25*2000days) / 1days)-1)  
+
+# Difference
+diff_NCP = @lift (1days*1e3).*(interior(NCP_timeseries[$n], 1, :, :) .- interior(NCP_timeseries[1], 1, :, :))
+diff_Premin = @lift (1days*1e3).*(interior(Premin_timeseries[$n], 1, :, :) .- interior(Premin_timeseries[1], 1, :, :))
+diff_Dremin = @lift (1days*1e3).*(interior(Dremin_timeseries[$n], 1, :, :) .- interior(Dremin_timeseries[1], 1, :, :))
+
+# Anomaly
+anomaly_NCP = @lift (($diff_NCP ./ $NCP_init) .* 100)
+anomaly_Premin = @lift (($diff_Premin ./ $Premin_init) .* 100)
+anomaly_Dremin = @lift (($diff_Dremin ./ $Dremin_init) .* 100)
+
+# Single station
+up_NCPₙ = @lift 1days*1e3*interior(NCP_timeseries[$n], 1, 250, :)
+up_Preminₙ = @lift 1days*1e3*interior(Premin_timeseries[$n], 1, 250, :)
+up_Dreminₙ = @lift 1days*1e3*interior(Dremin_timeseries[$n], 1, 250, :)
+
+init_up_NCPₙ = 1days*1e3*interior(NCP_timeseries[1], 1, 250, :)
+init_up_Preminₙ = 1days*1e3*interior(Premin_timeseries[1], 1, 250, :)
+init_up_Dreminₙ = 1days*1e3*interior(Dremin_timeseries[1], 1, 250, :)
+
+t= collect(0:1days:perturbation_time)
+kz_profiles = Matrix{Float64}(undef, length(zw), length(t))
+for (i, t_val) in enumerate(t)
+    kz_profiles[:, i] = [kz(0, z_val, t_val) for z_val in zw]
+end
+
+### Plot ###
+fig_rates = Figure(size=(1500, 1200))
+
+ax_kz = Axis(fig_rates[2, 1], xlabel = "kz (m² s⁻¹)", ylabel = "z (m)", title = "Temporal Variation of kz")
+kz_prof = lines!(ax_kz, kz_profiles[:, 1], zw)
+ylims!(ax_kz, -1000, 0)
+
+# Column 2: rates final - initial
+ax_NCP = Axis(fig_rates[2, 2]; xlabel = "y (km)", ylabel = "z (m)", title = "Δ(NCP) (mmol P m⁻³ d⁻¹)", aspect = 1)
+hm_NCP = heatmap!(ax_NCP, yw/1e3, zw, diff_NCP; colorrange = (-1e-3,1e-3),colormap = :balance) 
+Colorbar(fig_rates[2, 3], hm_NCP; flipaxis = false)
+ylims!(ax_NCP, -1000, 0)
+
+ax_Premin = Axis(fig_rates[3, 2]; xlabel = "y (km)", ylabel = "z (m)", title = "Δ(POPremin) (mmol P m⁻³ d⁻¹)", aspect = 1)
+hm_Premin = heatmap!(ax_Premin, yw/1e3, zw, diff_Premin; colorrange = (-1e-4,1e-4),colormap = :balance) 
+Colorbar(fig_rates[3, 3], hm_Premin; flipaxis = false)
+ylims!(ax_Premin, -1000, 0)
+
+ax_Dremin = Axis(fig_rates[4, 2]; xlabel = "y (km)", ylabel = "z (m)", title = "Δ(DOPremin) (mmol P m⁻³ d⁻¹)", aspect = 1)
+hm_Dremin = heatmap!(ax_Dremin, yw/1e3, zw, diff_Dremin; colorrange = (-5e-4,5e-4),colormap = :balance) 
+Colorbar(fig_rates[4, 3], hm_Dremin; flipaxis = false)
+ylims!(ax_Dremin, -1000, 0)
+
+# Column 3: rates anomaly
+ax_anomalyNCP = Axis(fig_rates[2, 4]; xlabel = "y (km)", ylabel = "z (m)", title = "NCP anomaly (% diff/init)", aspect = 1)
+hm_anomalyNCP = heatmap!(ax_anomalyNCP, yw/1e3, zw, anomaly_NCP; colorrange = (-100,100), colormap = :balance) 
+Colorbar(fig_rates[2, 5], hm_anomalyNCP; flipaxis = false)
+ylims!(ax_anomalyNCP, -1000, 0)
+
+ax_anomalyPremin = Axis(fig_rates[3, 4]; xlabel = "y (km)", ylabel = "z (m)", title = "POP remin anomaly (% diff/init)", aspect = 1)
+hm_anomalyPremin = heatmap!(ax_anomalyPremin, yw/1e3, zw, anomaly_Premin; colorrange = (-100,100), colormap = :balance) 
+Colorbar(fig_rates[3, 5], hm_anomalyPremin; flipaxis = false)
+ylims!(ax_anomalyPremin, -1000, 0)
+
+ax_anomalyDremin = Axis(fig_rates[4, 4]; xlabel = "y (km)", ylabel = "z (m)", title = "DOP remin anomaly (% diff/init)", aspect = 1)
+hm_anomalyDremin = heatmap!(ax_anomalyDremin, yw/1e3, zw, anomaly_Dremin; colorrange = (-100,100), colormap = :balance) 
+Colorbar(fig_rates[4, 5], hm_anomalyDremin; flipaxis = false)
+ylims!(ax_anomalyDremin, -1000, 0)
+
+# Column 4: rates: single profile 
+up_NCP = Axis(fig_rates[2, 6]; title = "NCP (center station)", xlabel = "rate (mmol P m⁻³ d⁻¹)", ylabel = "z (m)")
+lines!(up_NCP, init_up_NCPₙ, zw, color = :red, linestyle = :dash, label = "Initial")
+NCP_up = lines!(up_NCP, up_NCPₙ[], zw, label = "Dynamic")
+axislegend(up_NCP, position = :rb)
+xlims!(up_NCP, 0, 5e-3)
+ylims!(up_NCP, -1000, 0)
+
+up_Premin = Axis(fig_rates[3, 6]; title = "POP remin (center station)", xlabel = "rate (mmol P m⁻³ d⁻¹)", ylabel = "z (m)")
+lines!(up_Premin, init_up_Preminₙ, zw, color = :red, linestyle = :dash, label = "Initial")
+Premin_up = lines!(up_Premin, up_Preminₙ[], zw, label = "Dynamic")
+axislegend(up_Premin, position = :rb)
+xlims!(up_Premin, 0, 5e-4)
+ylims!(up_Premin, -1000, 0)
+
+up_Dremin = Axis(fig_rates[4, 6]; title = "DOP remin (center station)", xlabel = "rate (mmol P m⁻³ d⁻¹)", ylabel = "z (m)")
+lines!(up_Dremin, init_up_Dreminₙ, zw, color = :red, linestyle = :dash, label = "Initial")
+Dremin_up = lines!(up_Dremin, up_Dreminₙ[], zw, label = "Dynamic")
+axislegend(up_Dremin, position = :rb)
+xlims!(up_Dremin, 0, 1.5e-3)
+ylims!(up_Dremin, -1000, 0)
+
+fig_rates[1, 1:6] = Label(fig_rates, title, tellwidth=false)
+
+# And, finally, we record a movie.
+frames = 1:length(times)
+record(fig_rates, "AMOC115_12perY_rate.mp4", frames, framerate=50) do i
+    n[] = i
+    kz_prof[1]= kz_profiles[:,i]
+    NCP_up[1] = up_NCPₙ[]
+    Premin_up[1] = up_Preminₙ[]
+    Dremin_up[1] = up_Dreminₙ[]
+end
+nothing #hide
+#
+######################## Fluxes vs Final: fit to Martin curve #############################
+#=
 end_down_POPₙ = 1e3*interior(POP_timeseries[end], 1, 300, :)
 wₛₙₖ = 10 # m/day
 z₀ = log(0.01)*25 
@@ -427,7 +487,7 @@ lines!(ax_flux, end_POP_flux[2:200], zw[2:200], linewidth = 3, color = :blue, la
 lines!(ax_flux, end_Martin_flux, zw, linewidth = 4, color = :grey, linestyle=:dash, label = "Martin (final)")
 axislegend(ax_flux, position = :rb)
 display(fig_comp)
-
+=#
 
 ################################# Plot fluxes ################################# 
 #=

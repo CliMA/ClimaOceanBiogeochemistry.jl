@@ -17,7 +17,7 @@ using Oceananigans.Units
 Nx = 500 
 Nz = 100
 Lx = 10000kilometers   # m
-Lz = 2000           # m
+Lz = 4000           # m
 
 # We use a two-dimensional grid, with a `Flat` `y`-direction:
 grid = RectilinearGrid(#GPU(),

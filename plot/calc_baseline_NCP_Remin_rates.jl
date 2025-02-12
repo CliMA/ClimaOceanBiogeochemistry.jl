@@ -52,8 +52,8 @@ DOP_final = interior(DOP_timeseries[end], 1, :, :)
 Fe_final = interior(Fe_timeseries[end], 1, :, :)
 
 NCP_final = interior(NCP_timeseries[end], 1, :, :) .* 1e3 .* 1days
-Premin_final = interior(Premin_timeseries[end], 1, :, :) .* 1e3 .* 1days
-Dremin_final = interior(Dremin_timeseries[end], 1, :, :) .* 1e3 .* 1days
+POP_remin_final = interior(Premin_timeseries[end], 1, :, :) .* 1e3 .* 1days
+DOP_remin_final = interior(Dremin_timeseries[end], 1, :, :) .* 1e3 .* 1days
 
 # Load model parameters from CAN
 z_matrix = repeat(zt, 1, 500)
@@ -189,9 +189,9 @@ ylims!(ax_RP, 0.9, 1.3)
 lines!(ax_RP, yt[5:495]/1e3, vec(RPratio[5:495]), linewidth = 2)
 
 # Calculate e-ratio 
-eratio_100 = wₛₙₖ .* POP_final[:,196] .* 1e3 ./ total_NCP # mmol m⁻² d⁻¹
+eratio_100 = wₛₙₖ .* POP_final[:,195] .* 1e3 ./ total_NCP # mmol m⁻² d⁻¹
 
-ax_eR = Axis(fig_rate[2, 5]; xlabel = "y (km)", ylabel = "e-ratio", title = "e-ratio (F₁₀₀ₘ/NCP)")
+ax_eR = Axis(fig_rate[2, 5]; xlabel = "y (km)", ylabel = "e-ratio", title = "e-ratio (F₁₁₀ₘ/NCP)")
 ylims!(ax_eR, 0.18, 0.22)
 # Remove boundaries: 0 PAR -> 0 NCP
 lines!(ax_eR, yt[5:495]/1e3, vec(eratio_100[5:495]), linewidth = 2)
