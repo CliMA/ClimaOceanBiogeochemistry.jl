@@ -7,9 +7,9 @@ using Oceananigans.Units
 using Oceananigans.Fields: ZeroField, CenterField, FunctionField
 using Oceananigans.BoundaryConditions: fill_halo_regions!
 
-filepath1 = "./AMOC115_1perY.jld2"
-filepath2 = "./AMOC115_4perY.jld2"
-filepath3 = "./AMOC115_12perY.jld2"
+filepath1 = "./P1_21y.jld2"
+filepath2 = "./P2_21y.jld2"
+filepath3 = "./P3_21y.jld2"
 
 # Load POP data
 POP_timeseries1 = FieldTimeSeries(filepath1, "POP")
@@ -19,11 +19,11 @@ POP_timeseries2 = FieldTimeSeries(filepath2, "POP")
 POP_timeseries3 = FieldTimeSeries(filepath3, "POP")
 
 ############################## vertical diffusivity ##############################
-kz1(y,z,t) = 1e-4 + 5e-3 * (tanh((z+(100+50*sinpi(2*(t/day-(365.25*2000 + 1))/(365))))/20)+1) + 1e-2 * exp(-(z+4000)/50)
-kz2(y,z,t) = 1e-4 + 5e-3 * (tanh((z+(100+50*sinpi(2*(t/day-(365.25*2000 + 1))/(365/4))))/20)+1) + 1e-2 * exp(-(z+4000)/50)
-kz3(y,z,t) = 1e-4 + 5e-3 * (tanh((z+(100+50*sinpi(2*(t/day-(365.25*2000 + 1))/(365/12))))/20)+1) + 1e-2 * exp(-(z+4000)/50)
+kz1(y,z,t) = 1e-4 + 5e-3 * (tanh((z+(100+50*sinpi(2*(t/day-(365.25*2000))/(365))))/20)+1) + 1e-2 * exp(-(z+4000)/50)
+kz2(y,z,t) = 1e-4 + 5e-3 * (tanh((z+(100+50*sinpi(2*(t/day-(365.25*2000))/(365))+40*sinpi(2*(t/day-(365.25*2000))/(365/12))))/20)+1) + 1e-2 * exp(-(z+4000)/50)
+kz3(y,z,t) = 1e-4 + 5e-3 * (tanh((z+(100+50*sinpi(2*(t/day-(365.25*2000))/(365))+40*sinpi(2*(t/day-(365.25*2000))/(365/52))))/20)+1) + 1e-2 * exp(-(z+4000)/50)
 
-t= collect(1days:1days:366days)
+t= collect(1days:1days:365days)
 kz1_prof = Matrix{Float64}(undef, length(zw), length(t))
 kz2_prof = Matrix{Float64}(undef, length(zw), length(t))
 kz3_prof = Matrix{Float64}(undef, length(zw), length(t))
@@ -34,7 +34,7 @@ for (i, t_val) in enumerate(t)
 end
 
 n = Observable(1)
-title = @lift @sprintf("t = Day %d", ((times[$n] - 365.25*2000days) / 1days)-1) 
+title = @lift @sprintf("t = Day %d", ((times[$n] - 365.25*2000days - 365*20days) / 1days)) 
 
 ####################### POP flux = (10m/d)*[POP] #######################
 # 1D profile
@@ -170,7 +170,7 @@ fig_compare[1, 1:6] = Label(fig_compare, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig_compare, "AMOC115_3flux_compare.mp4", frames, framerate=50) do i
+record(fig_compare, "3flux_compare.mp4", frames, framerate=50) do i
     n[] = i
     kz_prof1[1]= kz1_prof[:,i]
     kz_prof2[1]= kz2_prof[:,i]

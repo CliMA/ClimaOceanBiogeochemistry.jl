@@ -1,5 +1,5 @@
 # Pick up from a baseline model, run 1-year perturbation
-using GLMakie
+# using GLMakie
 using Printf
 using Statistics
 
@@ -56,59 +56,29 @@ fill_halo_regions!(u, arch)
 # Seasonal: 100+50*sinpi(2*(t/day)/365.25)
 # Single: (t % 10days == 0 ? 200 : 0)
 # Initialize the perturbation after Day 1 (not Day 0): 365.25*2000 + 1
-kz(y,z,t) = 1e-4 + 5e-3 * (tanh((z+(100+
-            # 40*sinpi(2*(t/day-(365.25*2000))/(365/52)) +
-            50*sinpi(2*(t/day-(365.25*2000))/365)  ))/20)+1) +
-            + 1e-2 * exp(-(z+4000)/50)
+kz(y,z,t) = 1e-4 + 5e-3 * (tanh((z+100)/20)+1) + 1e-2 * exp(-(z+4000)/50)
 tracer_vertical_closure = VerticalScalarDiffusivity(VerticallyImplicitTimeDiscretization(), 
                                         κ=(DIC=kz,ALK=kz,PO₄=kz,NO₃=kz,DOP=kz,POP=kz,Fe=0))
 tracer_horizontal_closure = HorizontalScalarDiffusivity(
                                     κ=(DIC=1e3,ALK=1e3,PO₄=1e3,NO₃=1e3,DOP=1e3,POP=1e3,Fe=0))
-                                    
-# Fe field & forcing
-# @inline Feᵢ(y,z) = (0.02+(-z/2000)) /1e6
-# Fe_input(y, z, t) = (z > -30 && y < 100kilometers ? 1e-12 : 0.0)
-# F_forcing = Forcing(Fe_input)
 
-maximum_net_community_production_rate = CenterField(grid) 
-maxNCP(y,z) = (2e-5 + sinpi(y/Ly) * 8e-5)/day
-set!(maximum_net_community_production_rate, maxNCP)   
-fill_halo_regions!(maximum_net_community_production_rate, arch)
 
-############################### Set PAR(y,t) ############################### 
-#=
-function seasonal_PAR(y, z, t)
-    # Constants
-    day_in_year = 365.25
-    axial_tilt = 23.5  # Earth's axial tilt in degrees
-    latitude = (y/Ly - 0.5) * 180.0  # Convert y to latitude in degrees
-    
-    # Solar declination (varies over the year due to Earth's tilt)
-    solar_declination = axial_tilt * sinpi(2 * t / day_in_year)
-    
-    # Solar angle of incidence (latitude and solar declination combined)
-    solar_angle = latitude - solar_declination
-    
-    # PAR depends on the cosine of the solar angle 
-    angle_effect = cosd(solar_angle)
-    angle_effect = max(0.0, angle_effect)  # Ensure no negative values
-    
-    # Scale PAR by angle effect
-    PAR = 700 * angle_effect
-    return PAR
-end
-=#
-function seasonal_PAR(y, z, t) 
-    return 700 * (1+sinpi((t/day - 365.25*2000)/365)) * sinpi(y/Ly) 
+# maximum_net_community_production_rate = CenterField(grid) 
+# maxNCP(y,z) = (2e-5 + sinpi(y/Ly) * 8e-5)/day
+# set!(maximum_net_community_production_rate, maxNCP)   
+# fill_halo_regions!(maximum_net_community_production_rate, arch)
+
+function seasonal_NCP(y, z, t) 
+    return (2e-5 + sinpi(y/Ly) * 8e-5)/day * (1+sinpi(2*(t/day - 365.25*2000)/365))  
 end
 clock = Clock{Float64}(time=0)
-incident_PAR = FunctionField{Nothing, Center, Center}(seasonal_PAR, grid; clock)
+maximum_net_community_production_rate = FunctionField{Nothing, Center, Center}(seasonal_NCP, grid; clock)
 
 # Set PAR as a function of latitude
-# incident_PAR = CenterField(grid) 
-# surface_PAR(y,z) = 700 * sinpi(y/Ly) 
-# set!(incident_PAR, surface_PAR)   
-# fill_halo_regions!(incident_PAR, arch)
+incident_PAR = CenterField(grid) 
+surface_PAR(y,z) = 700 * sinpi(y/Ly) 
+set!(incident_PAR, surface_PAR)   
+fill_halo_regions!(incident_PAR, arch)
 
 ############################## Model 2: Perturbation ############################## 
 model2 = HydrostaticFreeSurfaceModel(grid = grid,

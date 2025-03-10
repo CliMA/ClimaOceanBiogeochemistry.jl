@@ -8,7 +8,7 @@ using Adapt
 import Adapt: adapt_structure, adapt
 using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
 using Oceananigans.BoundaryConditions: ImpenetrableBoundaryCondition, fill_halo_regions!
-using Oceananigans.Fields: ConstantField, ZeroField, AbstractField, CenterField
+using Oceananigans.Fields: ConstantField, ZeroField, AbstractField, CenterField, FunctionField
 using Oceananigans.Grids: Center, znode, znodes
 using Oceananigans.Units: days
 using Oceananigans.Utils: launch!
@@ -17,38 +17,38 @@ using KernelAbstractions: @kernel, @index
 
 const c = Center()
 
-struct CarbonAlkalinityNutrients{FT, W, S, C} <: AbstractBiogeochemistry
-    reference_density                             :: FT
-    maximum_net_community_production_rate         :: S # mol PO₄ m⁻³ s⁻¹
-    phosphate_half_saturation                     :: FT # mol PO₄ m⁻³
-    nitrate_half_saturation                       :: FT # mol NO₃ m⁻³
-    iron_half_saturation                          :: FT # mol Fe m⁻³
-    incident_PAR                                  :: S # W m⁻²
-    PAR_half_saturation                           :: FT  # W m⁻²
-    PAR_attenuation_scale                         :: FT  # m
-    PAR_percent                                   :: FT  # m
-    fraction_of_particulate_export                :: FT
-    dissolved_organic_phosphorus_remin_timescale  :: FT # s⁻¹
-    stoichoimetric_ratio_carbon_to_phosphate      :: FT 
-    stoichoimetric_ratio_nitrate_to_phosphate     :: FT 
-    stoichoimetric_ratio_phosphate_to_oxygen      :: FT 
-    stoichoimetric_ratio_phosphate_to_iron        :: FT 
-    stoichoimetric_ratio_carbon_to_nitrate        :: FT 
-    stoichoimetric_ratio_carbon_to_oxygen         :: FT 
-    stoichoimetric_ratio_carbon_to_iron           :: FT 
-    stoichoimetric_ratio_silicate_to_phosphate    :: FT
-    rain_ratio_inorganic_to_organic_carbon        :: FT 
-    option_of_particulate_remin                   :: FT 
-    particulate_organic_phosphorus_remin_timescale :: FT
+struct CarbonAlkalinityNutrients{FT, S, FF, W, C} <: AbstractBiogeochemistry
+    reference_density                                :: FT
+    maximum_net_community_production_rate            :: S # mol PO₄ m⁻³ s⁻¹
+    phosphate_half_saturation                        :: FT # mol PO₄ m⁻³
+    nitrate_half_saturation                          :: FT # mol NO₃ m⁻³
+    iron_half_saturation                             :: FT # mol Fe m⁻³
+    incident_PAR                                     :: FF # W m⁻²
+    PAR_half_saturation                              :: FT  # W m⁻²
+    PAR_attenuation_scale                            :: FT  # m
+    PAR_percent                                      :: FT  # m
+    fraction_of_particulate_export                   :: FT
+    dissolved_organic_phosphorus_remin_timescale     :: FT # s⁻¹
+    stoichoimetric_ratio_carbon_to_phosphate         :: FT 
+    stoichoimetric_ratio_nitrate_to_phosphate        :: FT 
+    stoichoimetric_ratio_phosphate_to_oxygen         :: FT 
+    stoichoimetric_ratio_phosphate_to_iron           :: FT 
+    stoichoimetric_ratio_carbon_to_nitrate           :: FT 
+    stoichoimetric_ratio_carbon_to_oxygen            :: FT 
+    stoichoimetric_ratio_carbon_to_iron              :: FT 
+    stoichoimetric_ratio_silicate_to_phosphate       :: FT
+    rain_ratio_inorganic_to_organic_carbon           :: FT 
+    option_of_particulate_remin                      :: FT 
+    particulate_organic_phosphorus_remin_timescale   :: FT
     particulate_organic_phosphorus_sedremin_timescale :: FT
-    iron_scavenging_rate                          :: FT # s⁻¹
-    ligand_concentration                          :: FT # mol L m⁻³
-    ligand_stability_coefficient                  :: FT
-    martin_curve_exponent                         :: FT 
+    iron_scavenging_rate                             :: FT # s⁻¹
+    ligand_concentration                             :: FT # mol L m⁻³
+    ligand_stability_coefficient                     :: FT
+    martin_curve_exponent                            :: FT 
     particulate_organic_phosphorus_sinking_velocity   :: W  # m s⁻¹ 
-    NCP                                             :: C
-    Premin                                          :: C
-    Dremin                                          :: C
+    NCP                                              :: C
+    Premin                                           :: C
+    Dremin                                           :: C
 end
 
 """
@@ -148,6 +148,7 @@ function CarbonAlkalinityNutrients(; grid,
     elseif maximum_net_community_production_rate isa Field
         fill_halo_regions!(maximum_net_community_production_rate)
     end  
+    S = typeof(maximum_net_community_production_rate)
 
     if incident_PAR isa Number
         surface_PAR = incident_PAR            
@@ -157,14 +158,14 @@ function CarbonAlkalinityNutrients(; grid,
     elseif incident_PAR isa Field
         fill_halo_regions!(incident_PAR)
     end
-    S = typeof(incident_PAR)
+    FF = typeof(incident_PAR)
 
     if particulate_organic_phosphorus_sinking_velocity isa Number
             w₀ = particulate_organic_phosphorus_sinking_velocity
             no_penetration = ImpenetrableBoundaryCondition()
             bcs = FieldBoundaryConditions(grid, (Center, Center, Face),
-                                        top=no_penetration, 
-                                        bottom=no_penetration)
+                                         top=no_penetration, 
+                                         bottom=no_penetration)
             particulate_organic_phosphorus_sinking_velocity = ZFaceField(grid, boundary_conditions = bcs)
             set!(particulate_organic_phosphorus_sinking_velocity, w₀)
             fill_halo_regions!(particulate_organic_phosphorus_sinking_velocity)

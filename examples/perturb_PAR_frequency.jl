@@ -56,10 +56,7 @@ fill_halo_regions!(u, arch)
 # Seasonal: 100+50*sinpi(2*(t/day)/365.25)
 # Single: (t % 10days == 0 ? 200 : 0)
 # Initialize the perturbation after Day 1 (not Day 0): 365.25*2000 + 1
-kz(y,z,t) = 1e-4 + 5e-3 * (tanh((z+(100+
-            # 40*sinpi(2*(t/day-(365.25*2000))/(365/52)) +
-            50*sinpi(2*(t/day-(365.25*2000))/365)  ))/20)+1) +
-            + 1e-2 * exp(-(z+4000)/50)
+kz(y,z,t) = 1e-4 + 5e-3 * (tanh((z+100)/20)+1) + 1e-2 * exp(-(z+4000)/50)
 tracer_vertical_closure = VerticalScalarDiffusivity(VerticallyImplicitTimeDiscretization(), 
                                         κ=(DIC=kz,ALK=kz,PO₄=kz,NO₃=kz,DOP=kz,POP=kz,Fe=0))
 tracer_horizontal_closure = HorizontalScalarDiffusivity(
@@ -76,7 +73,7 @@ set!(maximum_net_community_production_rate, maxNCP)
 fill_halo_regions!(maximum_net_community_production_rate, arch)
 
 ############################### Set PAR(y,t) ############################### 
-#=
+#
 function seasonal_PAR(y, z, t)
     # Constants
     day_in_year = 365.25
@@ -84,7 +81,7 @@ function seasonal_PAR(y, z, t)
     latitude = (y/Ly - 0.5) * 180.0  # Convert y to latitude in degrees
     
     # Solar declination (varies over the year due to Earth's tilt)
-    solar_declination = axial_tilt * sinpi(2 * t / day_in_year)
+    solar_declination = axial_tilt * sinpi(2 * (t/days) / day_in_year)
     
     # Solar angle of incidence (latitude and solar declination combined)
     solar_angle = latitude - solar_declination
@@ -97,11 +94,15 @@ function seasonal_PAR(y, z, t)
     PAR = 700 * angle_effect
     return PAR
 end
-=#
-function seasonal_PAR(y, z, t) 
-    return 700 * (1+sinpi((t/day - 365.25*2000)/365)) * sinpi(y/Ly) 
-end
-clock = Clock{Float64}(time=0)
+#
+# function vary_PAR(y, z, t) 
+#     if mod(floor(Int, (t - 365.25*2000days) / 10days), 2) == 0
+#         return 700 * sinpi(y/Ly) 
+#     else
+#         return 700
+#     end
+# end
+clock = Clock{Float64}(time=zero(grid))
 incident_PAR = FunctionField{Nothing, Center, Center}(seasonal_PAR, grid; clock)
 
 # Set PAR as a function of latitude
@@ -111,8 +112,8 @@ incident_PAR = FunctionField{Nothing, Center, Center}(seasonal_PAR, grid; clock)
 # fill_halo_regions!(incident_PAR, arch)
 
 ############################## Model 2: Perturbation ############################## 
-model2 = HydrostaticFreeSurfaceModel(grid = grid,
-                                     #clock,
+model2 = HydrostaticFreeSurfaceModel(;grid = grid,
+                                     clock,
                                      biogeochemistry = CarbonAlkalinityNutrients(; grid,
                                                                                    maximum_net_community_production_rate  = maximum_net_community_production_rate,
                                                                                    incident_PAR = incident_PAR),
@@ -127,8 +128,8 @@ model2 = HydrostaticFreeSurfaceModel(grid = grid,
 
 set!(model2, DIC=2.1, ALK=2.35, NO₃=2.4e-2, PO₄=1.6e-3, DOP=0, POP=0, Fe = 6e-7) # mol PO₄ m⁻³
 
-spinup_time = (365.25*2000+365*20)days
-perturbation_time =365days
+spinup_time = (365.25*2010)days
+perturbation_time =365.25days
 simulation2 = Simulation(model2; Δt = 1days, stop_time=spinup_time+perturbation_time) 
 
 # Define a callback to zero out Fe tendency
@@ -140,8 +141,8 @@ end
 simulation2.callbacks[:modify_Fe] = Callback(modify_tendency!, 
                                             callsite = TendencyCallsite())
 
-outputs = (#v = model2.velocities.v,
-            #w = model2.velocities.w,
+outputs = (v = model2.velocities.v,
+            w = model2.velocities.w,
             PO₄= model2.tracers.PO₄,
             DOP = model2.tracers.DOP,
             POP = model2.tracers.POP,
@@ -154,7 +155,7 @@ outputs = (#v = model2.velocities.v,
 simulation2.output_writers[:simple_output] =
             JLD2OutputWriter(model2, outputs, 
                             schedule = TimeInterval(1days), 
-                            filename = "P4_21y",
+                            filename = "seasonalPAR_11y",
                             overwrite_existing = true)   
 
 simulation2.output_writers[:checkpointer] = Checkpointer(model2,
@@ -165,7 +166,7 @@ simulation2.output_writers[:checkpointer] = Checkpointer(model2,
 run!(simulation2, pickup = true)
 
 #################################### Video of all tracers ####################################
-#=
+#
 filepath = simulation2.output_writers[:simple_output].filepath
 # filepath = "./AMOC115_seasonal.jld2"
 
@@ -175,14 +176,16 @@ xw, yw, zw = nodes(PO4_timeseries)
 POP_timeseries = FieldTimeSeries(filepath, "POP")
 DOP_timeseries = FieldTimeSeries(filepath, "DOP")
 # Fe_timeseries = FieldTimeSeries(filepath, "Fe")
-# NO3_timeseries = FieldTimeSeries(filepath, "NO₃")
+NO3_timeseries = FieldTimeSeries(filepath, "NO₃")
 
 NCP_timeseries = FieldTimeSeries(filepath, "NCP")
 Premin_timeseries = FieldTimeSeries(filepath, "Premin")
 Dremin_timeseries = FieldTimeSeries(filepath, "Dremin")
 
+#
 n = Observable(1)
-title = @lift @sprintf("t = Day %d", ((times[$n] - (365.25*2000+365*20)days) / 1days))
+# title = @lift @sprintf("t = Year %d0", times[$n] / 3652.5days) 
+title = @lift @sprintf("t = Day %d", ((times[$n] - 365.25*2010days) / 1days))
 
 # convert unit from mol/m³ to μM: 1e3*interior(...)
 PO4ₙ = @lift 1e3*interior(PO4_timeseries[$n], 1, :, 150:200)
@@ -202,6 +205,7 @@ fig = Figure(size = (1200, 600))
 ax_PO4 = Axis(fig[2, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "[PO₄] (μM)", aspect = 1)
 hm_PO4 = heatmap!(ax_PO4, yw/1e3, zw[150:200], PO4ₙ; colorrange = (0,2.5),colormap = :rainbow1) 
 Colorbar(fig[2, 2], hm_PO4; flipaxis = false)
+# contour!(ax_PO4, yw/1e3, zw, PO4ₙ, levels = 5, color = :black)
 
 ax_avg_PO4 = Axis(fig[2, 3]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", title = "Average [PO₄] (μM)", yaxisposition = :right)
 xlims!(ax_avg_PO4, 0, 2.1)
@@ -223,7 +227,7 @@ Colorbar(fig[3, 2], hm_NCP; flipaxis = false)
 ylims!(ax_NCP, -500, 0)
 
 ax_avg_NCP = Axis(fig[3, 3]; xlabel = "NCP (mmol m⁻³ d⁻¹)", ylabel = "z (m)", title = "Mean NCP", yaxisposition = :right)
-xlims!(ax_avg_NCP, 0, 0.005)
+xlims!(ax_avg_NCP, 0, 0.004)
 ylims!(ax_avg_NCP, -500, 0)
 NCP_prof = lines!(ax_avg_NCP, avg_NCPₙ[][1, :], zw)
 
@@ -241,7 +245,7 @@ fig[1, 1:6] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "MLD10to190_30perY_21y.mp4", frames, framerate=30) do i
+record(fig, "seasonalPAR_11y.mp4", frames, framerate=30) do i
     n[] = i
     PO4_prof[1] = avg_PO4ₙ[][1, :]
     POP_prof[1] = avg_POPₙ[][1, :]
@@ -249,100 +253,16 @@ record(fig, "MLD10to190_30perY_21y.mp4", frames, framerate=30) do i
     Premin_prof[1] = avg_Preminₙ[][1, :]
 end
 nothing #hide
-=#
-
-# ds = range(0, 365, length=1000)  # Time in days
-# MLD_12 = 100 .+ 90 .* sinpi.(2 .* (ds ./ (365 / 30))) 
-# MLD_365 = 100 .+ 90 .* sinpi.(2 .* (ds ./ 365)) 
-
-# fig = Figure(size=(1000, 400))
-
-# ax1 = Axis(fig[1, 1], xlabel="Day of the Year", ylabel="MLD (m)", title="Seasonal Variation of Mixed Layer Depth")
-# lines!(ax1, ds, MLD_365,color=:grey)
-# ylims!(ax1,200,0)
-
-# ax = Axis(fig[1, 2], xlabel="Day of the Year", ylabel="MLD (m)", title="Short-term Variation of Mixed Layer Depth")
-# lines!(ax, ds, MLD_12,color=:grey)
-# ylims!(ax,200,0)
-# fig
-
-#=
-n = Observable(1)
-# title = @lift @sprintf("t = Year %d0", times[$n] / 3652.5days) 
-title = @lift @sprintf("t = Day %d", times[$n] / 1days) 
-
-# convert unit from mol/m³ to μM: 1e3*interior(...)
-PO4ₙ = @lift 1e3*interior(PO4_timeseries[$n], 1, :, :)
-avg_PO4ₙ = @lift mean(1e3*interior(PO4_timeseries[$n], 1, :, :), dims=1) 
-
-POPₙ = @lift 1e3*interior(POP_timeseries[$n], 1, :, :)
-avg_POPₙ = @lift mean(1e3*interior(POP_timeseries[$n], 1, :, :), dims=1) 
-
-NO3ₙ = @lift 1e3*interior(NO3_timeseries[$n], 1, :, :)
-Feₙ = @lift 1e6*interior(Fe_timeseries[$n], 1, :, :)
-
-fig = Figure(size = (1500, 1500))
-
-ax_s = Axis(fig[2, 1]; xlabel = "y (km)", ylabel = "z (m)",title = "Stream function (m² s⁻¹)", aspect = 1)
-hm_s = heatmap!(ax_s, yw./1e3, zw, Ψ; colormap = :viridis) 
-Colorbar(fig[2, 2], hm_s; flipaxis = false)
-contour!(ax_s, yw./1e3, grid.zᵃᵃᶜ[0:100], Ψ, levels = 10, color = :black)
-
-ax_v = Axis(fig[2, 3]; xlabel = "y (km)", ylabel = "z (m)",title = "v (t) (cm s⁻¹)", aspect = 1)
-hm_v = heatmap!(ax_v, yw./1e3, zw, vₙ; colorrange = (-3,3), colormap = :balance) 
-Colorbar(fig[2, 4], hm_v; flipaxis = false)
-
-ax_w = Axis(fig[2, 5]; xlabel = "y (km)", ylabel = "z (m)", title = "w (t) (cm s⁻¹)", aspect = 1)
-hm_w = heatmap!(ax_w, yw./1e3, zw, wₙ; colorrange = (-8e-4, 8e-4), colormap = :balance) 
-Colorbar(fig[2, 6], hm_w; flipaxis = false)
-
-ax_PO4 = Axis(fig[3, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "[PO₄] (μM)", aspect = 1)
-hm_PO4 = heatmap!(ax_PO4, yw/1e3, zw, PO4ₙ; colorrange = (0,2.5),colormap = :rainbow1) 
-Colorbar(fig[3, 2], hm_PO4; flipaxis = false)
-contour!(ax_PO4, yw/1e3, zw[1:100], PO4ₙ, levels = 5, color = :black)
-
-ax_NO3 = Axis(fig[3, 3]; xlabel = "y (km)", ylabel = "z (m)", title = "[NO₃] (μM)", aspect = 1)
-hm_NO3 = heatmap!(ax_NO3, yw/1e3, zw, NO3ₙ; colorrange = (0,35),colormap = :rainbow1) 
-Colorbar(fig[3, 4], hm_NO3; flipaxis = false)
-contour!(ax_NO3, yw/1e3, zw[1:100], NO3ₙ, levels = 5, color = :black)
-
-ax_Fe = Axis(fig[3, 5]; xlabel = "y (km)", ylabel = "z (m)", title = "[Fe] (nM)", aspect = 1)
-hm_Fe = heatmap!(ax_Fe, yw/1e3, zw, Feₙ; colorrange = (0,1),colormap = :rainbow1) 
-Colorbar(fig[3, 6], hm_Fe; flipaxis = false)
-contour!(ax_Fe, yw/1e3, zw[1:100], Feₙ, levels = 5, color = :black)
-
-ax_POP = Axis(fig[4, 3]; xlabel = "y (km)", ylabel = "z (m)", title = "[POP] (μM)", aspect = 1)
-hm_POP = heatmap!(ax_POP, yw/1e3, zw, POPₙ; colorrange = (0,0.015),colormap = :rainbow1) 
-Colorbar(fig[4, 4], hm_POP; flipaxis = false)
-
-ax_avg_PO4 = Axis(fig[4, 1:2]; xlabel = "[PO₄] (μM)", ylabel = "z (m)", title = "Average [PO₄] (μM)", yaxisposition = :right)
-xlims!(ax_avg_PO4, 0, 2)
-PO4_prof = lines!(ax_avg_PO4, avg_PO4ₙ[][1, :], zw[1:100])
-
-ax_avg_POP = Axis(fig[4, 5:6]; xlabel = "[POP] (μM)", ylabel = "z (m)", title = "Average [POP] (μM)",yaxisposition = :right)
-xlims!(ax_avg_POP, 0, 0.015)
-POP_prof = lines!(ax_avg_POP, avg_POPₙ[][1, :], zw[1:100])
-
-fig[1, 1:6] = Label(fig, title, tellwidth=false)
-
-# And, finally, we record a movie.
-frames = 1:length(times)
-record(fig, "MLD10to190_1perY_21y.mp4", frames, framerate=40) do i
-    n[] = i
-    PO4_prof[1] = avg_PO4ₙ[][1, :]
-    POP_prof[1] = avg_POPₙ[][1, :]
-end
-nothing #hide
-=#
+#
 ############################## Compare concentration variatons ##############################
-
+#=
 # PO4_last = 1e3*interior(PO4_timeseries[end], 1, :, :) 
 # POP_last = 1e3*interior(POP_timeseries[end], 1, :, :) 
 # DOP_last = 1e3*interior(DOP_timeseries[end], 1, :, :) 
-#= sum(PO4_last.+POP_last.+DOP_last)
+# sum(PO4_last.+POP_last.+DOP_last)
 
 n = Observable(1)
-title = @lift @sprintf("t = Day %d", ((times[$n] - 365.25*2000days - 3650days) / 1days)) 
+title = @lift @sprintf("t = Day %d", ((times[$n] - 365.25*2000days ) / 1days)) #- 3650days
 
 PO4_init = 1e3*interior(PO4_timeseries[1], 1, :, :) 
 POP_init = 1e3*interior(POP_timeseries[1], 1, :, :) 
@@ -434,7 +354,7 @@ fig_compare[1, 1:4] = Label(fig_compare, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig_compare, "12perY_11y_conc.mp4", frames, framerate=50) do i
+record(fig_compare, "PAR_test.mp4", frames, framerate=50) do i
     n[] = i
     kz_prof[1]= kz_profiles[:,i]
     POP_flux_prof[1] = avg_POP_fluxₙ[][1,:]

@@ -2,11 +2,8 @@ using GLMakie
 using Printf
 using Statistics
 
-using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 using Oceananigans
 using Oceananigans.Units
-using Oceananigans.Fields: ZeroField, CenterField
-using Oceananigans.BoundaryConditions: fill_halo_regions!
 
 Ny = 500 
 Nz = 200
@@ -22,8 +19,8 @@ grid = RectilinearGrid(arch,
                        topology=(Flat, Bounded, Bounded))
 
 # Load model outputs
-filepath = "./AMOC115_auxiliary.jld2"
-
+# filepath = "./AMOC115_auxiliary.jld2"
+filepath = "./P4_21y.jld2"
 # using JLD2
 # data = load("AMOC115_auxiliary.jld2")
 # println(keys(data))  # List variable names
@@ -74,11 +71,11 @@ N = max.(0, NO3_final)
 F = max.(0, Fe_final)
 
 # Limitation terms
-light_lim = I ./ (I .+ kᴵ)
-p_lim = P ./ (P .+ kᴾ)
-n_lim = N ./ (N .+ kᴺ)
-f_lim = F ./ (F .+ kᶠ)
-all_lim = light_lim .* min.(p_lim, n_lim, f_lim)  
+# light_lim = I ./ (I .+ kᴵ)
+# p_lim = P ./ (P .+ kᴾ)
+# n_lim = N ./ (N .+ kᴺ)
+# f_lim = F ./ (F .+ kᶠ)
+# all_lim = light_lim .* min.(p_lim, n_lim, f_lim)  
 
 #= tracer concentration and limitation terms
 fig_can = Figure(size = (1100, 600))
