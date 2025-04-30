@@ -7,26 +7,28 @@ using Oceananigans.Units
 using Oceananigans.BoundaryConditions: fill_halo_regions!
 using Oceananigans.Fields: ConstantField, ZeroField
 using Oceananigans.Grids: Center, znode
-using CairoMakie
+using GLMakie
 using Printf
 
 ######################################### Grid ##########################################
 # the 1D domain
 H = 1000 # deepest depth 
-Nz = 1000 # number of vertical grids (resolution = H/Nz)
+Nz = 200 # number of vertical grids (resolution = H/Nz)
 
 grid = RectilinearGrid(size = Nz; z = (-H, 0), topology = (Flat, Flat, Bounded))
 
 ################################### Boundary condition ###################################
 # Add a top boundary condition (fixed value) to ensure there is POC production from the top 
-top_value = 5
+
+#top_value = 1.0
+top_value(t) = (1.0 +sinpi(2 / 365 * (t/day))) 
 value_top_bcs = FieldBoundaryConditions(top = ValueBoundaryCondition(top_value))
 
 ####################################### Forcing #######################################
 # Particle forcing: remineralization and sinking
 
 # Calculate remineralization of particulate organic phosphorus according to a first-order rate constant.
-z₀ = -5 # Reference depth (m)
+z₀ = -110 # Reference depth (m)
 wₛ = -10/day # Sinking velocity (s⁻¹)
 martin_b = 0.84
 
@@ -47,20 +49,12 @@ model = HydrostaticFreeSurfaceModel(; grid,
 
 ############################## Initial conditions ################################
 #Dᵢ(x,y,z) = 5 * (-z).^-0.84
-set!(model, POC=5)
-
-simulation = Simulation(model, Δt=10minutes, stop_time=120days)
-
-function progress(sim)
-    @printf("Iteration: %d, time: %s, total(POC): %.2e \n",
-            iteration(sim), prettytime(sim),
-            sum(model.tracers.POC))
-    return nothing
-end
-simulation.callbacks[:progress] = Callback(progress, IterationInterval(1000))
+# POCᵢ(z) = ((z + z₀) / z₀)^(-0.84) 
+set!(model, POC=1)
+simulation = Simulation(model, Δt=1hour, stop_time=365*2days)
 
 ############################### Output file ###############################
-filename = "POC_minimal.jld2"
+filename = "POC_1D_yearly.jld2"
 simulation.output_writers[:fields] = JLD2OutputWriter(model, model.tracers;
                                                       filename,
                                                       schedule = TimeInterval(1day),
@@ -69,53 +63,90 @@ simulation.output_writers[:fields] = JLD2OutputWriter(model, model.tracers;
 # Start simulation!
 run!(simulation)
 
+top_value2(t) = (1.0 +sinpi(2 / (365/12) * (t/day))) 
+value_top_bcs2 = FieldBoundaryConditions(top = ValueBoundaryCondition(top_value2))
+
+model2 = HydrostaticFreeSurfaceModel(; grid,
+                                    boundary_conditions = (; POC = value_top_bcs2),
+                                    velocities = nothing,
+                                    tracers = (:POC), 
+                                    forcing = (; POC = (sinking,remineralization)), 
+                                    buoyancy = nothing) 
+set!(model2, POC=1)
+simulation2 = Simulation(model2, Δt=1hour, stop_time=365*2days)
+filename2 = "POC_1D_monthly.jld2"
+simulation2.output_writers[:fields] = JLD2OutputWriter(model2, model2.tracers;
+                                                      filename = filename2,
+                                                      schedule = TimeInterval(1day),
+                                                      overwrite_existing = true)
+run!(simulation2)
+
 # ###################### Visualization ######################
 
 # All that's left is to visualize the results.
+
 POCt = FieldTimeSeries(filename, "POC")
+POCt2 = FieldTimeSeries(filename2, "POC")
 
-t = POCt.times
-nt = length(t)
-z = znodes(POCt)
+times = POCt.times
+nt = length(times)
+zw = znodes(POCt)
 
-# 1. Movie
+# Analytical solution
+function D(z, t; N=365, w=-10, z0=z₀)
+    return (1+sinpi(2 / N * (t - z/w))) * ((z + z0) / z0)^(-0.84) 
+end
+Ana_1 = [D(z, t; N=365) for z in zw, t in times/day]
+Ana_2 = [D(z, t; N=365/12) for z in zw, t in times/day]
+
 fig = Figure(;size=(800, 600))
-
-ax1 = Axis(fig[1, 1], ylabel="z (m)", xlabel="POC flux (mol m⁻² d⁻¹)")
-ax2 = Axis(fig[1, 2], ylabel="z (m)", xlabel="Remin rate (mol m⁻³ d⁻¹)")
-
-xlims!(ax1, -5, 55)
-ylims!(ax1, -1000, 0)
-
-xlims!(ax2, -0.5, 5)
-ylims!(ax2, -1000, 0)
 
 slider = Slider(fig[2, 1:2], range=1:nt, startvalue=1)
 n = slider.value
-title = @lift @sprintf("t = %d days", t[$n] / day)
+title = @lift @sprintf("t = %d days", (times[$n]/ day))
 Label(fig[0, 1:2], title)
-
-# tracer concentration
 POCn = @lift interior(POCt[$n], 1, 1, :)
-# particle flux = concentration x sinking speed
-FPOC = @lift (-wₛ*day)*(interior(POCt[$n], 1, 1, :))
+POCn2 = @lift interior(POCt2[$n], 1, 1, :)
+POC_data = POCt[1,1,:,:]
+POC_data2 = POCt2[1,1,:,:]
+diff_1 = POC_data .- Ana_1 
+diff_2 = POC_data2 .- Ana_2 
 
-lines!(ax1, FPOC, z, linewidth = 1.5,label = "Modeled flux")
+############################################################
+######################## Yearly ###########################
+############################################################
 
+ax1 = Axis(fig[1, 1], ylabel="z (m)", xlabel="POC conc (mol m⁻³)")
+xlims!(ax1, -0.5, 2.5)
+ylims!(ax1, -1000, 0)
+lines!(ax1, POCn, zw, linewidth = 3,label = "Modeled")
+POC_prof = lines!(ax1, Ana_1[:, 1], zw, linewidth = 1.5,label = "Analytical")
+diff_prof = lines!(ax1, diff_1[:, 1], zw, color=:red3, linestyle=:dash, linewidth = 1.5,label = "M-A")
+axislegend(ax1, position = :rb)
 # Plot "Martin curve" for comparison
 
-POC_last = interior(POCt[end], 1, 1, :) 
-POC_flux = POC_last * (-wₛ*day)
-martin = POC_flux[grid.Nz]*((z[grid.Nz]+z₀)./(z.+z₀)).^martin_b
+# POC_last = interior(POCt[end], 1, 1, :) 
+# POC_flux = POC_last * (-wₛ*day)
+# martin = POC_flux[grid.Nz]*((z[grid.Nz]+z₀)./(z.+z₀)).^martin_b
 
-lines!(ax1, martin, z, linewidth = 2,linestyle=:dash, label = "Martin curve")
-axislegend(ax1, position = :rb)
+# lines!(ax1, martin, z, linewidth = 2,linestyle=:dash, label = "Martin curve")
 
-# 2. Plot rates
-ReminRate = @lift (martin_b*(-wₛ*day)./(-z.+z₀)).*(interior(POCt[$n], 1, 1, :))
-lines!(ax2, ReminRate, z,linewidth = 1.5,label = "Remin rate")
+############################################################
+######################## Monthly ###########################
+############################################################
+ax2 = Axis(fig[1, 2], ylabel="z (m)", xlabel="POC conc (mol m⁻³)")
+xlims!(ax2, -0.5, 2.5)
+ylims!(ax2, -1000, 0)
+lines!(ax2, POCn2, zw, linewidth = 3,label = "Modeled")
+POC_prof2 = lines!(ax2, Ana_2[:, 1], zw, linewidth = 1.5,label = "Analytical")
+diff_prof2 = lines!(ax2, diff_2[:, 1], zw, color=:red3, linestyle=:dash, linewidth = 1.5,label = "M-A")
+axislegend(ax2, position = :rb)
 
-record(fig, "POC_minimal.mp4", 1:nt, framerate=24) do nn
+record(fig, "POC_export_remin_1D.mp4", 366:nt, framerate=20) do nn
     n[] = nn
+    POC_prof[1] = Ana_1[:, nn]
+    POC_prof2[1] = Ana_2[:, nn]
+    diff_prof[1] = diff_1[:, nn]
+    diff_prof2[1] = diff_2[:, nn]
 end
 nothing

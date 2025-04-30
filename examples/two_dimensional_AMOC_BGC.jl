@@ -138,8 +138,8 @@ run!(simulation, pickup = true)
 
 #################################### Visualize ####################################
 
-filepath = simulation.output_writers[:simple_output].filepath
-# filepath = "./AMOC117.jld2"
+# filepath = simulation.output_writers[:simple_output].filepath
+filepath = "./AMOC115.jld2"
 
 v_timeseries = FieldTimeSeries(filepath, "v")
 w_timeseries = FieldTimeSeries(filepath, "w")
@@ -279,7 +279,7 @@ display(fig_sum)
 =#
 
 ###################### Plot model nutrients vs WOA23 data #########################
-#=
+#
 using NCDatasets, Interpolations
 dsP = Dataset("data/woa23_all_p00_01.nc")
 dsN = Dataset("data/woa23_all_n00_01.nc")
@@ -332,35 +332,38 @@ Fe_final = interior(Fe_timeseries[end], 1, :, :)
 
 fig_can2 = Figure(size = (1000, 1000))
 
-ax_PO4 = Axis(fig_can2[1, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "[PO₄] (μM)", aspect = 1)
-hm_PO4 = heatmap!(ax_PO4, yt/1e3, zt, PO4_final.*1e3; colorrange = (0, 3),
+ax_PO4 = Axis(fig_can2[1, 1]; xlabel = "y (×10³ km)", ylabel = "z (m)", title = "Modeled [PO₄] (μM)", aspect = 1)
+hm_PO4 = heatmap!(ax_PO4, yt/1e6, zt, PO4_final.*1e3; colorrange = (0, 3),
                 colormap = colors6, interpolate = true)                 
 Colorbar(fig_can2[1, 2], hm_PO4; flipaxis = false)
 levels = range(0, 3, length=7) 
-contour!(ax_PO4, yt./1e3, zt, PO4_final.*1e3, levels = levels, color = :black)
+contour!(ax_PO4, yt./1e6, zt, PO4_final.*1e3, levels = levels, color = :black)
 
-ax_PO4_obs = Axis(fig_can2[2, 1]; xlabel = "Latitude", ylabel = "z (m)", title = "[PO₄] (μM)", aspect = 1)
+ax_PO4_obs = Axis(fig_can2[2, 1]; xlabel = "Latitude", ylabel = "Depth (m)", title = "Observed [PO₄] (μM)", aspect = 1)
 hm_PO4_obs = heatmap!(ax_PO4_obs, lat, -depth, PO4_interpolated; colorrange = (0, 3),
                 colormap = colors6, interpolate = true)                 
 Colorbar(fig_can2[2, 2], hm_PO4_obs; flipaxis = false)
 ylims!(ax_PO4_obs, -4000, 0)
 contour!(ax_PO4_obs, lat, -depth, PO4_interpolated, levels = levels, color = :black)
+ax_PO4_obs.xticks = (-45:45:45, ["45°S", "0°", "45°N"])
 
-ax_NO3 = Axis(fig_can2[1, 3]; xlabel = "y (km)", ylabel = "z (m)", title = "[NO₃] (μM)", aspect = 1)
-hm_NO3 = heatmap!(ax_NO3, yt/1e3, zt, NO3_final.*1e3; colorrange = (0, 40),
+ax_NO3 = Axis(fig_can2[1, 3]; xlabel = "y (×10³ km)", ylabel = "z (m)", title = "Modeled [NO₃] (μM)", aspect = 1)
+hm_NO3 = heatmap!(ax_NO3, yt/1e6, zt, NO3_final.*1e3; colorrange = (0, 40),
                 colormap = colors8, interpolate = true)                 
 Colorbar(fig_can2[1, 4], hm_NO3; flipaxis = false)
 levels2 = range(0, 40, length=9) 
-contour!(ax_NO3, yt./1e3, zt, NO3_final.*1e3, levels = levels2, color = :black)
+contour!(ax_NO3, yt./1e6, zt, NO3_final.*1e3, levels = levels2, color = :black)
 
-ax_NO3_obs = Axis(fig_can2[2, 3]; xlabel = "Latitude", ylabel = "z (m)", title = "[NO₃] (μM)", aspect = 1)
+ax_NO3_obs = Axis(fig_can2[2, 3]; xlabel = "Latitude", ylabel = "Depth (m)", title = "Observed [NO₃] (μM)", aspect = 1)
 hm_NO3_obs = heatmap!(ax_NO3_obs, lat, -depth, NO3_interpolated; colorrange = (0, 40),
                 colormap = colors8, interpolate = true)                 
 Colorbar(fig_can2[2, 4], hm_NO3_obs; flipaxis = false)
 ylims!(ax_NO3_obs, -4000, 0)
 contour!(ax_NO3_obs, lat, -depth, NO3_interpolated, levels = levels2, color = :black)
+ax_NO3_obs.xticks = (-45:45:45, ["45°S", "0°", "45°N"])
+
 display(fig_can2)
-=#
+#
 
 
 # ax_DOP = Axis(fig_can2[2, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "[DOP] (μM)", aspect = 1)
@@ -411,7 +414,7 @@ total_remin_final = POP_remin_final .+ DOP_remin_final
 =#
 
 ########################### Compare POC fluxes with observations ###########################
-#=
+#
 using XLSX, JLD2, DataFrames
 
 @load "data/POCflux_Cael2018.jld2" obs_POCflux
@@ -421,28 +424,48 @@ obs_POC_flux_Cael = obs_POCflux[:,2]./ 12 .* 365.25 / 1e3 # mg C m⁻² d⁻¹ t
 obs_depth_Martin = obs_POCflux[:,1]
 obs_POC_flux_Martin = obs_POCflux[:,2]./ 12 .* 365.25 / 1e3 # mg C m⁻² d⁻¹ to mol C m⁻² y⁻¹
  
+POP_final = interior(POP_timeseries[end], 1, :, :)
 # compare to Martin curve
+wₛₙₖ = 10
+z₀ = log(0.01)*25
 POP_flux = vec(mean(wₛₙₖ .* POP_final .*1e3; dims = 1))
+
 ref_grid_index = 192
 Martin_flux = POP_flux[ref_grid_index]*((zt[ref_grid_index]+z₀)./(zt.+z₀)).^0.84
-# Martin_flux[ref_grid_index+3:end] .= NaN
-model_POC_flux = POP_flux .* 117 .* 365.25  / 1e3# mmol P m⁻² d⁻¹ to mol C m⁻² y⁻¹ 
+Martin_flux[ref_grid_index+2:end] .= NaN
+original_Martin = POP_flux[195]*((z₀)./(zt)).^0.84
+original_Martin[196:end] .= NaN
 
-fig_comp = Figure(size = (800, 500))
+# convert POP to POC; unit
+Martin_POC_flux = Martin_flux .* 117 .* 365.25  / 1e3
+original_Martin_POC = original_Martin .* 117 .* 365.25  / 1e3
 
-ax_flux = Axis(fig_comp[1, 1]; xlabel = "POP flux (mmol P m⁻² d⁻¹)", ylabel = "z (m)", title = "POP flux")
-xlims!(ax_flux, 0, 0.065)
-lines!(ax_flux, POP_flux[2:200], zt[2:200], linewidth = 4, label = "Model")
-lines!(ax_flux, Martin_flux, zt, linewidth = 2, color = :red3, label = "Martin curve")
-axislegend(ax_flux, position = :rb)
+model_POC_flux = POP_flux .* 117 .* 365.25  / 1e3 # mmol P m⁻² d⁻¹ to mol C m⁻² y⁻¹ 
+model_POC_flux_std = vec(std(wₛₙₖ .* POP_final .* 117 .* 365.25; dims = 1))
 
-ax_Cael= Axis(fig_comp[1, 2], xlabel = "POC flux (mol C m⁻² y⁻¹)", ylabel = "Depth (m)", title = "POC flux")
-scatter!(ax_Cael, obs_POC_flux_Cael, -obs_depth_Cael, marker = :circle, color = :grey, label = "Cael et al. (2018)")
-scatter!(ax_Cael, obs_POC_flux_Martin, obs_depth_Martin, marker = :circle, color = :red3, label = "Martin et al. (1987)")
-lines!(ax_Cael, model_POC_flux[2:200], zt[2:200], color = :royalblue3, linewidth = 3, label = "Model")
-xlims!(ax_Cael, 0, 3)
+zw_band = vcat(zt, reverse(zt))
+POC_band = vcat(model_POC_flux .+ model_POC_flux_std, reverse(model_POC_flux .- model_POC_flux_std))
+
+
+# ax_flux = Axis(fig_comp[1, 1]; xlabel = "POP flux (mmol P m⁻² d⁻¹)", ylabel = "z (m)", title = "POP flux")
+# xlims!(ax_flux, 0, 0.065)
+# lines!(ax_flux, POP_flux[2:200], zt[2:200], linewidth = 4, label = "Model")
+# lines!(ax_flux, Martin_flux, zt, linewidth = 2, color = :red3, label = "Martin curve")
+# axislegend(ax_flux, position = :rb)
+
+fig_comp = Figure(size = (500, 500))
+
+ax_Cael= Axis(fig_comp[1, 1], xlabel = "POC flux (mol C m⁻² y⁻¹)", ylabel = "Depth (m)")
+
+scatter!(ax_Cael, obs_POC_flux_Cael, -obs_depth_Cael, marker = :circle, color = (:grey66, 0.5), markersize=6, label = "Observations")
+# scatter!(ax_Cael, obs_POC_flux_Martin, obs_depth_Martin, marker = :circle, color = :red3, label = "Martin et al. (1987)")
+lines!(ax_Cael, model_POC_flux[2:200], zt[2:200], color = :royalblue3, linewidth = 5, label = "Model mean ± 1 std")
+poly!(ax_Cael,POC_band, zw_band, color = (:royalblue3, 0.3)) 
+lines!(ax_Cael, original_Martin_POC[2:200], zt[2:200], color = :black, linewidth = 3, label = "Original Martin curve")
+lines!(ax_Cael, Martin_POC_flux[2:200], zt[2:200], color = :red3, linewidth = 2, label = "Age-adjusted Martin curve")
+xlims!(ax_Cael, 0, 4)
 ylims!(ax_Cael, -4000, 0)
 axislegend(ax_Cael, position = :rb)
 
 display(fig_comp)
-=#
+#

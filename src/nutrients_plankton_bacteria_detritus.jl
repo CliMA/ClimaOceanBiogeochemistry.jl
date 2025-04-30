@@ -4,7 +4,8 @@ using Oceananigans.Grids: znode, Center, AbstractTopology, Flat, Bounded
 using Oceananigans.BoundaryConditions: ImpenetrableBoundaryCondition, fill_halo_regions!
 using Oceananigans.Fields: ZeroField, ZFaceField
 using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
-
+using Adapt
+import Adapt: adapt_structure, adapt
 import Oceananigans.Biogeochemistry: required_biogeochemical_tracers, biogeochemical_drift_velocity
 
 const c = Center()
@@ -162,6 +163,24 @@ end
 
 const NPZBD = NutrientsPlanktonBacteriaDetritus
 
+Adapt.adapt_structure(to, bgc::NutrientsPlanktonBacteriaDetritus) = 
+NutrientsPlanktonBacteriaDetritus(adapt(to, bgc.maximum_plankton_growth_rate),   
+    adapt(to, bgc.maximum_bacteria_growth_rate),   
+    adapt(to, bgc.maximum_grazing_rate),           
+    adapt(to, bgc.bacteria_yield),                 
+    adapt(to, bgc.zooplankton_yield),              
+    adapt(to, bgc.linear_remineralization_rate),   
+    adapt(to, bgc.linear_mortality_rate),          
+    adapt(to, bgc.quadratic_mortality_rate),       
+    adapt(to, bgc.quadratic_mortality_rate_Z),     
+    adapt(to, bgc.nutrient_half_saturation),       
+    adapt(to, bgc.detritus_half_saturation),       
+    adapt(to, bgc.grazing_half_saturation),        
+    adapt(to, bgc.PAR_half_saturation),            
+    adapt(to, bgc.PAR_attenuation_scale),          
+    adapt(to, bgc.detritus_vertical_velocity))
+
+
 @inline required_biogeochemical_tracers(::NPZBD) = (:N, :P, :Z, :B, :D1, :D2)
 
 @inline function biogeochemical_drift_velocity(bgc::NPZBD, ::Val{:D2})
@@ -218,7 +237,7 @@ end
     Z = @inbounds fields.Z[i, j, k]
     D1 = @inbounds fields.D1[i, j, k] 
     D2 = @inbounds fields.D2[i, j, k]
-    D = D1 .+ D2
+    D = D1 + D2
     B = @inbounds fields.B[i, j, k]
     N = @inbounds fields.N[i, j, k]
     
@@ -282,7 +301,7 @@ end
 
     D1 = @inbounds fields.D1[i, j, k]
     D2 = @inbounds fields.D2[i, j, k]
-    D = D1 .+ D2
+    D = D1 + D2
     B = @inbounds fields.B[i, j, k]
     Z = @inbounds fields.Z[i, j, k]
 

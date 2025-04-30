@@ -1,5 +1,5 @@
 # Pick up from a baseline model, run 1-year perturbation
-# using GLMakie
+using GLMakie
 using Printf
 using Statistics
 
@@ -69,7 +69,7 @@ tracer_horizontal_closure = HorizontalScalarDiffusivity(
 # fill_halo_regions!(maximum_net_community_production_rate, arch)
 
 function seasonal_NCP(y, z, t) 
-    return (2e-5 + sinpi(y/Ly) * 8e-5)/day * (1+sinpi(2*(t/day - 365.25*2000)/365))  
+    return (2e-5 + sinpi(y/Ly) * 8e-5)/day * (1.25+0.75*sinpi(2*(t/day - 365.25*2000)/(160)))  
 end
 clock = Clock{Float64}(time=0)
 maximum_net_community_production_rate = FunctionField{Nothing, Center, Center}(seasonal_NCP, grid; clock)
@@ -81,8 +81,8 @@ set!(incident_PAR, surface_PAR)
 fill_halo_regions!(incident_PAR, arch)
 
 ############################## Model 2: Perturbation ############################## 
-model2 = HydrostaticFreeSurfaceModel(grid = grid,
-                                     #clock,
+model2 = HydrostaticFreeSurfaceModel(;grid = grid,
+                                     clock,
                                      biogeochemistry = CarbonAlkalinityNutrients(; grid,
                                                                                    maximum_net_community_production_rate  = maximum_net_community_production_rate,
                                                                                    incident_PAR = incident_PAR),
@@ -97,7 +97,7 @@ model2 = HydrostaticFreeSurfaceModel(grid = grid,
 
 set!(model2, DIC=2.1, ALK=2.35, NO₃=2.4e-2, PO₄=1.6e-3, DOP=0, POP=0, Fe = 6e-7) # mol PO₄ m⁻³
 
-spinup_time = (365.25*2000+365*20)days
+spinup_time = (365.25*2000+365*50)days
 perturbation_time =365days
 simulation2 = Simulation(model2; Δt = 1days, stop_time=spinup_time+perturbation_time) 
 
@@ -109,6 +109,11 @@ function modify_tendency!(model2)
 end                                        
 simulation2.callbacks[:modify_Fe] = Callback(modify_tendency!, 
                                             callsite = TendencyCallsite())
+
+ # Print the progress 
+progress(sim) = @printf("Iteration: %d, time: %s \n", 
+        iteration(sim), prettytime(sim))
+add_callback!(simulation2, progress, IterationInterval(3650))
 
 outputs = (#v = model2.velocities.v,
             #w = model2.velocities.w,
@@ -124,7 +129,7 @@ outputs = (#v = model2.velocities.v,
 simulation2.output_writers[:simple_output] =
             JLD2OutputWriter(model2, outputs, 
                             schedule = TimeInterval(1days), 
-                            filename = "P4_21y",
+                            filename = "P7_51y",
                             overwrite_existing = true)   
 
 simulation2.output_writers[:checkpointer] = Checkpointer(model2,
@@ -135,7 +140,7 @@ simulation2.output_writers[:checkpointer] = Checkpointer(model2,
 run!(simulation2, pickup = true)
 
 #################################### Video of all tracers ####################################
-#=
+#
 filepath = simulation2.output_writers[:simple_output].filepath
 # filepath = "./AMOC115_seasonal.jld2"
 
@@ -152,7 +157,7 @@ Premin_timeseries = FieldTimeSeries(filepath, "Premin")
 Dremin_timeseries = FieldTimeSeries(filepath, "Dremin")
 
 n = Observable(1)
-title = @lift @sprintf("t = Day %d", ((times[$n] - (365.25*2000+365*20)days) / 1days))
+title = @lift @sprintf("t = Day %d", ((times[$n] - (365.25*2000+365*50)days) / 1days))
 
 # convert unit from mol/m³ to μM: 1e3*interior(...)
 PO4ₙ = @lift 1e3*interior(PO4_timeseries[$n], 1, :, 150:200)
@@ -179,31 +184,31 @@ ylims!(ax_avg_PO4, -1000, 0)
 PO4_prof = lines!(ax_avg_PO4, avg_PO4ₙ[][1, :], zw)
 
 ax_POP = Axis(fig[2, 4]; xlabel = "y (km)", ylabel = "z (m)", title = "[POP] (μM)", aspect = 1)
-hm_POP = heatmap!(ax_POP, yw/1e3, zw[150:200], POPₙ; colorrange = (0,0.010),colormap = :rainbow1) 
+hm_POP = heatmap!(ax_POP, yw/1e3, zw[150:200], POPₙ; colorrange = (0,0.012),colormap = :rainbow1) 
 Colorbar(fig[2, 5], hm_POP; flipaxis = false)
 
 ax_avg_POP = Axis(fig[2, 6]; xlabel = "[POP] (μM)", ylabel = "z (m)", title = "Average [POP] (μM)",yaxisposition = :right)
-xlims!(ax_avg_POP, 0, 0.008)
+xlims!(ax_avg_POP, 0, 0.01)
 ylims!(ax_avg_POP, -1000, 0)
 POP_prof = lines!(ax_avg_POP, avg_POPₙ[][1, :], zw)
 
 ax_NCP = Axis(fig[3, 1]; xlabel = "y (km)", ylabel = "z (m)", title = "NCP (mmol m⁻³ d⁻¹)", aspect = 1)
-hm_NCP = heatmap!(ax_NCP, yw/1e3, zw[150:200], NCPₙ; colorrange = (0,0.006),colormap = :rainbow1) 
+hm_NCP = heatmap!(ax_NCP, yw/1e3, zw[150:200], NCPₙ; colorrange = (0,0.008),colormap = :rainbow1) 
 Colorbar(fig[3, 2], hm_NCP; flipaxis = false)
 ylims!(ax_NCP, -500, 0)
 
 ax_avg_NCP = Axis(fig[3, 3]; xlabel = "NCP (mmol m⁻³ d⁻¹)", ylabel = "z (m)", title = "Mean NCP", yaxisposition = :right)
-xlims!(ax_avg_NCP, 0, 0.005)
+xlims!(ax_avg_NCP, 0, 0.008)
 ylims!(ax_avg_NCP, -500, 0)
 NCP_prof = lines!(ax_avg_NCP, avg_NCPₙ[][1, :], zw)
 
 ax_Premin = Axis(fig[3, 4]; xlabel = "y (km)", ylabel = "z (m)", title = "Premin (mmol m⁻³ d⁻¹)", aspect = 1)
-hm_Premin = heatmap!(ax_Premin, yw/1e3, zw[150:200], Preminₙ; colorrange = (0,0.0005),colormap = :rainbow1) 
+hm_Premin = heatmap!(ax_Premin, yw/1e3, zw[150:200], Preminₙ; colorrange = (0,0.0006),colormap = :rainbow1) 
 Colorbar(fig[3, 5], hm_Premin; flipaxis = false)
 ylims!(ax_Premin, -500, 0)
 
 ax_avg_Premin = Axis(fig[3, 6]; xlabel = "Premin (mmol m⁻³ d⁻¹)", ylabel = "z (m)", title = "Mean Premin", yaxisposition = :right)
-xlims!(ax_avg_Premin, 0, 0.0004)
+xlims!(ax_avg_Premin, 0, 0.0006)
 ylims!(ax_avg_Premin, -500, 0)
 Premin_prof = lines!(ax_avg_Premin, avg_Preminₙ[][1, :], zw)
 
@@ -211,7 +216,7 @@ fig[1, 1:6] = Label(fig, title, tellwidth=false)
 
 # And, finally, we record a movie.
 frames = 1:length(times)
-record(fig, "MLD10to190_30perY_21y.mp4", frames, framerate=30) do i
+record(fig, "P7_51y.mp4", frames, framerate=30) do i
     n[] = i
     PO4_prof[1] = avg_PO4ₙ[][1, :]
     POP_prof[1] = avg_POPₙ[][1, :]
@@ -219,7 +224,7 @@ record(fig, "MLD10to190_30perY_21y.mp4", frames, framerate=30) do i
     Premin_prof[1] = avg_Preminₙ[][1, :]
 end
 nothing #hide
-=#
+#
 
 # ds = range(0, 365, length=1000)  # Time in days
 # MLD_12 = 100 .+ 90 .* sinpi.(2 .* (ds ./ (365 / 30))) 

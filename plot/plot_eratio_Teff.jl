@@ -2,28 +2,25 @@ using GLMakie
 using Printf
 using Statistics
 
-using ClimaOceanBiogeochemistry: CarbonAlkalinityNutrients
 using Oceananigans
 using Oceananigans.Units
-using Oceananigans.Fields: ZeroField, CenterField
-using Oceananigans.BoundaryConditions: fill_halo_regions!
 
-filepath1 = "./P1_21y.jld2"
-filepath2 = "./P2_21y.jld2"
-filepath3 = "./P3_21y.jld2"
+filepath1 = "./P5_51y.jld2" 
+filepath2 = "./P7_51y.jld2"
+filepath3 = "./P6_51y.jld2"
 
 NCP_timeseries1 = FieldTimeSeries(filepath1, "NCP")
-NCP_timeseries2 = FieldTimeSeries(filepath2, "NCP")
-NCP_timeseries3 = FieldTimeSeries(filepath3, "NCP")
-
+POP_timeseries1 = FieldTimeSeries(filepath1, "POP")
 Premin_timeseries1 = FieldTimeSeries(filepath1, "Premin")
 times = Premin_timeseries1.times
 xw, yw, zw = nodes(Premin_timeseries1)
-Premin_timeseries2 = FieldTimeSeries(filepath2, "Premin")
-Premin_timeseries3 = FieldTimeSeries(filepath3, "Premin")
 
-POP_timeseries1 = FieldTimeSeries(filepath1, "POP")
+NCP_timeseries2 = FieldTimeSeries(filepath2, "NCP")
+Premin_timeseries2 = FieldTimeSeries(filepath2, "Premin")
 POP_timeseries2 = FieldTimeSeries(filepath2, "POP")
+
+NCP_timeseries3 = FieldTimeSeries(filepath3, "NCP")
+Premin_timeseries3 = FieldTimeSeries(filepath3, "Premin")
 POP_timeseries3 = FieldTimeSeries(filepath3, "POP")
 
 #################################################################
@@ -89,10 +86,10 @@ for i in 1:365
     POP_flux1[i, :, :] = 1e4*interior(POP_timeseries1[i], 1, :, :)
     POP_flux2[i, :, :] = 1e4*interior(POP_timeseries2[i], 1, :, :)
     POP_flux3[i, :, :] = 1e4*interior(POP_timeseries3[i], 1, :, :)
-    # Calculate e-ratio (100 m/NCP)
-    True_eratio1[i, 1] = sum(POP_flux1[i, :, 195])/sum(dz*1days*1e3*interior(NCP_timeseries1[i], 1, :, :))
-    True_eratio2[i, 1] = sum(POP_flux2[i, :, 195])/sum(dz*1days*1e3*interior(NCP_timeseries2[i], 1, :, :))
-    True_eratio3[i, 1] = sum(POP_flux3[i, :, 195])/sum(dz*1days*1e3*interior(NCP_timeseries3[i], 1, :, :))
+    # Calculate e-ratio (115 m/NCP)
+    # True_eratio1[i, 1] = sum(POP_flux1[i, :, 195])/sum(dz*1days*1e3*interior(NCP_timeseries1[i], 1, :, :))
+    # True_eratio2[i, 1] = sum(POP_flux2[i, :, 195])/sum(dz*1days*1e3*interior(NCP_timeseries2[i], 1, :, :))
+    # True_eratio3[i, 1] = sum(POP_flux3[i, :, 190])/sum(dz*1days*1e3*interior(NCP_timeseries3[i], 1, :, :))
     # Calculate transfer efficiency (200 m/1000 m)
     True_Teff1[i, 1] = sum(POP_flux1[i, :, 150])/sum(POP_flux1[i, :, 190])
     True_Teff2[i, 1] = sum(POP_flux2[i, :, 150])/sum(POP_flux2[i, :, 190])
@@ -100,7 +97,21 @@ for i in 1:365
 end
 Martin_value = ((zw[150]+z₀)/(zw[190]+z₀))^-0.84
 Martin_Teff = repeat([Martin_value], 365, 1)
-#
+
+#=
+F1000_1 = sum(POP_flux2[:, :, 150];dims=1)
+F200_1 = sum(POP_flux2[:, :, 190];dims=1)
+mean_Teff1 = mean(F1000_1 ./ F200_1)
+
+F115 = (sum(POP_flux2[:, :, 195];dims=1))[:]
+F_NCP=zeros(365, 500)
+for i in 1:365
+    F_NCP[i,:]= sum(dz*1days*1e3*interior(NCP_timeseries2[i], 1, :, :);dims=2)
+end
+FP = sum(F_NCP;dims=1)[:]
+meaneR = mean(F115 ./ FP)
+=#
+
 #=
 POP_ref1 = POP_flux1[:, :, 190]
 POP_ref2 = POP_flux2[:, :, 190]
@@ -239,21 +250,21 @@ display(fig)
 ######################### Plot Teff together #########################
 #################################################################
 #
-fig = Figure(size=(800, 500))
+fig = Figure(size=(600, 500))
 
-ax_t_er = Axis(fig[1, 1]; ylabel = "ratio", xlabel = "t (day)", title = "e-ratio (F₁₀₀/NCP)")
-lines!(ax_t_er, 1:1:365, vec(True_eratio1), linewidth = 2, label = "Year")
-lines!(ax_t_er, 1:1:365, vec(True_eratio2), linewidth = 2, label = "Year+Month")
-lines!(ax_t_er, 1:1:365, vec(True_eratio3), linewidth = 2, label = "Year+Week")
-ylims!(ax_t_er, 0.18,0.24)
+# ax_t_er = Axis(fig[1, 1]; ylabel = "ratio", xlabel = "t (day)", title = "e-ratio (F₁₁₅/NCP)")
+# lines!(ax_t_er, 1:1:365, vec(True_eratio1), linewidth = 2, label = "Year")
+# lines!(ax_t_er, 1:1:365, vec(True_eratio2), linewidth = 2, label = "Year+Month")
+# lines!(ax_t_er, 1:1:365, vec(True_eratio3), linewidth = 2, label = "Year+Week")
+# ylims!(ax_t_er, 0,0.5)
 
-ax_t_tot = Axis(fig[1, 2]; ylabel = "ratio", xlabel = "t (day)", title = "Transfer effeciency (F₁₀₀₀/F₂₀₀)")
-lines!(ax_t_tot, 1:1:365, vec(True_Teff1), linewidth = 2, label = "Year")
-lines!(ax_t_tot, 1:1:365, vec(True_Teff2), linewidth = 2, label = "Year+Month")
-lines!(ax_t_tot, 1:1:365, vec(True_Teff3), linewidth = 2, label = "Year+Week")
+ax_t_tot = Axis(fig[1, 1]; ylabel = "ratio", xlabel = "t (day)", title = "Transfer effeciency (F₁₀₀₀/F₂₀₀)")
+lines!(ax_t_tot, 1:1:365, vec(True_Teff1), linewidth = 2, label = "T=365")
+lines!(ax_t_tot, 1:1:365, vec(True_Teff2), linewidth = 2, label = "T=160")
+lines!(ax_t_tot, 1:1:365, vec(True_Teff3), linewidth = 2, label = "T=30")
 lines!(ax_t_tot, 1:1:365,vec(Martin_Teff),linewidth = 2, label = "Martin")
-axislegend(ax_t_tot, position = :rb)
-ylims!(ax_t_tot, 0.25, 0.45)
+axislegend(ax_t_tot, position = :lt)
+ylims!(ax_t_tot, 0, 1.3)
 
 display(fig)
 # Mavg = mean(vec(Martin_Teff1)) #0.35246585432250294

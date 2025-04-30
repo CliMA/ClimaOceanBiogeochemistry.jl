@@ -8,7 +8,7 @@ using Oceananigans.Units
 using Oceananigans.Fields: ZeroField, CenterField
 using Oceananigans.BoundaryConditions: fill_halo_regions!
 
-filepath1 = "./P2_21y.jld2"
+filepath1 = "./P6_51y.jld2"
 NCP_timeseries1 = FieldTimeSeries(filepath1, "NCP")
 Premin_timeseries1 = FieldTimeSeries(filepath1, "Premin")
 times = Premin_timeseries1.times
@@ -32,7 +32,7 @@ for i in 1:365
 end
 sequester_Ftrue = sum(POP_flux1[:, :, 150]; dims=2) # flux at 1000 m
 export_Ftrue = sum(POP_flux1[:, :, 175]; dims=2)
-deep_Ftrue = sum(POP_Martin1[:, :, 50]; dims=2) 
+deep_Ftrue = sum(POP_flux1[:, :, 50]; dims=2) 
 
 POP_ref1 = POP_flux1[:, :, 190]
 # POP flux in Martin curve (mmol m-2 d-1)

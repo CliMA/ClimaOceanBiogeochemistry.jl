@@ -5,8 +5,8 @@ using Statistics
 using Oceananigans
 using Oceananigans.Units
 
-filepath1 = "./P1_21y.jld2"
-filepath2 = "./P4_21y.jld2"
+filepath1 = "./P5_51y.jld2"
+filepath2 = "./P6_51y.jld2"
 # filepath3 = "./P3_21y.jld2"
 
 #################################################################
@@ -102,9 +102,11 @@ fig = Figure(size=(800, 300))
 ############# integrated with time #############
 ax_t_tot = Axis(fig[1, 1]; ylabel = "(mmol m⁻³ d⁻¹)", xlabel = "t (day)", title = "Integrated NCP & Remin")
 lines!(ax_t_tot, 1:1:365, vec(tot_NCP1), linewidth = 3, label = "Production")
-lines!(ax_t_tot, 1:1:365,vec(tot_remin1),linewidth = 3, label = "Remineralization")
+lines!(ax_t_tot, 1:1:365,vec(tot_remin1),linewidth = 3, label = "Total remineralization")
+lines!(ax_t_tot, 1:1:365,vec(tot_Premin1),linewidth = 3, label = "POP remineralization")
+
 axislegend(ax_t_tot, position = :rt)
-ylims!(ax_t_tot, 5.8, 8.2)
+ylims!(ax_t_tot, 0, 12)
 # argmax(tot_NCP1) # find the index of the peak value
 # ax_t_MLD = Axis(fig[1, 1]; ylabel = "(m)", xlabel = "t (day)", yaxisposition=:right, 
 #                 yticks=0:50:200, yticklabelcolor=:red3, ylabelcolor=:red3)
@@ -114,9 +116,11 @@ ylims!(ax_t_tot, 5.8, 8.2)
 
 ax_t_tot2 = Axis(fig[1, 2]; ylabel = "(mmol m⁻³ d⁻¹)", xlabel = "t (day)", title = "Integrated NCP & Remin")
 lines!(ax_t_tot2, 1:1:365, vec(tot_NCP2), linewidth = 3, label = "Production")
-lines!(ax_t_tot2, 1:1:365,vec(tot_remin2),linewidth = 3, label = "Remineralization")
+lines!(ax_t_tot2, 1:1:365,vec(tot_remin2),linewidth = 3, label = "Total remineralization")
+lines!(ax_t_tot2, 1:1:365,vec(tot_Premin2),linewidth = 3, label = "POP remineralization")
+
 # axislegend(ax_t_tot2, position = :lb)
-ylims!(ax_t_tot2, 5.8, 8.2)
+ylims!(ax_t_tot2, 0,12)
 # ax_t_MLD2 = Axis(fig[2,1]; ylabel = "(m)", xlabel = "t (day)", yaxisposition=:right, 
 #                 yticks=0:50:200, yticklabelcolor=:red3, ylabelcolor=:red3)
 # lines!(ax_t_MLD2, 1:1:365, MLD2, linewidth = 1, color=:red3, label = "MLD")

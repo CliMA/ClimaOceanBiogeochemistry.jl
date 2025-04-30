@@ -158,6 +158,7 @@ function CarbonAlkalinityNutrients(; grid,
     elseif incident_PAR isa Field
         fill_halo_regions!(incident_PAR)
     end
+
     FF = typeof(incident_PAR)
 
     if particulate_organic_phosphorus_sinking_velocity isa Number
