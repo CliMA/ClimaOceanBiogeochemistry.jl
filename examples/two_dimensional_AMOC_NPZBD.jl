@@ -1,14 +1,14 @@
-# using GLMakie
-using CUDA
+using GLMakie
+# using CUDA
 using Printf
 using Statistics
 
-using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus
 using Oceananigans
 using Oceananigans.Units
 using Oceananigans.Fields: ZeroField, CenterField
 using Oceananigans.BoundaryConditions: fill_halo_regions!
 
+using ClimaOceanBiogeochemistry: NutrientsPlanktonBacteriaDetritus
 using Oceananigans.Models.HydrostaticFreeSurfaceModels:
                     HydrostaticFreeSurfaceModel,
                     PrescribedVelocityFields
@@ -20,7 +20,7 @@ Nz = 200
 Ly = 15000kilometers   # m
 Lz = 4000           # m
 
-arch = GPU()
+arch = CPU()
 # We use a two-dimensional grid, with a `Flat` `y`-direction:
 grid = RectilinearGrid(arch,
                        size = (Ny, Nz),
@@ -65,18 +65,18 @@ model = HydrostaticFreeSurfaceModel(grid = grid,
                                     buoyancy = nothing,
                                     closure = (tracer_vertical_closure, tracer_horizontal_closure))
 
-set!(model, N=3, P=1e-1, Z=1e-1, B=1e-1, D1=8e-2, D2=2e-2) # mol PO₄ m⁻³
+set!(model, N=3, P=1e-1, Z=1e-1, B=1e-1, D1=8e-2, D2=2e-2) 
 
-spinup_time = 365.25*2000days
+# spinup_time = 365.25*2000days
 # compute_time = 365days
 
-simulation = Simulation(model; Δt = 3hour, stop_time=spinup_time) 
+simulation = Simulation(model; Δt = 3hour, stop_time=365*50days) 
 
 # Print the progress 
-# progress(sim) = @printf("Iteration: %d, time: %s , total(N): %.2e\n",
-#             iteration(sim), prettytime(sim),
-#             sum(model.tracers.N) + sum(model.tracers.P) + sum(model.tracers.B) + sum(model.tracers.D1) + sum(model.tracers.D2))
-# add_callback!(simulation, progress, IterationInterval(10))
+progress(sim) = @printf("Iteration: %d, time: %s , total(N): %.2e\n",
+            iteration(sim), prettytime(sim),
+            sum(model.tracers.N) + sum(model.tracers.P) + sum(model.tracers.B) + sum(model.tracers.D1) + sum(model.tracers.D2))
+add_callback!(simulation, progress, IterationInterval(100))
 
 # outputs = (
 #             N = model.tracers.N,
@@ -91,20 +91,20 @@ filename = "AMOC_NPZBD_test1.jld2"
 simulation.output_writers[:simple_output] =
         JLD2OutputWriter(model, model.tracers; 
                         filename,
-                        schedule = TimeInterval(365.25*100days), 
+                        schedule = TimeInterval(365days), 
                         overwrite_existing = true)
 
-simulation.output_writers[:checkpointer] = Checkpointer(model,
-            schedule = TimeInterval(365.25*500days),
-            prefix = "AMOC_NPZBD_checkpoint",
-            overwrite_existing = false)
+# simulation.output_writers[:checkpointer] = Checkpointer(model,
+#             schedule = TimeInterval(365.25*500days),
+#             prefix = "AMOC_NPZBD_checkpoint",
+#             overwrite_existing = false)
         
-run!(simulation, pickup = false)
+run!(simulation) #, pickup = false)
 
 ###################################################################
 ########################## Visualization ##########################
 ###################################################################
-#=
+#
 # All that's left is to visualize the results.
 
 Pt = FieldTimeSeries(filename, "P")
@@ -131,7 +131,7 @@ axD2 = Axis(fig[2, 5], xlabel="y (×10³ km)", ylabel = "z (m)", title="[Particu
 slider = Slider(fig[3, 1:5], range=1:nt, startvalue=1)
 n = slider.value
 
-title = @lift @sprintf("t = %d days", 2*(t[$n] / 2day))
+title = @lift @sprintf("t = %d years", (t[$n] / 365day))
 Label(fig[0, 1:5], title)
 
 Nn  = @lift interior(Nt[$n], 1, :, :)
@@ -160,8 +160,8 @@ hm_D2 = heatmap!(axD2, y./1e6, z, D2n; colorrange = (0,0.05),colormap = :thermal
 # Colorbar(fig[2, 4], hm_D2; flipaxis = false)
 ylims!(axD2,-500,0)
 
-record(fig, "AMOC_NPZBD_test.mp4", 1:nt, framerate=20) do nn
+record(fig, "AMOC_NPZBD_50y.mp4", 1:nt, framerate=20) do nn
     n[] = nn
 end
 nothing #hide
-=#
+#

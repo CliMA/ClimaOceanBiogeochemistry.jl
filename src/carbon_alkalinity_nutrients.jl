@@ -46,9 +46,9 @@ struct CarbonAlkalinityNutrients{FT, S, FF, W, C} <: AbstractBiogeochemistry
     ligand_stability_coefficient                     :: FT
     martin_curve_exponent                            :: FT 
     particulate_organic_phosphorus_sinking_velocity   :: W  # m s⁻¹ 
-    NCP                                              :: C
-    Premin                                           :: C
-    Dremin                                           :: C
+    # NCP                                              :: C
+    # Premin                                           :: C
+    # Dremin                                           :: C
 end
 
 """
@@ -206,10 +206,10 @@ function CarbonAlkalinityNutrients(; grid,
                                      convert(FT, ligand_concentration),
                                      convert(FT, ligand_stability_coefficient),
                                      convert(FT, martin_curve_exponent),
-                                     particulate_organic_phosphorus_sinking_velocity,
-                                     NCP,
-                                     Premin,
-                                     Dremin)
+                                     particulate_organic_phosphorus_sinking_velocity)
+                                    #  NCP,
+                                    #  Premin,
+                                    #  Dremin)
 end
     
 const CAN = CarbonAlkalinityNutrients
@@ -242,13 +242,14 @@ Adapt.adapt_structure(to, bgc::CarbonAlkalinityNutrients) =
                             adapt(to, bgc.ligand_concentration),
                             adapt(to, bgc.ligand_stability_coefficient),
                             adapt(to, bgc.martin_curve_exponent),
-                            adapt(to, bgc.particulate_organic_phosphorus_sinking_velocity),
-                            adapt(to, bgc.NCP),
-                            adapt(to, bgc.Premin),
-                            adapt(to, bgc.Dremin))
+                            adapt(to, bgc.particulate_organic_phosphorus_sinking_velocity))
+                            # adapt(to, bgc.NCP),
+                            # adapt(to, bgc.Premin),
+                            # adapt(to, bgc.Dremin))
 
 @inline required_biogeochemical_tracers(::CAN) = (:DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe)
 
+#=
 """
 Required biogeochemical auxiliary tracers for the CarbonAlkalinityNutrients model
 """
@@ -312,7 +313,7 @@ end
             bgc.Dremin,
             model.grid, z)
 end
-
+=#
 """
 Add a vertical sinking "drift velocity" for the particulate organic phosphorus (POP) tracer.
 """
@@ -421,14 +422,14 @@ or 2) a first-order rate constant .
         rₛₑ = particulate_organic_phosphorus_sedremin_timescale 
         b = martin_curve_exponent    
         wₛ = particulate_organic_phosphorus_sinking_velocity
-        λ = PAR_attenuation_scale
+        # λ = PAR_attenuation_scale
         z  = depth
         z_btm = bottom_depth
-        fᵢ= percent_light
-        z₀ = log(fᵢ)*λ # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
+        # fᵢ= percent_light
+        # z₀ = log(fᵢ)*λ # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
         POP = particulate_organic_phosphorus_concentration
 
-    return ifelse(z == z_btm, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP)))
+    return ifelse(z == z_btm, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / z * POP), max(0, r * POP))) # delete +z₀
     # return ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP))
 end
 
