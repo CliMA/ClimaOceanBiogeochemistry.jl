@@ -70,7 +70,7 @@ set!(model, N=3, P=1e-1, Z=1e-1, B=1e-1, D1=8e-2, D2=2e-2)
 # spinup_time = 365.25*2000days
 # compute_time = 365days
 
-simulation = Simulation(model; Δt = 3hour, stop_time=365*50days) 
+simulation = Simulation(model; Δt = 3hour, stop_time=3days) 
 
 # Print the progress 
 progress(sim) = @printf("Iteration: %d, time: %s , total(N): %.2e\n",
@@ -87,11 +87,11 @@ add_callback!(simulation, progress, IterationInterval(100))
 #             D2 = model.tracers.D2
 #             )
 
-filename = "AMOC_NPZBD_test1.jld2"
+filename = "test1.jld2"
 simulation.output_writers[:simple_output] =
         JLD2OutputWriter(model, model.tracers; 
                         filename,
-                        schedule = TimeInterval(365days), 
+                        schedule = TimeInterval(3days), 
                         overwrite_existing = true)
 
 # simulation.output_writers[:checkpointer] = Checkpointer(model,
@@ -104,7 +104,7 @@ run!(simulation) #, pickup = false)
 ###################################################################
 ########################## Visualization ##########################
 ###################################################################
-#
+#=
 # All that's left is to visualize the results.
 
 Pt = FieldTimeSeries(filename, "P")
@@ -164,4 +164,4 @@ record(fig, "AMOC_NPZBD_50y.mp4", 1:nt, framerate=20) do nn
     n[] = nn
 end
 nothing #hide
-#
+=#

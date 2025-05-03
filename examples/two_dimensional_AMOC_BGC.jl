@@ -69,14 +69,14 @@ tracer_horizontal_closure = HorizontalScalarDiffusivity(κ=(DIC=1e3,ALK=1e3,PO�
 maximum_net_community_production_rate =  Field{Nothing, Center, Center}(grid)
 maxNCP(y,z) = (2e-5 + sinpi(y/Ly) * 8e-5)/day
 set!(maximum_net_community_production_rate, maxNCP)
-# fill_halo_regions!(maximum_net_community_production_rate, arch)
+fill_halo_regions!(maximum_net_community_production_rate, arch)
 
 # Set PAR as a function of latitude
 # incident_PAR = CenterField(grid) 
 incident_PAR =  Field{Nothing, Center, Center}(grid)
 surface_PAR(y,z) = 700 * sinpi(y/Ly) 
 set!(incident_PAR, surface_PAR)   
-# fill_halo_regions!(incident_PAR, arch)
+fill_halo_regions!(incident_PAR, arch)
 
 # Model
 model = HydrostaticFreeSurfaceModel(grid = grid,
@@ -93,10 +93,10 @@ model = HydrostaticFreeSurfaceModel(grid = grid,
 
 set!(model, DIC=2.1, ALK=2.35, NO₃=2.4e-2, PO₄=1.6e-3, DOP=0, POP=0, Fe = 6e-7) # mol PO₄ m⁻³
 
-spinup_time = 365.25*2000days
+# spinup_time = 365.25*2000days
 compute_time = 20days
 
-simulation = Simulation(model; Δt = 1day, stop_time=spinup_time+compute_time) 
+simulation = Simulation(model; Δt = 1day, stop_time=compute_time) 
 
 # Define a callback to zero out Fe tendency
 function modify_tendency!(model)
@@ -112,32 +112,31 @@ progress(sim) = @printf("Iteration: %d, time: %s \n", # total(P): %.2e
             #sum(model.tracers.PO₄) + sum(model.tracers.POP) + sum(model.tracers.DOP))
 add_callback!(simulation, progress, IterationInterval(100))
 
-outputs = (v = model.velocities.v,
-            w = model.velocities.w,
+outputs = (# v = model.velocities.v,
+            # w = model.velocities.w,
             PO₄= model.tracers.PO₄,
             DOP = model.tracers.DOP,
             POP = model.tracers.POP,
-            NO₃ = model.tracers.NO₃,
-            Fe = model.tracers.Fe,
-            NCP = model.biogeochemistry.NCP,
-            Premin = model.biogeochemistry.Premin,
-            Dremin = model.biogeochemistry.Dremin)
+            NO₃ = model.tracers.NO₃)
+            # NCP = model.biogeochemistry.NCP,
+            # Premin = model.biogeochemistry.Premin,
+            # Dremin = model.biogeochemistry.Dremin)
 
 simulation.output_writers[:simple_output] =
         JLD2OutputWriter(model, outputs, 
                         schedule = TimeInterval(10days), 
-                        filename = "AMOC_auxiliary",
+                        filename = "test1",
                         overwrite_existing = false)
 
-simulation.output_writers[:checkpointer] = Checkpointer(model,
-            schedule = TimeInterval(compute_time),
-            prefix = "AMOC115_checkpoint",
-            overwrite_existing = false)
+# simulation.output_writers[:checkpointer] = Checkpointer(model,
+#             schedule = TimeInterval(compute_time),
+#             prefix = "AMOC115_checkpoint",
+#             overwrite_existing = false)
         
-run!(simulation, pickup = true)
+run!(simulation) #, pickup = true)
 
 #################################### Visualize ####################################
-
+#=
 # filepath = simulation.output_writers[:simple_output].filepath
 filepath = "./AMOC115.jld2"
 
@@ -468,4 +467,4 @@ ylims!(ax_Cael, -4000, 0)
 axislegend(ax_Cael, position = :rb)
 
 display(fig_comp)
-#
+=#

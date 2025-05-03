@@ -13,38 +13,38 @@ using Oceananigans.Grids: Center, znode, znodes
 using Oceananigans.Units: days
 using Oceananigans.Utils: launch!
 using Oceananigans.Architectures: architecture
-using KernelAbstractions: @kernel, @index
+# using KernelAbstractions: @kernel, @index
 
 const c = Center()
 
-struct CarbonAlkalinityNutrients{FT, S, FF, W, C} <: AbstractBiogeochemistry
-    reference_density                                :: FT
-    maximum_net_community_production_rate            :: S # mol PO₄ m⁻³ s⁻¹
-    phosphate_half_saturation                        :: FT # mol PO₄ m⁻³
-    nitrate_half_saturation                          :: FT # mol NO₃ m⁻³
-    iron_half_saturation                             :: FT # mol Fe m⁻³
-    incident_PAR                                     :: FF # W m⁻²
-    PAR_half_saturation                              :: FT  # W m⁻²
-    PAR_attenuation_scale                            :: FT  # m
-    PAR_percent                                      :: FT  # m
-    fraction_of_particulate_export                   :: FT
-    dissolved_organic_phosphorus_remin_timescale     :: FT # s⁻¹
-    stoichoimetric_ratio_carbon_to_phosphate         :: FT 
-    stoichoimetric_ratio_nitrate_to_phosphate        :: FT 
-    stoichoimetric_ratio_phosphate_to_oxygen         :: FT 
-    stoichoimetric_ratio_phosphate_to_iron           :: FT 
-    stoichoimetric_ratio_carbon_to_nitrate           :: FT 
-    stoichoimetric_ratio_carbon_to_oxygen            :: FT 
-    stoichoimetric_ratio_carbon_to_iron              :: FT 
-    stoichoimetric_ratio_silicate_to_phosphate       :: FT
-    rain_ratio_inorganic_to_organic_carbon           :: FT 
-    option_of_particulate_remin                      :: FT 
-    particulate_organic_phosphorus_remin_timescale   :: FT
+struct CarbonAlkalinityNutrients{FT, S, FD, W} <: AbstractBiogeochemistry
+    reference_density                                 :: FT
+    maximum_net_community_production_rate             :: S # mol PO₄ m⁻³ s⁻¹
+    phosphate_half_saturation                         :: FT # mol PO₄ m⁻³
+    nitrate_half_saturation                           :: FT # mol NO₃ m⁻³
+    iron_half_saturation                              :: FT # mol Fe m⁻³
+    incident_PAR                                      :: S # W m⁻²
+    PAR_half_saturation                               :: FT  # W m⁻²
+    PAR_attenuation_scale                             :: FT  # m
+    PAR_percent                                       :: FT  # m
+    fraction_of_particulate_export                    :: FT
+    dissolved_organic_phosphorus_remin_timescale      :: FT # s⁻¹
+    stoichoimetric_ratio_carbon_to_phosphate          :: FT 
+    stoichoimetric_ratio_nitrate_to_phosphate         :: FT 
+    stoichoimetric_ratio_phosphate_to_oxygen          :: FT 
+    stoichoimetric_ratio_phosphate_to_iron            :: FT 
+    stoichoimetric_ratio_carbon_to_nitrate            :: FT 
+    stoichoimetric_ratio_carbon_to_oxygen             :: FT 
+    stoichoimetric_ratio_carbon_to_iron               :: FT 
+    stoichoimetric_ratio_silicate_to_phosphate        :: FT
+    rain_ratio_inorganic_to_organic_carbon            :: FT 
+    option_of_particulate_remin                       :: FT 
+    particulate_organic_phosphorus_remin_timescale    :: FT
     particulate_organic_phosphorus_sedremin_timescale :: FT
-    iron_scavenging_rate                             :: FT # s⁻¹
-    ligand_concentration                             :: FT # mol L m⁻³
-    ligand_stability_coefficient                     :: FT
-    martin_curve_exponent                            :: FT 
+    iron_scavenging_rate                              :: FT # s⁻¹
+    ligand_concentration                              :: FT # mol L m⁻³
+    ligand_stability_coefficient                      :: FT
+    martin_curve_exponent                             :: FT 
     particulate_organic_phosphorus_sinking_velocity   :: W  # m s⁻¹ 
     # NCP                                              :: C
     # Premin                                           :: C
@@ -130,14 +130,14 @@ function CarbonAlkalinityNutrients(; grid,
                                    stoichoimetric_ratio_carbon_to_iron          = 117 / 4.68e-4,
                                    stoichoimetric_ratio_silicate_to_phosphate   = 15.0,
                                    rain_ratio_inorganic_to_organic_carbon       = 1e-2,
-                                   option_of_particulate_remin                  = 1, # r decrease with depth = 1; "power law" function = 2
+                                   option_of_particulate_remin                  = 1.0, # r decrease with depth = 1; "power law" function = 2
                                    particulate_organic_phosphorus_remin_timescale= 0.03 / day, 
                                    particulate_organic_phosphorus_sedremin_timescale = 0.5 / day, 
                                    iron_scavenging_rate                         = 0.2 / 365.25days, # s⁻¹
                                    ligand_concentration                         = 1e-9 * reference_density, # mol L m⁻³
                                    ligand_stability_coefficient                 = 1e8,
                                    martin_curve_exponent                       = 0.84,
-                                   particulate_organic_phosphorus_sinking_velocity  = -10.0 / day,
+                                   particulate_organic_phosphorus_sinking_velocity  = -10.0 / day
                                    )
 
     if maximum_net_community_production_rate isa Number
@@ -158,24 +158,25 @@ function CarbonAlkalinityNutrients(; grid,
     elseif incident_PAR isa Field
         fill_halo_regions!(incident_PAR)
     end
-
-    FF = typeof(incident_PAR)
+    FD = typeof(incident_PAR)
 
     if particulate_organic_phosphorus_sinking_velocity isa Number
             w₀ = particulate_organic_phosphorus_sinking_velocity
             no_penetration = ImpenetrableBoundaryCondition()
             bcs = FieldBoundaryConditions(grid, (Center, Center, Face),
-                                         top=no_penetration, 
-                                         bottom=no_penetration)
-            particulate_organic_phosphorus_sinking_velocity = ZFaceField(grid, boundary_conditions = bcs)
-            set!(particulate_organic_phosphorus_sinking_velocity, w₀)
-            fill_halo_regions!(particulate_organic_phosphorus_sinking_velocity)
+                                          top=no_penetration, 
+                                          bottom=no_penetration)
+            w_field = ZFaceField(grid, boundary_conditions = bcs)
+            set!(w_field, w₀)
+            fill_halo_regions!(w_field)
+            particulate_organic_phosphorus_sinking_velocity = w_field
     end
+    W = typeof(particulate_organic_phosphorus_sinking_velocity)
 
-    NCP = CenterField(grid) 
-    Premin = CenterField(grid) 
-    Dremin = CenterField(grid) 
-    C = typeof(NCP) 
+    # NCP = CenterField(grid) 
+    # Premin = CenterField(grid) 
+    # Dremin = CenterField(grid) 
+    # C = typeof(NCP) 
 
     FT = eltype(grid)
 
@@ -206,7 +207,7 @@ function CarbonAlkalinityNutrients(; grid,
                                      convert(FT, ligand_concentration),
                                      convert(FT, ligand_stability_coefficient),
                                      convert(FT, martin_curve_exponent),
-                                     particulate_organic_phosphorus_sinking_velocity)
+                                     particulate_organic_phosphorus_sinking_velocity,)
                                     #  NCP,
                                     #  Premin,
                                     #  Dremin)
@@ -242,7 +243,7 @@ Adapt.adapt_structure(to, bgc::CarbonAlkalinityNutrients) =
                             adapt(to, bgc.ligand_concentration),
                             adapt(to, bgc.ligand_stability_coefficient),
                             adapt(to, bgc.martin_curve_exponent),
-                            adapt(to, bgc.particulate_organic_phosphorus_sinking_velocity))
+                            adapt(to, bgc.particulate_organic_phosphorus_sinking_velocity),)
                             # adapt(to, bgc.NCP),
                             # adapt(to, bgc.Premin),
                             # adapt(to, bgc.Dremin))
