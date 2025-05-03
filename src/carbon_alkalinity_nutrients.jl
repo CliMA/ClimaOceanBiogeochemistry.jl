@@ -17,7 +17,7 @@ using Oceananigans.Architectures: architecture
 
 const c = Center()
 
-struct CarbonAlkalinityNutrients{FT, S, FD, W} <: AbstractBiogeochemistry
+struct CarbonAlkalinityNutrients{FT, S, W} <: AbstractBiogeochemistry
     reference_density                                 :: FT
     maximum_net_community_production_rate             :: S # mol PO₄ m⁻³ s⁻¹
     phosphate_half_saturation                         :: FT # mol PO₄ m⁻³
@@ -158,7 +158,7 @@ function CarbonAlkalinityNutrients(; grid,
     elseif incident_PAR isa Field
         fill_halo_regions!(incident_PAR)
     end
-    FD = typeof(incident_PAR)
+    S = typeof(incident_PAR)
 
     if particulate_organic_phosphorus_sinking_velocity isa Number
             w₀ = particulate_organic_phosphorus_sinking_velocity
@@ -207,7 +207,7 @@ function CarbonAlkalinityNutrients(; grid,
                                      convert(FT, ligand_concentration),
                                      convert(FT, ligand_stability_coefficient),
                                      convert(FT, martin_curve_exponent),
-                                     particulate_organic_phosphorus_sinking_velocity,)
+                                     particulate_organic_phosphorus_sinking_velocity)
                                     #  NCP,
                                     #  Premin,
                                     #  Dremin)
@@ -243,7 +243,7 @@ Adapt.adapt_structure(to, bgc::CarbonAlkalinityNutrients) =
                             adapt(to, bgc.ligand_concentration),
                             adapt(to, bgc.ligand_stability_coefficient),
                             adapt(to, bgc.martin_curve_exponent),
-                            adapt(to, bgc.particulate_organic_phosphorus_sinking_velocity),)
+                            adapt(to, bgc.particulate_organic_phosphorus_sinking_velocity))
                             # adapt(to, bgc.NCP),
                             # adapt(to, bgc.Premin),
                             # adapt(to, bgc.Dremin))
