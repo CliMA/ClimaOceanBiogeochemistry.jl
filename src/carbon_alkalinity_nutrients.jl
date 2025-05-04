@@ -431,7 +431,7 @@ or 2) a first-order rate constant .
         POP = particulate_organic_phosphorus_concentration
 
     # return ifelse(z == z_btm, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / z * POP), max(0, r * POP))) # delete +z₀
-    return ifelse(Rᵣ == 1, max(0, b * wₛ / z * POP), max(0, r * POP))
+    return ifelse(Rᵣ == 1, max(0, b * wₛ / (z-10) * POP), max(0, r * POP))
 end
 
 """
