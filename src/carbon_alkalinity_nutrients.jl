@@ -15,8 +15,6 @@ using Oceananigans.Utils: launch!
 using Oceananigans.Architectures: architecture
 # using KernelAbstractions: @kernel, @index
 
-const c = Center()
-
 struct CarbonAlkalinityNutrients{FT, S, W} <: AbstractBiogeochemistry
     reference_density                                 :: FT
     maximum_net_community_production_rate             :: S # mol PO₄ m⁻³ s⁻¹
@@ -39,6 +37,7 @@ struct CarbonAlkalinityNutrients{FT, S, W} <: AbstractBiogeochemistry
     stoichoimetric_ratio_silicate_to_phosphate        :: FT
     rain_ratio_inorganic_to_organic_carbon            :: FT 
     option_of_particulate_remin                       :: FT 
+    particle_remin_smoothing_depth                    :: FT
     particulate_organic_phosphorus_remin_timescale    :: FT
     particulate_organic_phosphorus_sedremin_timescale :: FT
     iron_scavenging_rate                              :: FT # s⁻¹
@@ -73,6 +72,7 @@ end
                                 stoichoimetric_ratio_silicate_to_phosphate    = 15.0,
                                 rain_ratio_inorganic_to_organic_carbon        = 1e-2,
                                 option_of_particulate_remin                   = 1, 
+                                particle_remin_smoothing_depth                = -10.0,
                                 particulate_organic_phosphorus_remin_timescale = 0.03/day,
                                 particulate_organic_phosphorus_sedremin_timescale = 0.5/day,
                                 iron_scavenging_rate                          = 0.2 / 365.25days,
@@ -131,6 +131,7 @@ function CarbonAlkalinityNutrients(; grid,
                                    stoichoimetric_ratio_silicate_to_phosphate   = 15.0,
                                    rain_ratio_inorganic_to_organic_carbon       = 1e-2,
                                    option_of_particulate_remin                  = 1.0, # r decrease with depth = 1; "power law" function = 2
+                                   particle_remin_smoothing_depth               = -10.0, # in meters, add to POP remin constant 
                                    particulate_organic_phosphorus_remin_timescale= 0.03 / day, 
                                    particulate_organic_phosphorus_sedremin_timescale = 0.5 / day, 
                                    iron_scavenging_rate                         = 0.2 / 365.25days, # s⁻¹
@@ -201,6 +202,7 @@ function CarbonAlkalinityNutrients(; grid,
                                      convert(FT, stoichoimetric_ratio_silicate_to_phosphate),
                                      convert(FT, rain_ratio_inorganic_to_organic_carbon),
                                      convert(FT, option_of_particulate_remin),
+                                     convert(FT, particle_remin_smoothing_depth),
                                      convert(FT, particulate_organic_phosphorus_remin_timescale), 
                                      convert(FT, particulate_organic_phosphorus_sedremin_timescale), 
                                      convert(FT, iron_scavenging_rate),
@@ -237,6 +239,7 @@ Adapt.adapt_structure(to, bgc::CarbonAlkalinityNutrients) =
                             adapt(to, bgc.stoichoimetric_ratio_silicate_to_phosphate),
                             adapt(to, bgc.rain_ratio_inorganic_to_organic_carbon),
                             adapt(to, bgc.option_of_particulate_remin),
+                            adapt(to, bgc.particle_remin_smoothing_depth),
                             adapt(to, bgc.particulate_organic_phosphorus_remin_timescale), 
                             adapt(to, bgc.particulate_organic_phosphorus_sedremin_timescale), 
                             adapt(to, bgc.iron_scavenging_rate),
@@ -414,7 +417,7 @@ or 2) a first-order rate constant .
                                                     martin_curve_exponent,
                                                     particulate_organic_phosphorus_sinking_velocity,
                                                     PAR_attenuation_scale,
-                                                    depth, bottom_depth,
+                                                    depth, bottom_depth, particle_remin_smoothing_depth,
                                                     percent_light,
                                                     particulate_organic_phosphorus_concentration)
 
@@ -426,12 +429,13 @@ or 2) a first-order rate constant .
         # λ = PAR_attenuation_scale
         z  = depth
         z_btm = bottom_depth
+        z_offset = particle_remin_smoothing_depth
         # fᵢ= percent_light
         # z₀ = log(fᵢ)*λ # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
         POP = particulate_organic_phosphorus_concentration
 
-    # return ifelse(z == z_btm, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / z * POP), max(0, r * POP))) # delete +z₀
-    return ifelse(Rᵣ == 1, max(0, b * wₛ / (z-60) * POP), max(0, r * POP))
+    return ifelse(z == z_btm, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / z * POP), max(0, r * POP))) # delete +z₀
+    # return ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP))
 end
 
 """
@@ -505,6 +509,7 @@ Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     Rᵣ = bgc.option_of_particulate_remin
+    z_offset = bgc.particle_remin_smoothing_depth
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -519,7 +524,7 @@ Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
 
     return (Rᶜᴾ * (
                     dissolved_organic_phosphorus_remin(γ, DOP) +
-                    particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP) -
+                    particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm,z_offset, fᵢ, POP) -
                     (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
                 ) + particulate_inorganic_carbon_remin())
 end
@@ -545,6 +550,7 @@ Tracer sources and sinks for Alkalinity (ALK)
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     Rᵣ = bgc.option_of_particulate_remin
+    z_offset = bgc.particle_remin_smoothing_depth
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -560,7 +566,7 @@ Tracer sources and sinks for Alkalinity (ALK)
     return (-Rᴺᴾ * (
                 - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
                 dissolved_organic_phosphorus_remin(γ, DOP) +
-                particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP)) +
+                particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, z_offset,fᵢ, POP)) +
         2 * particulate_inorganic_carbon_remin())
 end
 
@@ -584,6 +590,7 @@ Tracer sources and sinks for inorganic/dissolved Nitrate (NO₃).
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     α = bgc.fraction_of_particulate_export 
     Rᵣ = bgc.option_of_particulate_remin
+    z_offset = bgc.particle_remin_smoothing_depth
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -599,7 +606,7 @@ Tracer sources and sinks for inorganic/dissolved Nitrate (NO₃).
     return (Rᴺᴾ * (
            - net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
            dissolved_organic_phosphorus_remin(γ, DOP) +
-           particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP)))
+           particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, z_offset, fᵢ, POP)))
 end
 
 """
@@ -625,6 +632,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     α = bgc.fraction_of_particulate_export 
     Rᵣ = bgc.option_of_particulate_remin
+    z_offset = bgc.particle_remin_smoothing_depth
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -640,7 +648,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     return (Rᶠᴾ * (
                 -   net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) 
                 +   dissolved_organic_phosphorus_remin(γ, DOP) 
-                +   particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP)) +
+                +   particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, z_offset, fᵢ, POP)) +
             iron_sources() -
             iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lₜ, β))
     end
@@ -664,6 +672,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     α = bgc.fraction_of_particulate_export 
     Rᵣ = bgc.option_of_particulate_remin
+    z_offset = bgc.particle_remin_smoothing_depth
     
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -678,7 +687,7 @@ Tracer sources and sinks for dissolved iron (FeT).
 
     return (- net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
             dissolved_organic_phosphorus_remin(γ, DOP) +
-            particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP))
+            particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, z_offset, fᵢ, POP))
 end
 
 """
@@ -726,6 +735,7 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     Rᵣ = bgc.option_of_particulate_remin
+    z_offset = bgc.particle_remin_smoothing_depth
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -738,5 +748,5 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
     POP = @inbounds fields.POP[i, j, k]
 
     return (α * net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
-           particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP))
+           particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, z_offset, fᵢ, POP))
 end
