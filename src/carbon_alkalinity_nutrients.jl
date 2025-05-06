@@ -434,8 +434,8 @@ or 2) a first-order rate constant .
         # z₀ = log(fᵢ)*λ # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
         POP = particulate_organic_phosphorus_concentration
 
-    # return ifelse(z == z_btm, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z_offset) * POP), max(0, r * POP))) # delete +z₀
-    return ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z_offset) * POP), max(0, r * POP))
+    return ifelse(z == z_btm, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z_offset) * POP), max(0, r * POP))) 
+    # return ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z_offset) * POP), max(0, r * POP))
 end
 
 """
