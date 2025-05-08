@@ -13,15 +13,17 @@ using Oceananigans.Grids: Center, znode, znodes
 using Oceananigans.Units: days
 using Oceananigans.Utils: launch!
 using Oceananigans.Architectures: architecture
-# using KernelAbstractions: @kernel, @index
+using KernelAbstractions: @kernel, @index
 
-struct CarbonAlkalinityNutrients{FT, S, W} <: AbstractBiogeochemistry
+const c = Center()
+
+struct CarbonAlkalinityNutrients{FT, S, FD, W, C} <: AbstractBiogeochemistry
     reference_density                                 :: FT
     maximum_net_community_production_rate             :: S # mol PO₄ m⁻³ s⁻¹
     phosphate_half_saturation                         :: FT # mol PO₄ m⁻³
     nitrate_half_saturation                           :: FT # mol NO₃ m⁻³
     iron_half_saturation                              :: FT # mol Fe m⁻³
-    incident_PAR                                      :: S # W m⁻²
+    incident_PAR                                      :: FD # W m⁻²
     PAR_half_saturation                               :: FT  # W m⁻²
     PAR_attenuation_scale                             :: FT  # m
     PAR_percent                                       :: FT  # m
@@ -45,9 +47,9 @@ struct CarbonAlkalinityNutrients{FT, S, W} <: AbstractBiogeochemistry
     ligand_stability_coefficient                      :: FT
     martin_curve_exponent                             :: FT 
     particulate_organic_phosphorus_sinking_velocity   :: W  # m s⁻¹ 
-    # NCP                                              :: C
-    # Premin                                           :: C
-    # Dremin                                           :: C
+    NCP                                              :: C
+    Premin                                           :: C
+    Dremin                                           :: C
 end
 
 """
@@ -159,7 +161,7 @@ function CarbonAlkalinityNutrients(; grid,
     elseif incident_PAR isa Field
         fill_halo_regions!(incident_PAR)
     end
-    S = typeof(incident_PAR)
+    FD = typeof(incident_PAR)
 
     if particulate_organic_phosphorus_sinking_velocity isa Number
             w₀ = particulate_organic_phosphorus_sinking_velocity
@@ -174,10 +176,10 @@ function CarbonAlkalinityNutrients(; grid,
     end
     W = typeof(particulate_organic_phosphorus_sinking_velocity)
 
-    # NCP = CenterField(grid) 
-    # Premin = CenterField(grid) 
-    # Dremin = CenterField(grid) 
-    # C = typeof(NCP) 
+    NCP = CenterField(grid) 
+    Premin = CenterField(grid) 
+    Dremin = CenterField(grid) 
+    C = typeof(NCP) 
 
     FT = eltype(grid)
 
@@ -209,10 +211,10 @@ function CarbonAlkalinityNutrients(; grid,
                                      convert(FT, ligand_concentration),
                                      convert(FT, ligand_stability_coefficient),
                                      convert(FT, martin_curve_exponent),
-                                     particulate_organic_phosphorus_sinking_velocity)
-                                    #  NCP,
-                                    #  Premin,
-                                    #  Dremin)
+                                     particulate_organic_phosphorus_sinking_velocity,
+                                     NCP,
+                                     Premin,
+                                     Dremin)
 end
     
 const CAN = CarbonAlkalinityNutrients
@@ -246,14 +248,14 @@ Adapt.adapt_structure(to, bgc::CarbonAlkalinityNutrients) =
                             adapt(to, bgc.ligand_concentration),
                             adapt(to, bgc.ligand_stability_coefficient),
                             adapt(to, bgc.martin_curve_exponent),
-                            adapt(to, bgc.particulate_organic_phosphorus_sinking_velocity))
-                            # adapt(to, bgc.NCP),
-                            # adapt(to, bgc.Premin),
-                            # adapt(to, bgc.Dremin))
+                            adapt(to, bgc.particulate_organic_phosphorus_sinking_velocity),
+                            adapt(to, bgc.NCP),
+                            adapt(to, bgc.Premin),
+                            adapt(to, bgc.Dremin))
 
 @inline required_biogeochemical_tracers(::CAN) = (:DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe)
 
-#=
+#
 """
 Required biogeochemical auxiliary tracers for the CarbonAlkalinityNutrients model
 """
@@ -289,10 +291,9 @@ end
     rₛₑ = bgc.particulate_organic_phosphorus_sedremin_timescale 
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
-    λ = bgc.PAR_attenuation_scale
-    fᵢ= bgc.PAR_percent
+    z_offset = bgc.particle_remin_smoothing_depth
 
-    @inbounds Premin[i,j,k] = ifelse(k == 1, rₛₑ * POP[i, j, k],  b * wₛ[i, j, k] / (z[k] + (log(fᵢ)*λ)) * POP[i, j, k])
+    @inbounds Premin[i,j,k] = ifelse(k == 1, rₛₑ * POP[i, j, k],  b * wₛ[i, j, k] / (z[k] + z_offset) * POP[i, j, k])
     # @inbounds Premin[i,j,k] = ifelse(z == z_btm, rₛₑ * POP[i, j, k],  b * wₛ / (z + (log(fᵢ)*λ)) * POP[i, j, k])
     # particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP[i, j, k])
 end 
@@ -317,7 +318,7 @@ end
             bgc.Dremin,
             model.grid, z)
 end
-=#
+#
 """
 Add a vertical sinking "drift velocity" for the particulate organic phosphorus (POP) tracer.
 """
@@ -434,8 +435,8 @@ or 2) a first-order rate constant .
         # z₀ = log(fᵢ)*λ # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
         POP = particulate_organic_phosphorus_concentration
 
-    return ifelse(z == z_btm, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z_offset) * POP), max(0, r * POP))) 
-    # return ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z_offset) * POP), max(0, r * POP))
+    return ifelse(z == z_btm, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / (z+z_offset) * POP), max(0, r * POP))) # delete +z₀
+    # return ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP))
 end
 
 """
