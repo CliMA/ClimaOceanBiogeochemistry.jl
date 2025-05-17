@@ -343,9 +343,9 @@ end
     D = @inbounds fields.D2[i, j, k]
     B = @inbounds fields.B[i, j, k]
 
-    if sum(B) > 0
+    if B > 0
         return bacteria_mortality(mlin, mq, B) + phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - bacteria_production(μᵇ, kᴰ, y, D, B) / y
-    elseif sum(B) == 0
+    else
         return phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - detritus_remineralization(r, D)
     end
 end
