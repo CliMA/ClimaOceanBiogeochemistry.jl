@@ -241,10 +241,10 @@ end
     B = @inbounds fields.B[i, j, k]
     N = @inbounds fields.N[i, j, k]
     
-    if sum(B) > 0
+    if B > 0
         return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) + bacteria_production(μᵇ, kᴰ, y, D, B) * (1/y - 1) 
                + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1) + zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1/γ - 1)
-    elseif sum(B) == 0
+    else
         return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) + detritus_remineralization(r, D)
         + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1)
     end
@@ -322,9 +322,9 @@ end
     D = @inbounds fields.D1[i, j, k] 
     B = @inbounds fields.B[i, j, k]
 
-    if sum(B) > 0
+    if B > 0
         return bacteria_mortality(mlin, mq, B) + phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - bacteria_production(μᵇ, kᴰ, y, D, B) / y 
-    elseif sum(B) == 0
+    else
         return phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - detritus_remineralization(r, D)
     end
 end
