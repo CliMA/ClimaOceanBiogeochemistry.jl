@@ -10,22 +10,24 @@ import Oceananigans.Biogeochemistry: required_biogeochemical_tracers, biogeochem
 
 const c = Center()
 
-struct NutrientsPlanktonBacteriaDetritus{FT, W} <: AbstractBiogeochemistry
-    maximum_plankton_growth_rate :: FT 
-    maximum_bacteria_growth_rate :: FT 
-    maximum_grazing_rate :: FT         
-    bacteria_yield :: FT               
-    zooplankton_yield :: FT            
-    linear_remineralization_rate :: FT 
-    linear_mortality_rate :: FT        
-    quadratic_mortality_rate :: FT     
-    quadratic_mortality_rate_Z :: FT   
-    nutrient_half_saturation :: FT     
-    detritus_half_saturation :: FT     
-    grazing_half_saturation  :: FT     
-    PAR_half_saturation :: FT          
-    PAR_attenuation_scale :: FT        
-    detritus_vertical_velocity :: W        
+struct NutrientsPlanktonBacteriaDetritus{FT, FD, W} <: AbstractBiogeochemistry
+    maximum_plankton_growth_rate    :: FT 
+    maximum_bacteria_growth_rate    :: FT 
+    maximum_grazing_rate            :: FT         
+    bacteria_yield                  :: FT               
+    zooplankton_yield               :: FT            
+    linear_remineralization_rate    :: FT 
+    linear_mortality_rate           :: FT        
+    quadratic_mortality_rate        :: FT     
+    quadratic_mortality_rate_Z      :: FT   
+    nutrient_half_saturation        :: FT     
+    detritus_half_saturation        :: FT     
+    grazing_half_saturation         :: FT  
+    incident_PAR                    :: FD    
+    PAR_half_saturation             :: FT          
+    PAR_attenuation_scale           :: FT        
+    detritus_vertical_velocity      :: W  
+    # depth_offset :: FT       
 end
 
 """
@@ -124,23 +126,31 @@ function NutrientsPlanktonBacteriaDetritus(; grid,
                                            nutrient_half_saturation     = 0.1,      # mmol m⁻³
                                            detritus_half_saturation     = 0.1,      # mmol m⁻³
                                            grazing_half_saturation      = 3.0,      # mmol m⁻³
+                                           incident_PAR                 = 700.0, # W m⁻²
                                            PAR_half_saturation          = 10.0,     # W m⁻²
                                            PAR_attenuation_scale        = 25.0,     # m
                                            detritus_vertical_velocity   = -10/day)  # m s⁻¹
+                                           #depth_offset                 = -10.0 )   # m 
 
     if detritus_vertical_velocity isa Number
         w₀ = detritus_vertical_velocity
         no_penetration = ImpenetrableBoundaryCondition()
-
         bcs = FieldBoundaryConditions(grid, (Center, Center, Face),
                                       top=no_penetration, bottom=no_penetration)
-
         detritus_vertical_velocity = ZFaceField(grid, boundary_conditions = bcs)
-
         set!(detritus_vertical_velocity, w₀)
-
         fill_halo_regions!(detritus_vertical_velocity)
     end
+
+    if incident_PAR isa Number
+        surface_PAR = incident_PAR            
+        incident_PAR = CenterField(grid)            
+        set!(incident_PAR, surface_PAR)            
+        fill_halo_regions!(incident_PAR)
+    elseif incident_PAR isa Field
+        fill_halo_regions!(incident_PAR)
+    end
+    FD = typeof(incident_PAR)
 
     FT = eltype(grid)
 
@@ -155,10 +165,12 @@ function NutrientsPlanktonBacteriaDetritus(; grid,
                                              convert(FT, quadratic_mortality_rate_Z),     
                                              convert(FT, nutrient_half_saturation),       
                                              convert(FT, detritus_half_saturation),       
-                                             convert(FT, grazing_half_saturation),        
+                                             convert(FT, grazing_half_saturation), 
+                                             incident_PAR,       
                                              convert(FT, PAR_half_saturation),            
                                              convert(FT, PAR_attenuation_scale),          
                                              detritus_vertical_velocity)
+                                             # convert(FT, depth_offset))
 end
 
 const NPZBD = NutrientsPlanktonBacteriaDetritus
@@ -175,10 +187,12 @@ NutrientsPlanktonBacteriaDetritus(adapt(to, bgc.maximum_plankton_growth_rate),
     adapt(to, bgc.quadratic_mortality_rate_Z),     
     adapt(to, bgc.nutrient_half_saturation),       
     adapt(to, bgc.detritus_half_saturation),       
-    adapt(to, bgc.grazing_half_saturation),        
+    adapt(to, bgc.grazing_half_saturation),  
+    adapt(to, bgc.incident_PAR),   
     adapt(to, bgc.PAR_half_saturation),            
     adapt(to, bgc.PAR_attenuation_scale),          
     adapt(to, bgc.detritus_vertical_velocity))
+    #adapt(to, bgc.depth_offset))
 
 
 @inline required_biogeochemical_tracers(::NPZBD) = (:N, :P, :Z, :B, :D1, :D2)
@@ -206,6 +220,9 @@ end
 # @inline temp_fun(Temp) = 0.8 .* exp.(-4000 .*(1 ./ (Temp .+ 273.15) .- 1 ./ 293.15))
 
 @inline bacteria_production(μᵇ, kᴰ, y, D, B) = y * μᵇ * D / (D + kᴰ) * B 
+# @inline function bacteria_production(μᵇ, kᴰ, y, D, B, z, depth_offset)
+#     return y * (μᵇ/(-(z + depth_offset))) * D / (D + kᴰ) * B 
+# end
 @inline phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) = (μᵖ * min(N / (N + kᴺ) , I / (I + kᴵ)) * P) 
 @inline zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) = γ * gₘ * P / (P + kᵍ) * Z
 @inline zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) = γ * gₘ * B / (B + kᵍ) * Z
@@ -222,6 +239,7 @@ end
     kᴰ = bgc.detritus_half_saturation
     kᴺ = bgc.nutrient_half_saturation
     kᵍ = bgc.grazing_half_saturation
+    I₀ = bgc.incident_PAR
     kᴵ = bgc.PAR_half_saturation
     λ = bgc.PAR_attenuation_scale
     y = bgc.bacteria_yield
@@ -229,9 +247,10 @@ end
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
+    # z_offset = bgc.depth_offset
 
-    # TODO: design a user interface for prescribing incoming shortwave
-    I = 700 * exp(z / λ)
+    # incoming shortwave
+    I = I₀[i,j,k] * exp(z / λ)
 
     P = @inbounds fields.P[i, j, k]
     Z = @inbounds fields.Z[i, j, k]
@@ -240,13 +259,13 @@ end
     D = D1 + D2
     B = @inbounds fields.B[i, j, k]
     N = @inbounds fields.N[i, j, k]
-    
+
     if B > 0
         return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) + bacteria_production(μᵇ, kᴰ, y, D, B) * (1/y - 1) 
                + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1) + zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1/γ - 1)
     else
         return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) + detritus_remineralization(r, D)
-        + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1)
+               + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1)
     end
 
 end
@@ -255,8 +274,9 @@ end
     μᵖ = bgc.maximum_plankton_growth_rate
     gₘ = bgc.maximum_grazing_rate
     kᴺ = bgc.nutrient_half_saturation
-    kᴵ = bgc.PAR_half_saturation
     kᵍ = bgc.grazing_half_saturation
+    I₀ = bgc.incident_PAR
+    kᴵ = bgc.PAR_half_saturation
     λ = bgc.PAR_attenuation_scale
     mlin = bgc.linear_mortality_rate
     mq = bgc.quadratic_mortality_rate
@@ -265,8 +285,8 @@ end
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
 
-    # TODO: design a user interface for prescribing incoming shortwave
-    I = 700 * exp(z / λ)
+    # incoming shortwave
+    I = I₀[i,j,k] * exp(z / λ)
 
     P = @inbounds fields.P[i, j, k]
     Z = @inbounds fields.Z[i, j, k]
@@ -298,6 +318,8 @@ end
     mq = bgc.quadratic_mortality_rate
     y = bgc.bacteria_yield
     γ = bgc.zooplankton_yield
+    # z = znode(i, j, k, grid, c, c, c)
+    # z_offset = bgc.depth_offset
 
     D1 = @inbounds fields.D1[i, j, k]
     D2 = @inbounds fields.D2[i, j, k]
@@ -321,6 +343,8 @@ end
     Z = @inbounds fields.Z[i, j, k]
     D = @inbounds fields.D1[i, j, k] 
     B = @inbounds fields.B[i, j, k]
+    # z = znode(i, j, k, grid, c, c, c)
+    # z_offset = bgc.depth_offset
 
     if B > 0
         return bacteria_mortality(mlin, mq, B) + phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - bacteria_production(μᵇ, kᴰ, y, D, B) / y 
@@ -342,10 +366,12 @@ end
     Z = @inbounds fields.Z[i, j, k]
     D = @inbounds fields.D2[i, j, k]
     B = @inbounds fields.B[i, j, k]
-
+    # z = znode(i, j, k, grid, c, c, c)
+    # z_offset = bgc.depth_offset
+    
     if B > 0
         return bacteria_mortality(mlin, mq, B) + phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - bacteria_production(μᵇ, kᴰ, y, D, B) / y
-    else
+    else 
         return phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - detritus_remineralization(r, D)
     end
 end
