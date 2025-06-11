@@ -12,10 +12,12 @@ const c = Center()
 
 struct NutrientsPlanktonBacteriaDetritus{FT, FD, W} <: AbstractBiogeochemistry
     maximum_plankton_growth_rate    :: FT 
-    maximum_bacteria_growth_rate    :: FT 
+    maximum_bacteria_growth_rate_D  :: FT 
+    maximum_bacteria_growth_rate_P  :: FT 
     maximum_grazing_rate            :: FT         
     bacteria_yield                  :: FT               
-    zooplankton_yield               :: FT            
+    zooplankton_yield               :: FT 
+    fraction_of_particulate_export  :: FT           
     linear_remineralization_rate    :: FT 
     linear_mortality_rate           :: FT        
     quadratic_mortality_rate        :: FT     
@@ -27,7 +29,7 @@ struct NutrientsPlanktonBacteriaDetritus{FT, FD, W} <: AbstractBiogeochemistry
     PAR_half_saturation             :: FT          
     PAR_attenuation_scale           :: FT        
     detritus_vertical_velocity      :: W  
-    # depth_offset :: FT       
+    depth_offset                    :: FT       
 end
 
 """
@@ -37,6 +39,7 @@ end
                                         maximum_grazing_rate         = 3/day
                                         bacteria_yield               = 0.2
                                         zooplankton_yield            = 0.3
+                                        fraction_of_particulate_export = 0.33,
                                         linear_remineralization_rate = 0.03/day,
                                         linear_mortality_rate        = 0.01/day,
                                         quadratic_mortality_rate     = 0.1/day,
@@ -46,7 +49,8 @@ end
                                         grazing_half_saturation      = 3.0,
                                         PAR_half_saturation          = 10.0,
                                         PAR_attenuation_scale        = 25.0,
-                                        detritus_vertical_velocity   = -10/day)
+                                        detritus_vertical_velocity   = -10/day,
+                                        depth_offset = -10)
 
 Return a six-tracer biogeochemistry model for the interaction of nutrients (N), phytoplankton (P), 
 zooplankton(Z), bacteria (B), dissolved detritus (D1), and particulate detritus (D2).
@@ -114,23 +118,25 @@ Biogeochemical functions
   a constant `detritus_sinking_speed`.
 """
 function NutrientsPlanktonBacteriaDetritus(; grid,
-                                           maximum_plankton_growth_rate = 1/day, # Add reference for each parameter
-                                           maximum_bacteria_growth_rate = 1/day,
-                                           maximum_grazing_rate         = 3/day,
-                                           bacteria_yield               = 0.2,
-                                           zooplankton_yield            = 0.3,
-                                           linear_remineralization_rate = 0.03/day, 
-                                           linear_mortality_rate        = 0.01/day, # m³/mmol/day
-                                           quadratic_mortality_rate     = 0.1/day,  # m³/mmol/day
-                                           quadratic_mortality_rate_Z   = 1/day,    # m³/mmol/day (zooplankton quadratic mortality)
-                                           nutrient_half_saturation     = 0.1,      # mmol m⁻³
-                                           detritus_half_saturation     = 0.1,      # mmol m⁻³
-                                           grazing_half_saturation      = 3.0,      # mmol m⁻³
-                                           incident_PAR                 = 700.0, # W m⁻²
-                                           PAR_half_saturation          = 10.0,     # W m⁻²
-                                           PAR_attenuation_scale        = 25.0,     # m
-                                           detritus_vertical_velocity   = -10/day)  # m s⁻¹
-                                           #depth_offset                 = -10.0 )   # m 
+                                           maximum_plankton_growth_rate   = 1/day, # Add reference for each parameter
+                                           maximum_bacteria_growth_rate_D = 1/day,
+                                           maximum_bacteria_growth_rate_P = 1/day,
+                                           maximum_grazing_rate           = 3/day,
+                                           bacteria_yield                 = 0.2,
+                                           zooplankton_yield              = 0.3,
+                                           fraction_of_particulate_export = 0.33, 
+                                           linear_remineralization_rate   = 0.03/day, 
+                                           linear_mortality_rate          = 0.01/day, # m³/mmol/day
+                                           quadratic_mortality_rate       = 0.1/day,  # m³/mmol/day
+                                           quadratic_mortality_rate_Z     = 1/day,    # m³/mmol/day (zooplankton quadratic mortality)
+                                           nutrient_half_saturation       = 0.1,      # mmol m⁻³
+                                           detritus_half_saturation       = 0.1,      # mmol m⁻³
+                                           grazing_half_saturation        = 3.0,      # mmol m⁻³
+                                           incident_PAR                   = 700.0, # W m⁻²
+                                           PAR_half_saturation            = 10.0,     # W m⁻²
+                                           PAR_attenuation_scale          = 25.0,     # m
+                                           detritus_vertical_velocity     = -10/day,  # m s⁻¹
+                                           depth_offset                   = -10.0 )   # m 
 
     if detritus_vertical_velocity isa Number
         w₀ = detritus_vertical_velocity
@@ -155,10 +161,12 @@ function NutrientsPlanktonBacteriaDetritus(; grid,
     FT = eltype(grid)
 
     return NutrientsPlanktonBacteriaDetritus(convert(FT, maximum_plankton_growth_rate),   
-                                             convert(FT, maximum_bacteria_growth_rate),   
+                                             convert(FT, maximum_bacteria_growth_rate_D),  
+                                             convert(FT, maximum_bacteria_growth_rate_P),   
                                              convert(FT, maximum_grazing_rate),           
                                              convert(FT, bacteria_yield),                 
-                                             convert(FT, zooplankton_yield),              
+                                             convert(FT, zooplankton_yield),       
+                                             convert(FT, fraction_of_particulate_export),       
                                              convert(FT, linear_remineralization_rate),   
                                              convert(FT, linear_mortality_rate),          
                                              convert(FT, quadratic_mortality_rate),       
@@ -169,18 +177,20 @@ function NutrientsPlanktonBacteriaDetritus(; grid,
                                              incident_PAR,       
                                              convert(FT, PAR_half_saturation),            
                                              convert(FT, PAR_attenuation_scale),          
-                                             detritus_vertical_velocity)
-                                             # convert(FT, depth_offset))
+                                             detritus_vertical_velocity,
+                                             convert(FT, depth_offset))
 end
 
 const NPZBD = NutrientsPlanktonBacteriaDetritus
 
 Adapt.adapt_structure(to, bgc::NutrientsPlanktonBacteriaDetritus) = 
 NutrientsPlanktonBacteriaDetritus(adapt(to, bgc.maximum_plankton_growth_rate),   
-    adapt(to, bgc.maximum_bacteria_growth_rate),   
+    adapt(to, bgc.maximum_bacteria_growth_rate_D),  
+    adapt(to, bgc.maximum_bacteria_growth_rate_P),   
     adapt(to, bgc.maximum_grazing_rate),           
     adapt(to, bgc.bacteria_yield),                 
-    adapt(to, bgc.zooplankton_yield),              
+    adapt(to, bgc.zooplankton_yield), 
+    adapt(to, bgc.fraction_of_particulate_export),             
     adapt(to, bgc.linear_remineralization_rate),   
     adapt(to, bgc.linear_mortality_rate),          
     adapt(to, bgc.quadratic_mortality_rate),       
@@ -191,8 +201,8 @@ NutrientsPlanktonBacteriaDetritus(adapt(to, bgc.maximum_plankton_growth_rate),
     adapt(to, bgc.incident_PAR),   
     adapt(to, bgc.PAR_half_saturation),            
     adapt(to, bgc.PAR_attenuation_scale),          
-    adapt(to, bgc.detritus_vertical_velocity))
-    #adapt(to, bgc.depth_offset))
+    adapt(to, bgc.detritus_vertical_velocity),
+    adapt(to, bgc.depth_offset))
 
 
 @inline required_biogeochemical_tracers(::NPZBD) = (:N, :P, :Z, :B, :D1, :D2)
@@ -220,9 +230,9 @@ end
 # @inline temp_fun(Temp) = 0.8 .* exp.(-4000 .*(1 ./ (Temp .+ 273.15) .- 1 ./ 293.15))
 
 @inline bacteria_production(μᵇ, kᴰ, y, D, B) = y * μᵇ * D / (D + kᴰ) * B 
-# @inline function bacteria_production(μᵇ, kᴰ, y, D, B, z, depth_offset)
-#     return y * (μᵇ/(-(z + depth_offset))) * D / (D + kᴰ) * B 
-# end
+@inline function bacteria_production_age(μᵇ, kᴰ, y, D, B, detritus_age)
+    return y * (μᵇ/ detritus_age) * D / (D + kᴰ) * B 
+end
 @inline phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) = (μᵖ * min(N / (N + kᴺ) , I / (I + kᴵ)) * P) 
 @inline zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) = γ * gₘ * P / (P + kᵍ) * Z
 @inline zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) = γ * gₘ * B / (B + kᵍ) * Z
@@ -233,7 +243,8 @@ end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:N}, clock, fields)
     μᵖ = bgc.maximum_plankton_growth_rate
-    μᵇ = bgc.maximum_bacteria_growth_rate
+    μᵇ_D = bgc.maximum_bacteria_growth_rate_D
+    μᵇ_P = bgc.maximum_bacteria_growth_rate_P
     r = bgc.linear_remineralization_rate
     gₘ = bgc.maximum_grazing_rate
     kᴰ = bgc.detritus_half_saturation
@@ -247,7 +258,9 @@ end
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
-    # z_offset = bgc.depth_offset
+    z_offset = bgc.depth_offset
+    w_sink = bgc.detritus_vertical_velocity
+    detritus_age = (z + z_offset)/ w_sink[i,j,k] 
 
     # incoming shortwave
     I = I₀[i,j,k] * exp(z / λ)
@@ -256,18 +269,20 @@ end
     Z = @inbounds fields.Z[i, j, k]
     D1 = @inbounds fields.D1[i, j, k] 
     D2 = @inbounds fields.D2[i, j, k]
-    D = D1 + D2
     B = @inbounds fields.B[i, j, k]
     N = @inbounds fields.N[i, j, k]
 
     if B > 0
-        return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) + bacteria_production(μᵇ, kᴰ, y, D, B) * (1/y - 1) 
-               + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1) + zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1/γ - 1)
+        return (- phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) 
+                + bacteria_production(μᵇ_D, kᴰ, y, D1, B) * (1/y - 1) 
+                + bacteria_production_age(μᵇ_P, kᴰ, y, D2, B, detritus_age) * (1/y - 1) 
+                + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1) 
+                + zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1/γ - 1))
     else
-        return - phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) + detritus_remineralization(r, D)
-               + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1)
+        return (- phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) 
+                + detritus_remineralization(r, D1) + detritus_remineralization(r, D2) 
+                + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1))
     end
-
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:P}, clock, fields)
@@ -292,7 +307,9 @@ end
     Z = @inbounds fields.Z[i, j, k]
     N = @inbounds fields.N[i, j, k]
 
-    return phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) - phytoplankton_mortality(mlin, mq, P) - zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) / γ 
+    return (phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) 
+            - phytoplankton_mortality(mlin, mq, P) 
+            - zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) / γ )
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:Z}, clock, fields)
@@ -310,7 +327,8 @@ end
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:B}, clock, fields)
-    μᵇ = bgc.maximum_bacteria_growth_rate
+    μᵇ_D = bgc.maximum_bacteria_growth_rate_D
+    μᵇ_P = bgc.maximum_bacteria_growth_rate_P
     gₘ = bgc.maximum_grazing_rate
     kᴰ = bgc.detritus_half_saturation
     kᵍ  = bgc.grazing_half_saturation
@@ -318,60 +336,73 @@ end
     mq = bgc.quadratic_mortality_rate
     y = bgc.bacteria_yield
     γ = bgc.zooplankton_yield
-    # z = znode(i, j, k, grid, c, c, c)
-    # z_offset = bgc.depth_offset
+
+    z = znode(i, j, k, grid, c, c, c)
+    z_offset = bgc.depth_offset
+    w_sink = bgc.detritus_vertical_velocity
+    detritus_age = (z + z_offset)/ w_sink[i,j,k] 
 
     D1 = @inbounds fields.D1[i, j, k]
     D2 = @inbounds fields.D2[i, j, k]
-    D = D1 + D2
     B = @inbounds fields.B[i, j, k]
     Z = @inbounds fields.Z[i, j, k]
 
-    return bacteria_production(μᵇ, kᴰ, y, D, B) - bacteria_mortality(mlin, mq, B) - zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) / γ
+    return (bacteria_production(μᵇ_D, kᴰ, y, D1, B) 
+            + bacteria_production_age(μᵇ_P, kᴰ, y, D2, B, detritus_age) 
+            - bacteria_mortality(mlin, mq, B) 
+            - zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) / γ)
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:D1}, clock, fields)
-    μᵇ = bgc.maximum_bacteria_growth_rate
+    μᵇ_D = bgc.maximum_bacteria_growth_rate_D
     kᴰ = bgc.detritus_half_saturation
     r = bgc.linear_remineralization_rate
     y = bgc.bacteria_yield
     mlin = bgc.linear_mortality_rate
     mq = bgc.quadratic_mortality_rate
     mq_Z = bgc.quadratic_mortality_rate_Z
+    α = bgc.fraction_of_particulate_export
 
     P = @inbounds fields.P[i, j, k]
     Z = @inbounds fields.Z[i, j, k]
-    D = @inbounds fields.D1[i, j, k] 
+    D1 = @inbounds fields.D1[i, j, k] 
     B = @inbounds fields.B[i, j, k]
     # z = znode(i, j, k, grid, c, c, c)
     # z_offset = bgc.depth_offset
+    # w_sink = bgc.detritus_vertical_velocity
 
     if B > 0
-        return bacteria_mortality(mlin, mq, B) + phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - bacteria_production(μᵇ, kᴰ, y, D, B) / y 
+        return ((1-α) * (bacteria_mortality(mlin, mq, B) + phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z)) 
+                - bacteria_production(μᵇ_D, kᴰ, y, D1, B) / y )
     else
-        return phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - detritus_remineralization(r, D)
+        return ((1-α) * (phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z)) - detritus_remineralization(r, D1))
     end
 end
 
 @inline function (bgc::NutrientsPlanktonBacteriaDetritus)(i, j, k, grid, ::Val{:D2}, clock, fields)
-    μᵇ = bgc.maximum_bacteria_growth_rate
+    μᵇ_P = bgc.maximum_bacteria_growth_rate_P
     kᴰ = bgc.detritus_half_saturation
     r = bgc.linear_remineralization_rate
     y = bgc.bacteria_yield
     mlin = bgc.linear_mortality_rate
     mq = bgc.quadratic_mortality_rate
     mq_Z = bgc.quadratic_mortality_rate_Z
+    α = bgc.fraction_of_particulate_export
 
     P = @inbounds fields.P[i, j, k]
     Z = @inbounds fields.Z[i, j, k]
-    D = @inbounds fields.D2[i, j, k]
+    D2 = @inbounds fields.D2[i, j, k]
     B = @inbounds fields.B[i, j, k]
-    # z = znode(i, j, k, grid, c, c, c)
-    # z_offset = bgc.depth_offset
-    
+    z = znode(i, j, k, grid, c, c, c)
+    z_offset = bgc.depth_offset
+    w_sink = bgc.detritus_vertical_velocity
+    detritus_age = (z + z_offset)/ w_sink[i,j,k] 
+
     if B > 0
-        return bacteria_mortality(mlin, mq, B) + phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - bacteria_production(μᵇ, kᴰ, y, D, B) / y
+        return (α * (bacteria_mortality(mlin, mq, B) + phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z)) 
+                - bacteria_production_age(μᵇ_P, kᴰ, y, D2, B, detritus_age) / y)
     else 
-        return phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z) - detritus_remineralization(r, D)
+        return (α * (phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z)) 
+                - detritus_remineralization(r, D2))
     end
 end
