@@ -230,8 +230,8 @@ end
 # @inline temp_fun(Temp) = 0.8 .* exp.(-4000 .*(1 ./ (Temp .+ 273.15) .- 1 ./ 293.15))
 
 @inline bacteria_production(μᵇ, kᴰ, y, D, B) = y * μᵇ * D / (D + kᴰ) * B 
-@inline function bacteria_production_age(μᵇ, kᴰ, y, D, B, detritus_age)
-    return y * (μᵇ/ detritus_age) * D / (D + kᴰ) * B 
+@inline function bacteria_production_age(μᵇ, kᴰ, y, D, B, detritus_age, z, z_btm)
+    return ifelse(z == z_btm, y * (μᵇ/days) * D / (D + kᴰ) * B, y * (μᵇ/ detritus_age) * D / (D + kᴰ) * B) 
 end
 @inline phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) = (μᵖ * min(N / (N + kᴺ) , I / (I + kᴵ)) * P) 
 @inline zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) = γ * gₘ * P / (P + kᵍ) * Z
@@ -258,6 +258,7 @@ end
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
+    z_btm = znode(i, j, 1, grid, c, c, c)
     z_offset = bgc.depth_offset
     w_sink = bgc.detritus_vertical_velocity
     detritus_age = (z + z_offset)/ w_sink[i,j,k] 
@@ -275,7 +276,7 @@ end
     if B > 0
         return (- phytoplankton_production(μᵖ, kᴺ, kᴵ, I, N, P) 
                 + bacteria_production(μᵇ_D, kᴰ, y, D1, B) * (1/y - 1) 
-                + bacteria_production_age(μᵇ_P, kᴰ, y, D2, B, detritus_age) * (1/y - 1) 
+                + bacteria_production_age(μᵇ_P, kᴰ, y, D2, B, detritus_age, z, z_btm) * (1/y - 1) 
                 + zooplankton_graze_phytoplankton(gₘ, kᵍ, γ, P, Z) * (1/γ - 1) 
                 + zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) * (1/γ - 1))
     else
@@ -338,6 +339,7 @@ end
     γ = bgc.zooplankton_yield
 
     z = znode(i, j, k, grid, c, c, c)
+    z_btm = znode(i, j, 1, grid, c, c, c)
     z_offset = bgc.depth_offset
     w_sink = bgc.detritus_vertical_velocity
     detritus_age = (z + z_offset)/ w_sink[i,j,k] 
@@ -348,7 +350,7 @@ end
     Z = @inbounds fields.Z[i, j, k]
 
     return (bacteria_production(μᵇ_D, kᴰ, y, D1, B) 
-            + bacteria_production_age(μᵇ_P, kᴰ, y, D2, B, detritus_age) 
+            + bacteria_production_age(μᵇ_P, kᴰ, y, D2, B, detritus_age, z, z_btm) 
             - bacteria_mortality(mlin, mq, B) 
             - zooplankton_graze_bacteria(gₘ, kᵍ, γ, B, Z) / γ)
 end
@@ -394,13 +396,14 @@ end
     D2 = @inbounds fields.D2[i, j, k]
     B = @inbounds fields.B[i, j, k]
     z = znode(i, j, k, grid, c, c, c)
+    z_btm = znode(i, j, 1, grid, c, c, c)
     z_offset = bgc.depth_offset
     w_sink = bgc.detritus_vertical_velocity
     detritus_age = (z + z_offset)/ w_sink[i,j,k] 
 
     if B > 0
         return (α * (bacteria_mortality(mlin, mq, B) + phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z)) 
-                - bacteria_production_age(μᵇ_P, kᴰ, y, D2, B, detritus_age) / y)
+                - bacteria_production_age(μᵇ_P, kᴰ, y, D2, B, detritus_age, z, z_btm) / y)
     else 
         return (α * (phytoplankton_mortality(mlin, mq, P) + zooplankton_mortality(mlin, mq_Z, Z)) 
                 - detritus_remineralization(r, D2))
