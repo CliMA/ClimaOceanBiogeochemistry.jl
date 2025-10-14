@@ -372,7 +372,7 @@ end
         grid,
         simulation.model.ocean.model.biogeochemistry.PAR_fraction_of_incoming_solar_radiation,
         simulation.model.ocean.model.biogeochemistry.incident_PAR,
-        simulation.model.fluxes.surface_atmosphere_state.Qs,
+        simulation.model.interfaces.near_surface_atmosphere_state.Qs,
         )
 
     launch!(
@@ -389,7 +389,7 @@ end
         simulation.model.ocean.model.tracers.DIC,
         simulation.model.ocean.model.tracers.ALK,
         simulation.model.ocean.model.tracers.S,
-        simulation.model.fluxes.total.ocean.tracers.S, # The FW forcing
+        simulation.model.interfaces.net_fluxes.ocean_surface.S, # The FW forcing
         simulation.model.ocean.model.tracers.DIC.boundary_conditions.top.condition,
         simulation.model.ocean.model.tracers.ALK.boundary_conditions.top.condition,
     )
