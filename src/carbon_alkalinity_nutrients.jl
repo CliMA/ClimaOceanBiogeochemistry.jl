@@ -5,11 +5,12 @@ import Oceananigans.Biogeochemistry:
 
 # using CUDA
 using Adapt
+using Oceananigans
 import Adapt: adapt_structure, adapt
 using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
-using Oceananigans.BoundaryConditions: ImpenetrableBoundaryCondition, fill_halo_regions!
-using Oceananigans.Fields: ConstantField, ZeroField, AbstractField, CenterField, FunctionField
-using Oceananigans.Grids: Center, znode, znodes
+using Oceananigans.BoundaryConditions: ImpenetrableBoundaryCondition, FieldBoundaryConditions, fill_halo_regions!
+using Oceananigans.Fields: Field, ConstantField, ZeroField, AbstractField, CenterField, FunctionField
+using Oceananigans.Grids: Center, Face, znode, znodes
 using Oceananigans.Units: days
 using Oceananigans.Utils: launch!
 using Oceananigans.Architectures: architecture
@@ -39,7 +40,7 @@ struct CarbonAlkalinityNutrients{FT, S, FD, W, C} <: AbstractBiogeochemistry
     stoichoimetric_ratio_silicate_to_phosphate        :: FT
     rain_ratio_inorganic_to_organic_carbon            :: FT 
     option_of_particulate_remin                       :: FT 
-    particle_remin_smoothing_depth                    :: FT
+    particle_remin_initial_age                        :: FT
     particulate_organic_phosphorus_remin_timescale    :: FT
     particulate_organic_phosphorus_sedremin_timescale :: FT
     iron_scavenging_rate                              :: FT # s⁻¹
@@ -74,7 +75,7 @@ end
                                 stoichoimetric_ratio_silicate_to_phosphate    = 15.0,
                                 rain_ratio_inorganic_to_organic_carbon        = 1e-2,
                                 option_of_particulate_remin                   = 1, 
-                                particle_remin_smoothing_depth                = -10.0,
+                                particle_remin_initial_age                    = 10.0,
                                 particulate_organic_phosphorus_remin_timescale = 0.03/day,
                                 particulate_organic_phosphorus_sedremin_timescale = 0.5/day,
                                 iron_scavenging_rate                          = 0.2 / 365.25days,
@@ -133,14 +134,14 @@ function CarbonAlkalinityNutrients(; grid,
                                    stoichoimetric_ratio_silicate_to_phosphate   = 15.0,
                                    rain_ratio_inorganic_to_organic_carbon       = 1e-2,
                                    option_of_particulate_remin                  = 1.0, # r decrease with depth = 1; "power law" function = 2
-                                   particle_remin_smoothing_depth               = -10.0, # in meters, add to POP remin constant 
-                                   particulate_organic_phosphorus_remin_timescale= 0.03 / day, 
-                                   particulate_organic_phosphorus_sedremin_timescale = 0.5 / day, 
+                                   particle_remin_initial_age                   = 10.0, # in days, add to age-dependent remin constant 
+                                   particulate_organic_phosphorus_remin_timescale= 0.03 / days, 
+                                   particulate_organic_phosphorus_sedremin_timescale = 0.5 / days, 
                                    iron_scavenging_rate                         = 0.2 / 365.25days, # s⁻¹
                                    ligand_concentration                         = 1e-9 * reference_density, # mol L m⁻³
                                    ligand_stability_coefficient                 = 1e8,
                                    martin_curve_exponent                       = 0.84,
-                                   particulate_organic_phosphorus_sinking_velocity  = -10.0 / day
+                                   particulate_organic_phosphorus_sinking_velocity  = -10.0 / days
                                    )
 
     if maximum_net_community_production_rate isa Number
@@ -204,7 +205,7 @@ function CarbonAlkalinityNutrients(; grid,
                                      convert(FT, stoichoimetric_ratio_silicate_to_phosphate),
                                      convert(FT, rain_ratio_inorganic_to_organic_carbon),
                                      convert(FT, option_of_particulate_remin),
-                                     convert(FT, particle_remin_smoothing_depth),
+                                     convert(FT, particle_remin_initial_age),
                                      convert(FT, particulate_organic_phosphorus_remin_timescale), 
                                      convert(FT, particulate_organic_phosphorus_sedremin_timescale), 
                                      convert(FT, iron_scavenging_rate),
@@ -241,7 +242,7 @@ Adapt.adapt_structure(to, bgc::CarbonAlkalinityNutrients) =
                             adapt(to, bgc.stoichoimetric_ratio_silicate_to_phosphate),
                             adapt(to, bgc.rain_ratio_inorganic_to_organic_carbon),
                             adapt(to, bgc.option_of_particulate_remin),
-                            adapt(to, bgc.particle_remin_smoothing_depth),
+                            adapt(to, bgc.particle_remin_initial_age),
                             adapt(to, bgc.particulate_organic_phosphorus_remin_timescale), 
                             adapt(to, bgc.particulate_organic_phosphorus_sedremin_timescale), 
                             adapt(to, bgc.iron_scavenging_rate),
@@ -285,23 +286,18 @@ end
 
     γ = bgc.dissolved_organic_phosphorus_remin_timescale
     @inbounds Dremin[i,j,k] = dissolved_organic_phosphorus_remin(γ, DOP[i, j, k])
-
-    # Rᵣ = bgc.option_of_particulate_remin      
-    # r = bgc.particulate_organic_phosphorus_remin_timescale                            
+                          
     rₛₑ = bgc.particulate_organic_phosphorus_sedremin_timescale 
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
-    z_offset = bgc.particle_remin_smoothing_depth
+    a_offset = bgc.particle_remin_initial_age
 
-    @inbounds Premin[i,j,k] = ifelse(k == 1, rₛₑ * POP[i, j, k],  b * wₛ[i, j, k] / (z[k] + z_offset) * POP[i, j, k])
-    # @inbounds Premin[i,j,k] = ifelse(z == z_btm, rₛₑ * POP[i, j, k],  b * wₛ / (z + (log(fᵢ)*λ)) * POP[i, j, k])
-    # particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, fᵢ, POP[i, j, k])
+    @inbounds Premin[i,j,k] = ifelse(k == 1, rₛₑ * POP[i, j, k],  b * wₛ[i, j, k] / (z[k] + wₛ[i,j,k] * a_offset) * POP[i, j, k])
 end 
 
 @inline function update_biogeochemical_state!(bgc::CAN, model)
     arch = architecture(model.grid)
     z = znodes(model.grid, Center(), Center(), Center())
-    # z_btm = z[1]
     launch!(arch, model.grid, :xyz, update_NetCommunityProduction!, 
             bgc,
             model.tracers.PO₄, 
@@ -417,9 +413,8 @@ or 2) a first-order rate constant .
                                                     particulate_organic_phosphorus_sedremin_timescale, 
                                                     martin_curve_exponent,
                                                     particulate_organic_phosphorus_sinking_velocity,
-                                                    PAR_attenuation_scale,
-                                                    depth, bottom_depth, particle_remin_smoothing_depth,
-                                                    percent_light,
+                                                    depth, bottom_depth, 
+                                                    particle_remin_initial_age,
                                                     particulate_organic_phosphorus_concentration)
 
         Rᵣ = option_of_particulate_remin                                  
@@ -427,16 +422,13 @@ or 2) a first-order rate constant .
         rₛₑ = particulate_organic_phosphorus_sedremin_timescale 
         b = martin_curve_exponent    
         wₛ = particulate_organic_phosphorus_sinking_velocity
-        # λ = PAR_attenuation_scale
         z  = depth
         z_btm = bottom_depth
-        z_offset = particle_remin_smoothing_depth
-        # fᵢ= percent_light
-        # z₀ = log(fᵢ)*λ # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
+        a_offset = particle_remin_initial_age
+        z_offset = a_offset * wₛ   
         POP = particulate_organic_phosphorus_concentration
 
-    return ifelse(z == z_btm, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / (z+z_offset) * POP), max(0, r * POP))) # delete +z₀
-    # return ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP))
+    return ifelse(z == z_btm, rₛₑ * POP, ifelse(Rᵣ == 1, max(0, b * wₛ / (z+z_offset) * POP), max(0, r * POP))) 
 end
 
 """
@@ -510,7 +502,7 @@ Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     Rᵣ = bgc.option_of_particulate_remin
-    z_offset = bgc.particle_remin_smoothing_depth
+    a_offset = bgc.particle_remin_initial_age
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -525,7 +517,7 @@ Tracer sources and sinks for Dissolved Inorganic Carbon (DIC)
 
     return (Rᶜᴾ * (
                     dissolved_organic_phosphorus_remin(γ, DOP) +
-                    particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm,z_offset, fᵢ, POP) -
+                    particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], z, z_btm, a_offset, POP) -
                     (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
                 ) + particulate_inorganic_carbon_remin())
 end
@@ -551,7 +543,7 @@ Tracer sources and sinks for Alkalinity (ALK)
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     Rᵣ = bgc.option_of_particulate_remin
-    z_offset = bgc.particle_remin_smoothing_depth
+    a_offset = bgc.particle_remin_initial_age
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -567,7 +559,7 @@ Tracer sources and sinks for Alkalinity (ALK)
     return (-Rᴺᴾ * (
                 - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
                 dissolved_organic_phosphorus_remin(γ, DOP) +
-                particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, z_offset,fᵢ, POP)) +
+                particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], z, z_btm, a_offset, POP)) +
         2 * particulate_inorganic_carbon_remin())
 end
 
@@ -591,7 +583,7 @@ Tracer sources and sinks for inorganic/dissolved Nitrate (NO₃).
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     α = bgc.fraction_of_particulate_export 
     Rᵣ = bgc.option_of_particulate_remin
-    z_offset = bgc.particle_remin_smoothing_depth
+    a_offset = bgc.particle_remin_initial_age
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -607,7 +599,7 @@ Tracer sources and sinks for inorganic/dissolved Nitrate (NO₃).
     return (Rᴺᴾ * (
            - net_community_production(μᵖ[i, j, k] , kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
            dissolved_organic_phosphorus_remin(γ, DOP) +
-           particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, z_offset, fᵢ, POP)))
+           particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], z, z_btm, a_offset, POP)))
 end
 
 """
@@ -633,7 +625,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     α = bgc.fraction_of_particulate_export 
     Rᵣ = bgc.option_of_particulate_remin
-    z_offset = bgc.particle_remin_smoothing_depth
+    a_offset = bgc.particle_remin_initial_age
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -649,7 +641,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     return (Rᶠᴾ * (
                 -   net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) 
                 +   dissolved_organic_phosphorus_remin(γ, DOP) 
-                +   particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, z_offset, fᵢ, POP)) +
+                +   particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], z, z_btm, a_offset, POP)) +
             iron_sources() -
             iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lₜ, β))
     end
@@ -673,7 +665,7 @@ Tracer sources and sinks for dissolved iron (FeT).
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     α = bgc.fraction_of_particulate_export 
     Rᵣ = bgc.option_of_particulate_remin
-    z_offset = bgc.particle_remin_smoothing_depth
+    a_offset = bgc.particle_remin_initial_age
     
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -688,7 +680,7 @@ Tracer sources and sinks for dissolved iron (FeT).
 
     return (- net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
             dissolved_organic_phosphorus_remin(γ, DOP) +
-            particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, z_offset, fᵢ, POP))
+            particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], z, z_btm, a_offset, POP))
 end
 
 """
@@ -736,7 +728,7 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
     b = bgc.martin_curve_exponent    
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     Rᵣ = bgc.option_of_particulate_remin
-    z_offset = bgc.particle_remin_smoothing_depth
+    a_offset = bgc.particle_remin_initial_age
 
     # Available photosynthetic radiation
     z = znode(i, j, k, grid, c, c, c)
@@ -749,5 +741,5 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
     POP = @inbounds fields.POP[i, j, k]
 
     return (α * net_community_production(μᵖ[i, j, k], kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
-           particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], λ, z, z_btm, z_offset, fᵢ, POP))
+           particulate_organic_phosphorus_remin(Rᵣ, r, rₛₑ, b, wₛ[i,j,k], z, z_btm, a_offset, POP))
 end
