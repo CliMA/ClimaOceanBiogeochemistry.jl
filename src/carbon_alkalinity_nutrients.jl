@@ -75,14 +75,14 @@ end
                                 stoichoimetric_ratio_silicate_to_phosphate    = 15.0,
                                 rain_ratio_inorganic_to_organic_carbon        = 1e-2,
                                 option_of_particulate_remin                   = 1, 
-                                particle_remin_initial_age                    = 10.0,
+                                particle_remin_initial_age                    = 5.0days,
                                 particulate_organic_phosphorus_remin_timescale = 0.03/day,
                                 particulate_organic_phosphorus_sedremin_timescale = 0.5/day,
                                 iron_scavenging_rate                          = 0.2 / 365.25days,
                                 ligand_concentration                          = 1e-9 * reference_density,
                                 ligand_stability_coefficient                  = 1e8,
                                 martin_curve_exponent                         = 0.84,
-                                particulate_organic_phosphorus_sinking_velocity   = -10.0 / day)
+                                particulate_organic_phosphorus_sinking_velocity   = -20.0 / day)
 
 Return a seven-tracer biogeochemistry model for the interaction of carbon, alkalinity, and nutrients.
 
@@ -134,14 +134,14 @@ function CarbonAlkalinityNutrients(; grid,
                                    stoichoimetric_ratio_silicate_to_phosphate   = 15.0,
                                    rain_ratio_inorganic_to_organic_carbon       = 1e-2,
                                    option_of_particulate_remin                  = 1.0, # r decrease with depth = 1; "power law" function = 2
-                                   particle_remin_initial_age                   = 10.0, # in days, add to age-dependent remin constant 
+                                   particle_remin_initial_age                   = 5.0days, # in days, add to age-dependent remin constant 
                                    particulate_organic_phosphorus_remin_timescale= 0.03 / days, 
                                    particulate_organic_phosphorus_sedremin_timescale = 0.5 / days, 
                                    iron_scavenging_rate                         = 0.2 / 365.25days, # s⁻¹
                                    ligand_concentration                         = 1e-9 * reference_density, # mol L m⁻³
                                    ligand_stability_coefficient                 = 1e8,
                                    martin_curve_exponent                       = 0.84,
-                                   particulate_organic_phosphorus_sinking_velocity  = -10.0 / days
+                                   particulate_organic_phosphorus_sinking_velocity  = -20.0 / days
                                    )
 
     if maximum_net_community_production_rate isa Number
