@@ -16,7 +16,9 @@ end
     grid = RectilinearGrid(size = 64, z = (-256, 0), topology = (Flat, Flat, Bounded))
     @test CarbonAlkalinityNutrients(; grid) isa CarbonAlkalinityNutrients
 
-    model = HydrostaticFreeSurfaceModel(; grid, biogeochemistry = CarbonAlkalinityNutrients(; grid))
+    model = HydrostaticFreeSurfaceModel(grid; 
+                                        tracers=(:T, :S), # Required BGC tracers will be added automatically
+                                        biogeochemistry = CarbonAlkalinityNutrients(; grid))
 
     @test :PO₄ ∈ keys(model.tracers)
 
