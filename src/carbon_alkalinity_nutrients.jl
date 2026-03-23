@@ -432,7 +432,7 @@ end
         simulation.model.ocean.model.tracers.DIC,
         simulation.model.ocean.model.tracers.ALK,
         simulation.model.ocean.model.tracers.S,
-        simulation.model.interfaces.net_fluxes.ocean_surface.S, # The FW forcing
+        simulation.model.interfaces.net_fluxes.ocean.S, # The FW forcing
         simulation.model.ocean.model.tracers.DIC.boundary_conditions.top.condition,
         simulation.model.ocean.model.tracers.ALK.boundary_conditions.top.condition,
     )
