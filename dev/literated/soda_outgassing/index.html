@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Soda outgassing · ClimaOceanBiogeochemistry.jl</title><meta name="title" content="Soda outgassing · ClimaOceanBiogeochemistry.jl"/><meta property="og:title" content="Soda outgassing · ClimaOceanBiogeochemistry.jl"/><meta property="twitter:title" content="Soda outgassing · ClimaOceanBiogeochemistry.jl"/><meta name="description" content="Documentation for ClimaOceanBiogeochemistry.jl."/><meta property="og:description" content="Documentation for ClimaOceanBiogeochemistry.jl."/><meta property="twitter:description" content="Documentation for ClimaOceanBiogeochemistry.jl."/><meta property="og:url" content="https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/literated/soda_outgassing/"/><meta property="twitter:url" content="https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/literated/soda_outgassing/"/><link rel="canonical" href="https://clima.github.io/ClimaOceanBiogeochemistry.jl/dev/literated/soda_outgassing/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">ClimaOceanBiogeochemistry.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../single_column_nutrients_plankton_bacteria_detritus/">Single column nutrients, plankton, bacteria, detritus</a></li><li><a class="tocitem" href="../single_column_carbon_alkalinity_nutrients/">Single column carbon, alkalinity, nutrients</a></li><li class="is-active"><a class="tocitem" href>Soda outgassing</a><ul class="internal"><li><a class="tocitem" href="#Model-setup"><span>Model setup</span></a></li><li class="toplevel"><a class="tocitem" href="#Simulation-of-a-soda-outgassing-CO-in-the-fridge"><span>Simulation of a soda outgassing CO₂ in the fridge</span></a></li><li class="toplevel"><a class="tocitem" href="#A-simulation-of-a-soda-outgassing-CO-on-the-counter"><span>A simulation of a soda outgassing CO₂ on the counter</span></a></li><li><a class="tocitem" href="#Visualization"><span>Visualization</span></a></li></ul></li><li><a class="tocitem" href="../simple_plankton_growth_death/">Simple plankton growth and death</a></li></ul></li><li><span class="tocitem">Library</span><ul><li><a class="tocitem" href="../../library/outline/">Contents</a></li><li><a class="tocitem" href="../../library/public/">Public</a></li><li><a class="tocitem" href="../../library/internals/">Private</a></li><li><a class="tocitem" href="../../library/function_index/">Function index</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Soda outgassing</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Soda outgassing</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/CliMA/ClimaOceanBiogeochemistry.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/CliMA/ClimaOceanBiogeochemistry.jl/blob/main/examples/soda_outgassing.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Illustration-of-using-a-carbon-system-solver"><a class="docs-heading-anchor" href="#Illustration-of-using-a-carbon-system-solver">Illustration of using a carbon system solver</a><a id="Illustration-of-using-a-carbon-system-solver-1"></a><a class="docs-heading-anchor-permalink" href="#Illustration-of-using-a-carbon-system-solver" title="Permalink"></a></h1><p>This example illustrates how to use ClimaOceanBiogeochemistry&#39;s <code>UniversalRobustCarbonSystem</code> model in a 0-d context.</p><pre><code class="language-julia hljs">using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
+using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonSystemParameters, CarbonSolverParameters, CarbonCoefficientParameters
+
+using Oceananigans
+using Oceananigans.Units
+
+using Printf
+using CairoMakie</code></pre><p>We are going to simulate two bottles of soda, one opened and left in the fridge   the other opened and left on the counter to go flat.</p><h2 id="Model-setup"><a class="docs-heading-anchor" href="#Model-setup">Model setup</a><a id="Model-setup-1"></a><a class="docs-heading-anchor-permalink" href="#Model-setup" title="Permalink"></a></h2><p>The 0-d grid represents a 10cm bottle of soda</p><pre><code class="language-julia hljs">grid = RectilinearGrid(size = 1,
+                       z = (-1meter/10, 0),
+                       topology = (Flat, Flat, Bounded))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1×1×1 RectilinearGrid{Float64, Oceananigans.Grids.Flat, Oceananigans.Grids.Flat, Oceananigans.Grids.Bounded} on Oceananigans.Architectures.CPU with 0×0×1 halo
+├── Flat x
+├── Flat y
+└── Bounded  z ∈ [-0.1, 0.0]      regularly spaced with Δz=0.1</code></pre><p>For CO₂ exchange, we use a FluxBoundaryCondition for the &quot;top&quot; of the dissolved inorganic carbon (DIC) tracer. We&#39;ll write a callback later to calculate the flux every time step.</p><pre><code class="language-julia hljs">co₂_flux = Field{Center, Center, Nothing}(grid)
+dic_bcs  = FieldBoundaryConditions(top = FluxBoundaryCondition(co₂_flux))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Oceananigans.FieldBoundaryConditions, with boundary conditions
+├── west: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── east: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── south: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── north: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── bottom: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)
+├── top: FluxBoundaryCondition: 1×1×1 Field{Oceananigans.Grids.Center, Oceananigans.Grids.Center, Nothing} reduced over dims = (3,) on Oceananigans.Grids.RectilinearGrid on Oceananigans.Architectures.CPU
+└── immersed: DefaultBoundaryCondition (FluxBoundaryCondition: Nothing)</code></pre><p>Field arrays to store pCO₂ values filled in <code>compute_co₂_flux!</code></p><pre><code class="language-julia hljs">soda_pCO₂ = Field{Center, Center, Nothing}(grid)
+atmos_pCO₂ = Field{Center, Center, Nothing}(grid)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1×1×1 Field{Oceananigans.Grids.Center, Oceananigans.Grids.Center, Nothing} reduced over dims = (3,) on Oceananigans.Grids.RectilinearGrid on Oceananigans.Architectures.CPU
+├── grid: 1×1×1 RectilinearGrid{Float64, Oceananigans.Grids.Flat, Oceananigans.Grids.Flat, Oceananigans.Grids.Bounded} on Oceananigans.Architectures.CPU with 0×0×1 halo
+├── boundary conditions: FieldBoundaryConditions
+│   └── west: Nothing, east: Nothing, south: Nothing, north: Nothing, bottom: Nothing, top: Nothing, immersed: ZeroFlux
+└── data: 1×1×1 OffsetArray(::Array{Float64, 3}, 1:1, 1:1, 1:1) with eltype Float64 with indices 1:1×1:1×1:1
+    └── max=0.0, min=0.0, mean=0.0</code></pre><p>Build function for CO₂ flux calculation. Dissolved CO₂ in the soda will exchange with the overlying atmosphere These are some coefficients and constants that we&#39;ll use in the calculation</p><pre><code class="language-julia hljs">Base.@kwdef struct CO₂_flux_parameters{FT}
+    surface_wind_speed   :: FT = 10. # ms⁻¹
+    atmospheric_pCO₂     :: FT = 280e-6 # atm
+    exchange_coefficient :: FT = 0.337 # cm hr⁻¹
+    salinity             :: FT = 0.0 # psu
+    alkalinity           :: FT = 2.35e-3 # mol kg⁻¹
+    silicate             :: FT = 0e-6 # mol kg⁻¹
+    phosphate            :: FT = 0e-6 # mol kg⁻¹
+    initial_pH_guess     :: FT = 8.0
+    reference_density    :: FT = 1024.5 # kg m⁻³
+end
+
+&quot;&quot;&quot;
+    compute_co₂_flux!(simulation)
+
+Returns the tendency due to CO₂ flux using the piston velocity
+formulation of Wanninkhof (1992) and the solubility/activity of
+CO₂ that depends on temperature, etc.
+&quot;&quot;&quot;
+@inline function compute_co₂_flux!(simulation; solver_params = ())
+    Nz = size(simulation.model.grid, 3)
+
+# Get coefficients from CO₂_flux_parameters struct
+# I really want the option to take these from the model
+    (; surface_wind_speed,
+       atmospheric_pCO₂,
+       exchange_coefficient,
+       salinity,
+       alkalinity,
+       silicate,
+       phosphate,
+       initial_pH_guess,
+       reference_density,
+       ) = CO₂_flux_parameters()
+
+    U₁₀      = surface_wind_speed
+    pCO₂ᵃᵗᵐ  = atmospheric_pCO₂
+    Kʷₐᵥₑ    = exchange_coefficient
+    Sᴬ       = salinity
+    Aᵀ       = alkalinity
+    Siᵀ      = silicate
+    Pᵀ       = phosphate
+    pH       = initial_pH_guess
+    ρʳᵉᶠ     = reference_density
+
+    cmhr⁻¹_per_ms⁻¹ = 1 / 3.6e5 # conversion factor from cm/hr to m/s
+
+    co₂_flux = simulation.model.tracers.DIC.boundary_conditions.top.condition
+    Θᶜ = simulation.model.tracers.T[1,1,Nz]
+    Cᵀ = simulation.model.tracers.DIC[1,1,Nz]/ρʳᵉᶠ
+
+    # applied pressure in atm (i.e. Pˢᵘʳᶠ-Pᵃᵗᵐ)
+    # Positive when the can is sealed, then zero when the can is opens
+    # On average, the 12 ounce soda cans sold in the US tend to have a pressure of roughly 120 kPa when canned at 4 °C
+    if iteration(simulation) &lt;= 1
+        Δpᵦₐᵣ   = 0.2
+    else
+        # *pssshhhht* the bottle is opened
+        Δpᵦₐᵣ   = 0.0
+    end
+
+    # compute soda pCO₂ using the UniversalRobustCarbonSystem solver
+    # Returns soda pCO₂ (in atm) and atmosphere/soda solubility coefficients (mol kg⁻¹ atm⁻¹)
+    (; pCO₂ᵒᶜᵉ, Pᵈⁱᶜₖₛₒₗₐ, Pᵈⁱᶜₖₛₒₗₒ) = UniversalRobustCarbonSystem(
+        pH      = pH,
+        pCO₂ᵃᵗᵐ = pCO₂ᵃᵗᵐ,
+        Θᶜ      = Θᶜ,
+        Sᴬ      = Sᴬ,
+        Δpᵦₐᵣ   = Δpᵦₐᵣ,
+        Cᵀ      = Cᵀ,
+        Aᵀ      = Aᵀ,
+        Pᵀ      = Pᵀ,
+        Siᵀ     = Siᵀ,
+        solver_params...,
+    )
+
+    # store the soda and atmospheric CO₂ concentrations into Fields
+    soda_pCO₂[1,1,Nz]  = (pCO₂ᵒᶜᵉ * Pᵈⁱᶜₖₛₒₗₒ ) * ρʳᵉᶠ # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
+    atmos_pCO₂[1,1,Nz] = (pCO₂ᵃᵗᵐ * Pᵈⁱᶜₖₛₒₗₐ) * ρʳᵉᶠ # Convert mol kg⁻¹ to mol m⁻³
+
+    # compute schmidt number for DIC
+    kˢᶜ = CarbonCoefficientParameters(
+            a₀ = 2116.8,
+            a₁ = 136.25,
+            a₂ = 4.7353,
+            a₃ = 9.2307e-2,
+            a₄ = 7.555e-4,
+            a₅ = 660.0,
+        )
+
+    Cˢᶜᵈⁱᶜ =  ( kˢᶜ.a₀ -
+                kˢᶜ.a₁ * Θᶜ +
+                kˢᶜ.a₂ * Θᶜ^2 -
+                kˢᶜ.a₃ * Θᶜ^3 +
+                kˢᶜ.a₄ * Θᶜ^4
+              )/kˢᶜ.a₅
+
+    # compute gas exchange coefficient/piston velocity and correct with Schmidt number
+    Kʷ =  (
+           (Kʷₐᵥₑ * cmhr⁻¹_per_ms⁻¹) * U₁₀^2
+          ) / sqrt(Cˢᶜᵈⁱᶜ)
+
+    # compute co₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards in the soda)
+    co₂_flux[1,1,Nz] = - Kʷ * (
+                    pCO₂ᵃᵗᵐ * Pᵈⁱᶜₖₛₒₗₐ -
+                    pCO₂ᵒᶜᵉ * Pᵈⁱᶜₖₛₒₗₒ
+                   ) * ρʳᵉᶠ # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
+    return nothing
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Main.compute_co₂_flux!</code></pre><h1 id="Simulation-of-a-soda-outgassing-CO-in-the-fridge"><a class="docs-heading-anchor" href="#Simulation-of-a-soda-outgassing-CO-in-the-fridge">Simulation of a soda outgassing CO₂ in the fridge</a><a id="Simulation-of-a-soda-outgassing-CO-in-the-fridge-1"></a><a class="docs-heading-anchor-permalink" href="#Simulation-of-a-soda-outgassing-CO-in-the-fridge" title="Permalink"></a></h1><pre><code class="language-julia hljs">model_open_in_the_fridge = NonhydrostaticModel(;
+    grid,
+    velocities = nothing,
+    buoyancy   = nothing,
+    closure    = nothing,
+    tracers    = (:T, :DIC),
+    boundary_conditions = (; DIC=dic_bcs),
+    )</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">NonhydrostaticModel{CPU, RectilinearGrid}(time = 0 seconds, iteration = 0)
+├── grid: 1×1×1 RectilinearGrid{Float64, Oceananigans.Grids.Flat, Oceananigans.Grids.Flat, Oceananigans.Grids.Bounded} on Oceananigans.Architectures.CPU with 0×0×1 halo
+├── timestepper: QuasiAdamsBashforth2TimeStepper
+├── advection scheme: Centered reconstruction order 2
+├── tracers: (T, DIC)
+├── closure: Nothing
+├── buoyancy: Nothing
+└── coriolis: Nothing</code></pre><p>Initial conditions for the refridgerated soda</p><pre><code class="language-julia hljs">Tᵢ   = 4     # °C
+DICᵢ = 2.4   # mol/m³
+set!(model_open_in_the_fridge, T = Tᵢ, DIC = DICᵢ)
+
+simulation = Simulation(model_open_in_the_fridge, Δt=10minutes, stop_time=24hours)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Simulation of NonhydrostaticModel{CPU, RectilinearGrid}(time = 0 seconds, iteration = 0)
+├── Next time step: 10 minutes
+├── Elapsed wall time: 0 seconds
+├── Wall time per iteration: NaN days
+├── Stop time: 1 day
+├── Stop iteration : Inf
+├── Wall time limit: Inf
+├── Callbacks: OrderedDict with 4 entries:
+│   ├── stop_time_exceeded =&gt; Callback of stop_time_exceeded on IterationInterval(1)
+│   ├── stop_iteration_exceeded =&gt; Callback of stop_iteration_exceeded on IterationInterval(1)
+│   ├── wall_time_limit_exceeded =&gt; Callback of wall_time_limit_exceeded on IterationInterval(1)
+│   └── nan_checker =&gt; Callback of NaNChecker for u on IterationInterval(100)
+├── Output writers: OrderedDict with no entries
+└── Diagnostics: OrderedDict with no entries</code></pre><p>Add an output writer...</p><pre><code class="language-julia hljs">fnm_fridge = &quot;soda_in_the_fridge.jld2&quot;
+outputs = (; co₂_flux,
+             soda_pCO₂,
+             atmos_pCO₂,
+             model_open_in_the_fridge.tracers.T,
+             model_open_in_the_fridge.tracers.DIC,
+             )
+simulation.output_writers[:jld2] = JLD2OutputWriter(
+    model_open_in_the_fridge, outputs;
+    filename = fnm_fridge,
+    schedule = TimeInterval(10minutes),
+    overwrite_existing = true,
+    )</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">JLD2OutputWriter scheduled on TimeInterval(10 minutes):
+├── filepath: ./soda_in_the_fridge.jld2
+├── 5 outputs: (co₂_flux, soda_pCO₂, atmos_pCO₂, T, DIC)
+├── array type: Array{Float64}
+├── including: [:grid, :coriolis, :buoyancy, :closure]
+├── file_splitting: NoFileSplitting
+└── file size: 0.0 B</code></pre><p>... and don&#39;t forget to add a callback to compute the CO₂ flux</p><pre><code class="language-julia hljs">add_callback!(simulation, compute_co₂_flux!)</code></pre><p>Run the simulation</p><pre><code class="language-julia hljs">run!(simulation)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr36"><span class="sgr1">[ Info: </span></span>Initializing simulation...
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>    ... simulation initialization complete (1.088 seconds)
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Executing initial time step...
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>    ... initial time step complete (3.743 seconds).
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Simulation is stopping after running for 5.385 seconds.
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Simulation time 1 day equals or exceeds stop time 1 day.</code></pre><h1 id="A-simulation-of-a-soda-outgassing-CO-on-the-counter"><a class="docs-heading-anchor" href="#A-simulation-of-a-soda-outgassing-CO-on-the-counter">A simulation of a soda outgassing CO₂ on the counter</a><a id="A-simulation-of-a-soda-outgassing-CO-on-the-counter-1"></a><a class="docs-heading-anchor-permalink" href="#A-simulation-of-a-soda-outgassing-CO-on-the-counter" title="Permalink"></a></h1><p>We simulate soda Warming up on the counter using a forcing function linear increase from 4°C to 30°C over 12 hours then stops warming</p><pre><code class="language-julia hljs">temperature_increase(z, t, p) = ifelse(t &lt;= 12hours, p.∂T∂t * p.Δt , 0.0)
+
+warming = Forcing(
+     temperature_increase,
+     parameters=(∂T∂t=1e-6, Δt=10minutes),
+     )</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">ContinuousForcing{@NamedTuple{∂T∂t::Float64, Δt::Float64}}
+├── func: temperature_increase (generic function with 1 method)
+├── parameters: (∂T∂t = 1.0e-6, Δt = 600.0)
+└── field dependencies: ()</code></pre><p>Build the second model for the soda on the counter</p><pre><code class="language-julia hljs">model_open_on_the_counter = NonhydrostaticModel(;
+    grid,
+    velocities = nothing,
+    buoyancy   = nothing,
+    closure    = nothing,
+    forcing    = (; T=warming),
+    tracers    = (:T, :DIC),
+    boundary_conditions = (; DIC=dic_bcs),
+    )
+
+set!(model_open_on_the_counter, T = Tᵢ, DIC = DICᵢ)
+
+simulation = Simulation(model_open_on_the_counter, Δt=10minutes, stop_time=24hours)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Simulation of NonhydrostaticModel{CPU, RectilinearGrid}(time = 0 seconds, iteration = 0)
+├── Next time step: 10 minutes
+├── Elapsed wall time: 0 seconds
+├── Wall time per iteration: NaN days
+├── Stop time: 1 day
+├── Stop iteration : Inf
+├── Wall time limit: Inf
+├── Callbacks: OrderedDict with 4 entries:
+│   ├── stop_time_exceeded =&gt; Callback of stop_time_exceeded on IterationInterval(1)
+│   ├── stop_iteration_exceeded =&gt; Callback of stop_iteration_exceeded on IterationInterval(1)
+│   ├── wall_time_limit_exceeded =&gt; Callback of wall_time_limit_exceeded on IterationInterval(1)
+│   └── nan_checker =&gt; Callback of NaNChecker for u on IterationInterval(100)
+├── Output writers: OrderedDict with no entries
+└── Diagnostics: OrderedDict with no entries</code></pre><p>Add an output writer...</p><pre><code class="language-julia hljs">fnm_counter = &quot;soda_on_the_counter.jld2&quot;
+outputs  = (; co₂_flux,
+              soda_pCO₂,
+              atmos_pCO₂,
+              model_open_on_the_counter.tracers.T,
+              model_open_on_the_counter.tracers.DIC,
+              )
+simulation.output_writers[:jld2] = JLD2OutputWriter(
+    model_open_on_the_counter, outputs;
+    filename = fnm_counter,
+    schedule = TimeInterval(10minutes),
+    overwrite_existing = true)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">JLD2OutputWriter scheduled on TimeInterval(10 minutes):
+├── filepath: ./soda_on_the_counter.jld2
+├── 5 outputs: (co₂_flux, soda_pCO₂, atmos_pCO₂, T, DIC)
+├── array type: Array{Float64}
+├── including: [:grid, :coriolis, :buoyancy, :closure]
+├── file_splitting: NoFileSplitting
+└── file size: 0.0 B</code></pre><p>..and don&#39;t forget to add a callback to compute the CO₂ flux</p><pre><code class="language-julia hljs">add_callback!(simulation, compute_co₂_flux!)</code></pre><p>Run the simulation</p><pre><code class="language-julia hljs">run!(simulation)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr36"><span class="sgr1">[ Info: </span></span>Initializing simulation...
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>    ... simulation initialization complete (995.146 ms)
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Executing initial time step...
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>    ... initial time step complete (2.019 seconds).
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Simulation is stopping after running for 3.570 seconds.
+<span class="sgr36"><span class="sgr1">[ Info: </span></span>Simulation time 1 day equals or exceeds stop time 1 day.</code></pre><h2 id="Visualization"><a class="docs-heading-anchor" href="#Visualization">Visualization</a><a id="Visualization-1"></a><a class="docs-heading-anchor-permalink" href="#Visualization" title="Permalink"></a></h2><p>All that&#39;s left is to visualize the results.</p><pre><code class="language-julia hljs">fridge_soda_pCO₂ = FieldTimeSeries(fnm_fridge, &quot;soda_pCO₂&quot;)
+fridge_atmo_co₂ = FieldTimeSeries(fnm_fridge, &quot;atmos_pCO₂&quot;)
+fridge_temp      = FieldTimeSeries(fnm_fridge, &quot;T&quot;)
+
+counter_soda_pCO₂ = FieldTimeSeries(fnm_counter, &quot;soda_pCO₂&quot;)
+counter_atmo_co₂ = FieldTimeSeries(fnm_counter, &quot;atmos_pCO₂&quot;)
+counter_temp      = FieldTimeSeries(fnm_counter, &quot;T&quot;)
+
+t  = fridge_soda_pCO₂.times
+nt = length(t)
+
+fig = Figure(size=(1200, 900))
+
+ax = Axis(fig[1,1], xlabel=&quot;Time&quot;, ylabel=&quot;CO₂ conc [mmol m⁻³]&quot;)
+lines!(t/(3600),
+       interior(fridge_soda_pCO₂, 1, 1, 1, :)*1e3;
+       linestyle = :dash,
+       label = &quot;fridge soda&quot;,
+       )
+lines!(t/(3600),
+       interior(counter_soda_pCO₂, 1, 1, 1, :)*1e3;
+       linestyle = :solid,
+       label = &quot;counter soda&quot;,
+       )
+lines!(t/(3600),
+       interior(fridge_atmo_co₂, 1, 1, 1, :)*1e3;
+       linestyle = :dash,
+       label = &quot;fridge saturated&quot;)
+lines!(t/(3600),
+       interior(counter_atmo_co₂, 1, 1, 1, :)*1e3;
+       linestyle = :solid,
+       label = &quot;counter saturated&quot;)
+axislegend()
+
+ax = Axis(fig[2,1], xlabel=&quot;Time&quot;, ylabel=&quot;Temp (°C)&quot;)
+lines!(t/(3600),
+       interior(fridge_temp, 1, 1, 1, :),
+       linestyle = :dash,
+       label = &quot;fridge soda temperature&quot;,
+       )
+lines!(t/(3600),
+       interior(counter_temp, 1, 1, 1, :),
+       linestyle = :solid,
+       label = &quot;counter soda temperature&quot;,
+       )
+axislegend()</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Makie.Legend()</code></pre><p>The cool soda&#39;s CO₂ concentration approaches equilibrium with the atmosphere (the saturated CO₂ concentration) quickly. The warming soda continues to outgas, since the solubility of CO₂ decreases with temperature. It&#39;ll taste flatter because of the lower CO₂ concentration.</p><pre><code class="language-julia hljs">#save(&quot;soda_outgassing_0d.png&quot;, fig)
+fig</code></pre><img src="3dc48bfc.png" alt="Example block output"/><p><img src="soda_outgassing_0d.png" alt/></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../single_column_carbon_alkalinity_nutrients/">« Single column carbon, alkalinity, nutrients</a><a class="docs-footer-nextpage" href="../simple_plankton_growth_death/">Simple plankton growth and death »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Tuesday 14 January 2025 15:49">Tuesday 14 January 2025</span>. Using Julia version 1.10.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
