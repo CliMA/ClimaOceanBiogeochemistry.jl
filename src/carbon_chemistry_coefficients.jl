@@ -156,12 +156,12 @@ const Θᴷ_0ᵒC = 273.15 # Handbook (2007)
 # Salinity reference value
 const Sʳᵉᶠ = -34.8
 
-@inline Θᵒᴷ(ΘᵒC::Real)::Real = ΘᵒC + Θᴷ_0ᵒC
-@inline Θᴷ₁₀₀(Θᴷ::Real)::Real = Θᴷ/100
-@inline Sᴾ⁰⁵(Sᵖ::Real)::Real  = sqrt(Sᵖ)
-@inline ΘᵒC(Θᴷ::Real)::Real   = Θᴷ - Θᴷ_0ᵒC
-@inline ΔSᵖ(Sᵖ::Real)::Real = Sᵖ + Sʳᵉᶠ
-@inline Rₜ(Θᴷ::Real)::Real = gasconst_bar_cm3_o_mol_k * Θᴷ
+@inline Θᵒᴷ(ΘᵒC::Real) = ΘᵒC + Θᴷ_0ᵒC
+@inline Θᴷ₁₀₀(Θᴷ::Real) = Θᴷ/100
+@inline Sᴾ⁰⁵(Sᵖ::Real) = sqrt(Sᵖ)
+@inline ΘᵒC(Θᴷ::Real)  = Θᴷ - Θᴷ_0ᵒC
+@inline ΔSᵖ(Sᵖ::Real) = Sᵖ + Sʳᵉᶠ
+@inline Rₜ(Θᴷ::Real) = gasconst_bar_cm3_o_mol_k * Θᴷ
 
 #Base.@kwdef struct Pᴴ²⁰ˢʷ{FT}
 #    a₀ :: FT    =   1.0
@@ -182,7 +182,7 @@ References: "libthdyct" -- derived by Munhoven (1997) from data by Millero (1982
             "Handbook (2007)" -- Handbook (2007)
 pH scale:   N/A
 """
-@inline function H₂Oˢʷ(Sᵖ::Real, params₁ = Pᴴ²⁰ˢʷ) :: Real
+@inline function H₂Oˢʷ(Sᵖ::Real, params₁ = Pᴴ²⁰ˢʷ)
     (; a₀, a₁) = params₁
     return a₀ + a₁ * Sᵖ 
 end
@@ -204,7 +204,7 @@ References: "libthdyct" -- derived by Munhoven (1997) from data by Millero (1982
             "Handbook (2007)" -- Handbook (2007)
 pH scale:   N/A
 """
-@inline μₛ(Sᵖ::Real, params₁ = Pᵘˢ, params₂ = Pᴴ²⁰ˢʷ) ::Real = (params₁.a₀ * Sᵖ) / H₂Oˢʷ(Sᵖ, params₂) # Handbook (2007)
+@inline μₛ(Sᵖ::Real, params₁ = Pᵘˢ, params₂ = Pᴴ²⁰ˢʷ) = (params₁.a₀ * Sᵖ) / H₂Oˢʷ(Sᵖ, params₂) # Handbook (2007)
 # μₛ(Sᵖ)    = (0.019920 * Sᵖ) / H₂Oˢʷ(Sᵖ, Pᴴ²⁰ˢʷ)# libthdyct
 
 # Base.@kwdef struct Pᴮᵀᴼᵀ{FT}
@@ -226,7 +226,7 @@ Return total borate concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Uppström (1974), cited by  Dickson et al. (2007, chapter 5, p 10)
             Millero (1982) cited in Millero (1995)
 """
-@inline function Bᵀᴼᵀ(Sᵖ::Real, params₁ = Pᴮᵀᴼᵀ) :: Real
+@inline function Bᵀᴼᵀ(Sᵖ::Real, params₁ = Pᴮᵀᴼᵀ)
     (; a₀, a₁, a₂) = params₁
     return a₀ * (Sᵖ / a₁) / a₂
 end
@@ -252,7 +252,7 @@ References: Culkin and Cox (1966),
             Culkin (1967), 
             Riley and Tongudai (1967)    
 """
-@inline function Caᵀᴼᵀ(Sᵖ::Real, params₁ = Pᶜᵃᵀᴼᵀ) :: Real
+@inline function Caᵀᴼᵀ(Sᵖ::Real, params₁ = Pᶜᵃᵀᴼᵀ)
     (; a₀, a₁, a₂) = params₁
     return (a₀ / a₁) * (Sᵖ / a₂)
 end
@@ -274,7 +274,7 @@ end
 Return total fluoride concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Culkin (1965) (???)
 """
-@inline function Fᵀᴼᵀ(Sᵖ::Real, params₁ = Pᶠᵀᴼᵀ) :: Real 
+@inline function Fᵀᴼᵀ(Sᵖ::Real, params₁ = Pᶠᵀᴼᵀ) 
     (; a₀, a₁) = params₁
     return a₀ * (Sᵖ / a₁)
 end
@@ -297,7 +297,7 @@ end
 Return total sulfate concentration in mol/kg-SW given practical salinity, `Sᵖ`.
 References: Morris, A.W. and Riley, J.P. (1966) quoted in Handbook (2007)
 """
-@inline function SO₄ᵀᴼᵀ(Sᵖ::Real, params₁ = Pˢᴼ⁴ᵀᴼᵀ) :: Real
+@inline function SO₄ᵀᴼᵀ(Sᵖ::Real, params₁ = Pˢᴼ⁴ᵀᴼᵀ)
     (; a₀, a₁, a₂) = params₁
     return (a₀ / a₁) * (Sᵖ / a₂)
 end
@@ -401,7 +401,7 @@ end
     pH scale  : N/A
     Note      : currently no pressure correction
 """
-@inline function Fᵈⁱᶜₖₛₒₗₐ(Θᴷ::Real, Sᵖ::Real, params₁ = Pᵈⁱᶜₖₛₒₗₐ) :: Real
+@inline function Fᵈⁱᶜₖₛₒₗₐ(Θᴷ::Real, Sᵖ::Real, params₁ = Pᵈⁱᶜₖₛₒₗₐ)
     (; a₀, a₁, a₂, a₃, b₀, b₁, b₂) = params₁
     return exp(
                a₀ + 
@@ -447,7 +447,7 @@ References: Weiss (1974) Marine Chemistry
 pH scale  : N/A
 Note      : currently no pressure correction
 """
-@inline function Fᵈⁱᶜₖₚᵣₑ(Θᴷ::Real, Sᵖ, params₁ = Pᵈⁱᶜₖₚᵣₑ) :: Real
+@inline function Fᵈⁱᶜₖₚᵣₑ(Θᴷ::Real, Sᵖ, params₁ = Pᵈⁱᶜₖₚᵣₑ)
     (; a₀, a₁, a₂, a₃, b₀, b₁, p₀) = params₁
 
 #  "x2" term often neglected (assumed=1) in applications of Weiss (1974) eq.9
@@ -491,7 +491,7 @@ References: Weiss (1979)
 pH scale  : N/A
 Note      : currently no pressure correction
 """
-@inline function Fᵈⁱᶜₖ₀(Θᴷ::Real, Sᵖ::Real, params₁ = Pᵈⁱᶜₖ₀) :: Real
+@inline function Fᵈⁱᶜₖ₀(Θᴷ::Real, Sᵖ::Real, params₁ = Pᵈⁱᶜₖ₀)
     (; a₀, a₁, a₂, b₀, b₁, b₂) = params₁
     return exp(
                a₀ + 
@@ -552,7 +552,7 @@ pH scale  : Total
 Valid range: T:  0-45  S:  5-45.
 Note      : converted here from mol/kg-H2O to mol/kg-SW
 """
-@inline function Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᵈⁱᶜₖ₁ᵣ₉₃, params₂ = Pᴴ²⁰ˢʷ) :: Real
+@inline function Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᵈⁱᶜₖ₁ᵣ₉₃, params₂ = Pᴴ²⁰ˢʷ)
     (; a₀, a₁, a₂, b₀, b₁, b₂, b₃, v₀, v₁, v₂, k₀, k₁, k₂) = params₁
     ln_kc1_p0 = (a₀ + 
                  a₁/Θᴷ + 
@@ -626,7 +626,7 @@ pH scale  : Total
 Valid range: T:  0-45  S:  5-45.
 Note      : converted here from mol/kg-H2O to mol/kg-SW
 """
-@inline function Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᵈⁱᶜₖ₂ᵣ₉₃, params₂ = Pᴴ²⁰ˢʷ) :: Real
+@inline function Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᵈⁱᶜₖ₂ᵣ₉₃, params₂ = Pᴴ²⁰ˢʷ)
     (; a₀, a₁, a₂, b₀, b₁, b₂, b₃, v₀, v₁, v₂, k₀, k₁, k₂) = params₁
     ln_kc2_p0 = (a₀ + 
                  a₁/Θᴷ + 
@@ -698,7 +698,7 @@ References: Millero (1995, eq 50 -- ln K1(COM))
              Millero (1982) pressure correction
 pH scale:   SWS
 """
-@inline function Fᵈⁱᶜₖ₁ₘ₉₅(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᵈⁱᶜₖ₁ₘ₉₅) :: Real
+@inline function Fᵈⁱᶜₖ₁ₘ₉₅(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᵈⁱᶜₖ₁ₘ₉₅)
     (; a₀, a₁, a₂, b₀, b₁, b₂, b₃, v₀, v₁, v₂, k₀, k₁, k₂) = params₁
     ln_kc1_p0 = (a₀ + 
                  a₁/Θᴷ + 
@@ -771,7 +771,7 @@ References: Millero (1995, eq 51 -- ln K2(COM))
             Millero (1979) pressure correction
 pH scale:   SWS
 """
-@inline function Fᵈⁱᶜₖ₂ₘ₉₅(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᵈⁱᶜₖ₂ₘ₉₅) :: Real
+@inline function Fᵈⁱᶜₖ₂ₘ₉₅(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᵈⁱᶜₖ₂ₘ₉₅)
     (; a₀, a₁, a₂, b₀, b₁, b₂, b₃, v₀, v₁, v₂, k₀, k₁, k₂) = params₁
     ln_kc2_p0 = (a₀ + 
                  a₁/Θᴷ + 
@@ -839,7 +839,7 @@ References: Luecker et al. (2000) -- also Handbook (2007)
             Millero (1979) pressure correction
 pH scale:   Total
 """
-@inline function Fᵈⁱᶜₖ₁ₗ₀₀(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᵈⁱᶜₖ₁ₗ₀₀) :: Real
+@inline function Fᵈⁱᶜₖ₁ₗ₀₀(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᵈⁱᶜₖ₁ₗ₀₀)
     (; a₀, a₁, a₂, b₀, b₁, v₀, v₁, v₂, k₀, k₁, k₂) = params₁
     log10_kc1_p0 = (a₀ + 
                     a₁/Θᴷ + 
@@ -905,7 +905,7 @@ References: Luecker et al. (2000) -- also Handbook (2007)
             Millero (1979) pressure correction
 pH scale:   Total
 """
-@inline function Fᵈⁱᶜₖ₂ₗ₀₀(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᵈⁱᶜₖ₂ₗ₀₀) :: Real
+@inline function Fᵈⁱᶜₖ₂ₗ₀₀(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᵈⁱᶜₖ₂ₗ₀₀)
     (; a₀, a₁, a₂, b₀, b₁, v₀, v₁, v₂, k₀, k₁, k₂) = params₁
     log10_kc2_p0 = (a₀ + 
                     a₁/Θᴷ + 
@@ -982,7 +982,7 @@ References: Dickson (1990, eq. 23) -- also Handbook (2007, eq. 37)
             Millero (1979) pressure correction
 pH scale  : total
 """
-@inline function Fᵇₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴮₖ₁) :: Real
+@inline function Fᵇₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴮₖ₁)
     (; a₀, a₁, a₂, a₃, a₄, b₀, b₁, b₂, c₀, c₁, c₂, d₀, v₀, v₁, v₂, v₃, k₀, k₁) = params₁
     ln_kb_p0  = ((a₀ +
                 Sᴾ⁰⁵(Sᵖ)*(a₁ +
@@ -1057,7 +1057,7 @@ References: Millero (1995) for value at p_bar = 0
             Millero (pers. comm. 1996) for pressure correction
 pH scale  : SWS
 """
-@inline function Fᴴ²ᴼₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴴ²ᴼₖ₁) :: Real
+@inline function Fᴴ²ᴼₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴴ²ᴼₖ₁)
     (; a₀, a₁, a₂, b₀, b₁, b₂, c₀, v₀, v₁, v₂, k₀, k₁) = params₁
     ln_kw_p0 = (a₀ +
                 a₁/Θᴷ +
@@ -1122,7 +1122,7 @@ References: Yao and Millero (1995)
             Millero (1995) for pressure correction
 pH scale  : SWS
 """
-@inline function Fᴾᴼ⁴ₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴾᴼ⁴ₖ₁) :: Real
+@inline function Fᴾᴼ⁴ₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴾᴼ⁴ₖ₁)
     (; a₀, a₁, a₂, b₀, b₁, b₂, b₃, v₀, v₁, v₂, k₀, k₁) = params₁
     ln_kp1_p0 = (a₀ +
                  a₁/Θᴷ +
@@ -1189,7 +1189,7 @@ References: Yao and Millero (1995)
             Millero (1995) for pressure correction
 pH scale  : SWS
 """
-@inline function Fᴾᴼ⁴ₖ₂(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴾᴼ⁴ₖ₂) :: Real
+@inline function Fᴾᴼ⁴ₖ₂(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴾᴼ⁴ₖ₂)
     (; a₀, a₁, a₂, b₀, b₁, b₂, b₃, v₀, v₁, v₂, k₀, k₁) = params₁
     ln_kp2_p0 = (a₀ +
                  a₁/Θᴷ +
@@ -1254,7 +1254,7 @@ References: Yao and Millero (1995)
             Millero (1995) for pressure correction
 pH scale  : SWS
 """
-@inline function Fᴾᴼ⁴ₖ₃(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴾᴼ⁴ₖ₃) :: Real
+@inline function Fᴾᴼ⁴ₖ₃(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴾᴼ⁴ₖ₃)
     (; a₀, a₁, a₂, a₃, a₄, a₅, v₀, v₁, v₂, k₀, k₁) = params₁
     ln_kp3_p0 = (a₀ +
                  a₁/Θᴷ +
@@ -1327,7 +1327,7 @@ pH scale  : SWS (according to Dickson et al, 2007)
 Note      : No pressure correction available
 Note      : converted here from mol/kg-H2O to mol/kg-sw
 """
-@inline function Fˢⁱᵗₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pˢⁱᵗₖ₁, params₂ = Pᵘˢ, params₃ = Pᴴ²⁰ˢʷ) :: Real
+@inline function Fˢⁱᵗₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pˢⁱᵗₖ₁, params₂ = Pᵘˢ, params₃ = Pᴴ²⁰ˢʷ)
     (; a₀, a₁, a₂, b₀, b₁, b₂, b₃, c₀, c₁, v₀, v₁, v₂, v₃, k₀, k₁ ) = params₁
 
     ln_ksi1_p0 = (a₀ +
@@ -1401,7 +1401,7 @@ Note      : the fits from Millero (1995) and Yao and Millero (1995)
             derive from Millero et al. (1988), with all the coefficients
             multiplied by -ln(10)
 """
-@inline function Fᴴ²ˢₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴴ²ˢₖ₁) :: Real
+@inline function Fᴴ²ˢₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴴ²ˢₖ₁)
     (; a₀, a₁, a₂, a₃, a₄, v₀, v₁, v₂, k₀, k₁) = params₁
     ln_kh2s_p0 = (a₀ +
                   a₁/Θᴷ +
@@ -1462,7 +1462,7 @@ References: Yao and Millero (1995)
             Millero (1995) for pressure correction
 pH scale  : SWS
 """
-@inline function Fᴺᴴ⁴ₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴺᴴ⁴ₖ₁) :: Real
+@inline function Fᴺᴴ⁴ₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴺᴴ⁴ₖ₁)
     (; a₀, a₁, a₂, b₀, b₁, b₂, b₃, v₀, v₁, v₂, k₀, k₁) = params₁
     ln_knh4_p0 = (a₀ +
                   a₁/Θᴷ +
@@ -1523,7 +1523,7 @@ References: Dickson and Riley (1979)
 pH scale  : free
 Note      : converted here from mol/kg-H2O to mol/kg-SW
 """
-@inline function Fᴴᶠᵦ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴴᶠᵦ₁, params₂ = Pᵘˢ, params₃ = Pᴴ²⁰ˢʷ) :: Real
+@inline function Fᴴᶠᵦ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴴᶠᵦ₁, params₂ = Pᵘˢ, params₃ = Pᴴ²⁰ˢʷ)
     (; a₀, a₁, a₂, v₀, v₁, v₂, k₀, k₁) = params₁
     ln_bhf_p0 = (a₀ +
                  a₁/Θᴷ +
@@ -1582,7 +1582,7 @@ References: Perez and Fraga (1987)
             Millero (1995) for pressure correction
 pH scale  : Total (according to Handbook, 2007
 """
-@inline function Fᴴᶠₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴴᶠₖ₁) :: Real
+@inline function Fᴴᶠₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴴᶠₖ₁)
     (; a₀, a₁, a₂, v₀, v₁, v₂, k₀, k₁) = params₁
     ln_khf_p0 = (a₀ +
                  a₁/Θᴷ +
@@ -1650,7 +1650,7 @@ References: Dickson (1990) -- also Handbook (2007)
 pH scale  : free
 Note      : converted here from mol/kg-H2O to mol/kg-SW
 """
-@inline function Fᴴˢᴼ⁴ₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴴˢᴼ⁴ₖ₁, params₂ = Pᵘˢ, params₃ = Pᴴ²⁰ˢʷ) :: Real
+@inline function Fᴴˢᴼ⁴ₖ₁(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᴴˢᴼ⁴ₖ₁, params₂ = Pᵘˢ, params₃ = Pᴴ²⁰ˢʷ)
     (; a₀, a₁, a₂, b₀, b₁, b₂, c₀, c₁, c₂, d₀, d₁, v₀, v₁, v₂, k₀, k₁) = params₁
     ln_khso4_p0 = (a₀ +
                    a₁/Θᴷ +
@@ -1722,7 +1722,7 @@ References: Mucci (1983)
 pH scale  : N/A
 Units     : (mol/kg-SW)^2
 """
-@inline function Fᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᶜᵃˡᶜⁱᵗᵉₛₚ) :: Real
+@inline function Fᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᶜᵃˡᶜⁱᵗᵉₛₚ)
     (; a₀, a₁, a₂, a₃, b₀, b₁, b₂, c₀, d₀, v₀, v₁, k₀, k₁) = params₁
     log10_kcalcite_p0 = (a₀ +
                          a₁*Θᴷ +
@@ -1792,7 +1792,7 @@ References: Mucci (1983)
 pH scale  : N/A
 Units     : (mol/kg-SW)^2
 """
-@inline function Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ) :: Real
+@inline function Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ)
     (; a₀, a₁, a₂, a₃, b₀, b₁, b₂, c₀, d₀, v₀, v₁, v₂, k₀, k₁) = params₁
     log10_karagonite_p0 = (a₀ +
                            a₁*Θᴷ +
@@ -1825,7 +1825,7 @@ Return the ratio H_SWS/H_Tot as a function of salinity, `Sᵖ`.
 Reference:  Munhoven
 pH scale:   all
 """
-@inline function H⁺ₛoverH⁺ₜ(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᶠᵀᴼᵀ, params₂ = Pᴴᶠᵦ₁, params₃ = Pᵘˢ, params₄ = Pᴴ²⁰ˢʷ, params₅ = Pˢᴼ⁴ᵀᴼᵀ, params₆ = Pᴴˢᴼ⁴ₖ₁) :: Real
+@inline function H⁺ₛoverH⁺ₜ(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᶠᵀᴼᵀ, params₂ = Pᴴᶠᵦ₁, params₃ = Pᵘˢ, params₄ = Pᴴ²⁰ˢʷ, params₅ = Pˢᴼ⁴ᵀᴼᵀ, params₆ = Pᴴˢᴼ⁴ₖ₁)
     return (1. +  
             (Fᵀᴼᵀ(Sᵖ, params₁)*Fᴴᶠᵦ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params₂, params₃, params₄))
            /(1. + SO₄ᵀᴼᵀ(Sᵖ, params₅)/Fᴴˢᴼ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params₆, params₃, params₄))
@@ -1839,7 +1839,7 @@ Return the ratio H_Tot/H_free as a function of salinity, `Sᵖ`.
 Reference:  Munhoven
 pH scale:   N/A
 """
-@inline function H⁺ₜoverH⁺₃(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pˢᴼ⁴ᵀᴼᵀ, params₂ = Pᴴˢᴼ⁴ₖ₁, params₃ = Pᵘˢ, params₄ = Pᴴ²⁰ˢʷ) :: Real
+@inline function H⁺ₜoverH⁺₃(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pˢᴼ⁴ᵀᴼᵀ, params₂ = Pᴴˢᴼ⁴ₖ₁, params₃ = Pᵘˢ, params₄ = Pᴴ²⁰ˢʷ)
     return 1. + SO₄ᵀᴼᵀ(Sᵖ, params₁)/Fᴴˢᴼ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params₂, params₃, params₄)
 end
 
@@ -1849,7 +1849,7 @@ end
 Return the ratio H_SWS/H_free as a function
 of salinity, `Sᵖ`.
 """
-@inline function H⁺ₛoverH⁺₃(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᶠᵀᴼᵀ, params₂ = Pᴴᶠᵦ₁, params₃ = Pᵘˢ, params₄ = Pᴴ²⁰ˢʷ, params₅ = Pˢᴼ⁴ᵀᴼᵀ, params₆ = Pᴴˢᴼ⁴ₖ₁) :: Real
+@inline function H⁺ₛoverH⁺₃(Θᴷ::Real, Sᵖ::Real, Δpᵦₐᵣ::Real, params₁ = Pᶠᵀᴼᵀ, params₂ = Pᴴᶠᵦ₁, params₃ = Pᵘˢ, params₄ = Pᴴ²⁰ˢʷ, params₅ = Pˢᴼ⁴ᵀᴼᵀ, params₆ = Pᴴˢᴼ⁴ₖ₁)
     return (1. + 
             (Fᵀᴼᵀ(Sᵖ, params₁)*Fᴴᶠᵦ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params₂, params₃, params₄)) +
             (SO₄ᵀᴼᵀ(Sᵖ, params₅)/Fᴴˢᴼ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params₆, params₃, params₄))

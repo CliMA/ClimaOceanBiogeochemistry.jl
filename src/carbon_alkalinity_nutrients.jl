@@ -14,7 +14,7 @@ using Oceananigans.Grids: Center, znode, znodes
 using Oceananigans.Units: days
 using Oceananigans.Architectures: architecture
 using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
-using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonSystem, CarbonSystemParameters, CarbonSolverParameters, CarbonCoefficientParameters
+using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonSystem, CarbonSystemParameters, CarbonSolverOptions, CarbonCoefficientParameters
 using KernelAbstractions: @kernel, @index
 using Oceananigans.Utils: launch!
 using Oceananigans.Grids: inactive_cell
@@ -58,7 +58,7 @@ struct CarbonAlkalinityNutrients{FT, W, S, M, P} <: AbstractBiogeochemistry
     ocean_pCO₂                                      :: S
     atmospheric_CO₂_solubility                      :: S
     oceanic_CO₂_solubility                          :: S
-    carbon_solver_params                            :: P # Named Tuple
+    carbon_system_params                            :: P # Named Tuple
     atmospheric_pCO₂                                :: S # ATM
     CO₂_flux                                        :: S
 end
@@ -150,8 +150,8 @@ function CarbonAlkalinityNutrients(; grid,
                                    iron_scavenging_rate                          = 0.2 / 365.25days, # s⁻¹
                                    ligand_concentration                          = 1e-9 * reference_density, # mol L m⁻³
                                    ligand_stability_coefficient                  = 1e8,
-                                   particulate_organic_phosphorus_sinking_velocity   = -10.0 / days,
-                                   carbon_solver_params                          = CarbonSystemParameters(),
+                                   particulate_organic_phosphorus_sinking_velocity = -10.0 / days,
+                                   carbon_system_params                          = CarbonSystemParameters(eltype(grid)),
                                    atmospheric_pCO₂                              = 280e-6,
 				   )
     FT = eltype(grid)
@@ -199,7 +199,7 @@ function CarbonAlkalinityNutrients(; grid,
     PAR                        = Field{Center,Center,Center}(grid)
     
     # Initialize auxiliary fields to prevent NaN propagation
-    set!(ocean_pCO₂,                 zero(FT))
+    set!(ocean_pCO₂,                 atmospheric_pCO₂)
     set!(atmospheric_CO₂_solubility, zero(FT))  # typical seawater CO₂ solubility
     set!(oceanic_CO₂_solubility,     zero(FT))
     set!(CO₂_flux,                   zero(FT))
@@ -245,7 +245,7 @@ function CarbonAlkalinityNutrients(; grid,
                                      ocean_pCO₂,
                                      atmospheric_CO₂_solubility,
                                      oceanic_CO₂_solubility,
-                                     carbon_solver_params,
+                                     carbon_system_params,
                                      atmospheric_pCO₂,
                                      CO₂_flux,
 )
@@ -285,7 +285,7 @@ Adapt.adapt_structure(to, bgc::CarbonAlkalinityNutrients) =
                             adapt(to, bgc.ocean_pCO₂),    
                             adapt(to, bgc.atmospheric_CO₂_solubility),
                             adapt(to, bgc.oceanic_CO₂_solubility),
-                            adapt(to, bgc.carbon_solver_params),
+                            adapt(to, bgc.carbon_system_params),
                             adapt(to, bgc.atmospheric_pCO₂),
                             adapt(to, bgc.CO₂_flux),
 )
@@ -295,6 +295,13 @@ const CAN = CarbonAlkalinityNutrients
 
 """
 Required biogeochemical tracers for the CarbonAlkalinityNutrients model
+    DIC -> Dissolved Inorganic Carbon
+    ALK -> Alkalinity
+    PO₄ -> Phosphate (macronutrient)
+    NO₃ -> Nitrate (macronutrient)
+    DOP -> Dissolved Organic Phosphorus
+    POP -> Particulate Organic Phosphorus
+    Fe  -> Dissolved Iron (micronutrient)
 """
 @inline required_biogeochemical_tracers(::CAN) = (:DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe)
 
@@ -312,25 +319,32 @@ end
 
 """
 Required biogeochemical auxiliary tracers for the CarbonAlkalinityNutrients model
+    PAR: Photosynthetically Active Radiation (W m⁻²)
+    pH: ocean pH
+    ocean_pCO₂: ocean partial pressure of CO₂ (atm)
+    atmospheric_CO₂_solubility: solubility of CO₂ in seawater (mol m⁻³ atm⁻¹)
+    oceanic_CO₂_solubility: solubility of CO₂ in seawater (mol m⁻³ atm⁻¹)
+    CO₂_flux: air-sea flux of CO₂ (mol m⁻² s⁻¹)
 """
-@inline required_biogeochemical_auxiliary_fields(::CAN) = tuple(:PAR, 
-								 :pH, 
-								 :ocean_pCO₂, 
-								 :atmospheric_CO₂_solubility,
-								 :oceanic_CO₂_solubility,
-								 :CO₂_flux
-								)
+@inline required_biogeochemical_auxiliary_fields(::CAN) = tuple(
+    :PAR, 
+    :pH, 
+    :ocean_pCO₂, 
+    :atmospheric_CO₂_solubility,
+    :oceanic_CO₂_solubility,
+    :CO₂_flux,
+)
 """
 Set the biogeochemical auxiliary tracers for the CarbonAlkalinityNutrients model
 """
 @inline biogeochemical_auxiliary_fields(bgc::CAN) = (; 
-                                            PAR                        = bgc.PAR,
-                                            pH                         = bgc.pH, 
-                                            ocean_pCO₂                 = bgc.ocean_pCO₂, 
-                                            atmospheric_CO₂_solubility = bgc.atmospheric_CO₂_solubility,
-                                            atmosphere_pCO₂            = bgc.atmospheric_pCO₂,
-                                            oceanic_CO₂_solubility     = bgc.oceanic_CO₂_solubility,
-                                            CO₂_flux                   = bgc.CO₂_flux,
+    PAR                        = bgc.PAR,
+    pH                         = bgc.pH, 
+    ocean_pCO₂                 = bgc.ocean_pCO₂, 
+    atmospheric_CO₂_solubility = bgc.atmospheric_CO₂_solubility,
+    atmospheric_pCO₂           = bgc.atmospheric_pCO₂,
+    oceanic_CO₂_solubility     = bgc.oceanic_CO₂_solubility,
+    CO₂_flux                   = bgc.CO₂_flux,
 )
 
 #Functions that fill the biogeochemical auxiliary tracers for the CarbonAlkalinityNutrients model
@@ -338,13 +352,13 @@ Set the biogeochemical auxiliary tracers for the CarbonAlkalinityNutrients model
 Set the PAR to 40% of the downwelling shortwave radiation
     at the ocean surface.
 """
-@kernel function calculate_par_from_surface_Qs!(grid, parfac, incident_par, Qs)
+@kernel function calculate_incident_par_from_surface_Qs!(grid, parfac, incident_par, Qs)
     FT = eltype(grid)
     i, j = @index(Global, NTuple)
     ks    = size(grid, 3)
     inactive = inactive_cell(i, j, ks, grid)
 
-    @inbounds incident_par[i, j] = ifelse(
+    @inbounds incident_par[i, j, 1] = ifelse(
         inactive,
         zero(FT),
         parfac * Qs[i, j, 1]
@@ -367,7 +381,7 @@ Update Photosynthetically Active Ratiation (PAR) field (i.e. light) for phytopla
     #@inbounds PAR[i, j, kt] =  ifelse(
 	#	        inactive,
     #		    zero(FT),
-    #    		PAR⁰[i, j] * exp(z_top / λ),
+    #    		PAR⁰[i, j, 1] * exp(z_top / λ),
 	#	)
 
 #    for k in kt-1:-1:1
@@ -376,7 +390,7 @@ Update Photosynthetically Active Ratiation (PAR) field (i.e. light) for phytopla
     @inbounds PAR[i, j, k] =  ifelse(
 		    inactive,
 		    zero(FT),
-    	    PAR⁰[i, j] * exp(zᶜ / λ),
+    	    PAR⁰[i, j, 1] * exp(zᶜ / λ),
 		    )
 #    end
 end 
@@ -393,12 +407,12 @@ Use salt forcing to inform DIC and ALK forcing using surface average values
     # Add carbon flux to the CO2 flux
     @inbounds begin
         FC[i, j, 1] = ifelse(
-            inactive,
+            inactive | (S₀[i, j, ks] <= zero(FT)),
             zero(FT),
             (C₀[i, j, ks]/S₀[i, j, ks]) * FS[i, j, 1],
         )
         FA[i, j, 1] = ifelse(
-            inactive,
+            inactive | (S₀[i, j, ks] <= zero(FT)),
             zero(FT),
             (A₀[i, j, ks]/S₀[i, j, ks]) * FS[i, j, 1],
         )
@@ -416,14 +430,14 @@ end
         grid,
         simulation.model.ocean.model.biogeochemistry.PAR_fraction_of_incoming_solar_radiation,
         simulation.model.ocean.model.biogeochemistry.incident_PAR,
-        simulation.model.interfaces.near_surface_atmosphere_state.Qs,
+        simulation.model.interfaces.atmosphere_ocean_interface.fluxes.downwelling_shortwave,
         )
 
     launch!(
 	    architecture(grid),
         grid,
         :xy,
-        calculate_par_from_surface_Qs!,
+        calculate_incident_par_from_surface_Qs!,
         kernel_args...
     )
 
@@ -488,7 +502,7 @@ Arguments:
     ALK, 
     PO4, 
     pH, 
-    atmosphere_pCO₂
+    atmospheric_pCO₂
     )
     FT = eltype(grid)
     i, j = @index(Global, NTuple)
@@ -497,7 +511,7 @@ Arguments:
 
     @inbounds CarbonSolved = ifelse(
         inactive,
-        CarbonSystem{eltype(grid)}(
+        CarbonSystem{FT}(
             zero(FT),
             zero(FT),
             zero(FT),
@@ -512,10 +526,10 @@ Arguments:
         ),
 	## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
         UniversalRobustCarbonSystem(;
-            pH      = pH[i, j],
-            pCO₂ᵃᵗᵐ = atmosphere_pCO₂[i, j],
+            pH      = pH[i, j, 1],
+            pCO₂ᵃᵗᵐ = atmospheric_pCO₂[i, j, 1],
             Θᶜ      = temperature[i, j, ks],
-            Sᴬ      = salinity[i, j, ks],
+            Sᴬ      = max(one(FT), salinity[i, j, ks]),  # guard against S ≤ 0 (ice melt)
             Δpᵦₐᵣ   = applied_pressure_bar,
             Cᵀ      = DIC[i, j, ks]/reference_density,
             Aᵀ      = ALK[i, j, ks]/reference_density,
@@ -525,10 +539,26 @@ Arguments:
             ),
     )
     @inbounds begin
-        ocean_pCO₂[i, j]                 = CarbonSolved.pCO₂ᵒᶜᵉ
-        atmospheric_CO₂_solubility[i, j] = CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ
-        oceanic_CO₂_solubility[i, j]     = CarbonSolved.Pᵈⁱᶜₖ₀ #Pᵈⁱᶜₖₛₒₗₒ
-        pH[i, j]                         = CarbonSolved.pH
+        ocean_pCO₂[i, j, 1]                 = ifelse(
+            isnan(CarbonSolved.pCO₂ᵒᶜᵉ), 
+            ocean_pCO₂[i, j, 1],                 
+            CarbonSolved.pCO₂ᵒᶜᵉ,
+        )
+        atmospheric_CO₂_solubility[i, j, 1] = ifelse(
+            isnan(CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ), 
+            atmospheric_CO₂_solubility[i, j, 1],
+            CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ,
+        )
+        oceanic_CO₂_solubility[i, j, 1]     = ifelse(
+            isnan(CarbonSolved.Pᵈⁱᶜₖ₀),
+            oceanic_CO₂_solubility[i, j, 1],
+            CarbonSolved.Pᵈⁱᶜₖ₀,
+        )
+        pH[i, j, 1]                         = ifelse(
+            isnan(CarbonSolved.pH),
+            pH[i, j, 1],
+            CarbonSolved.pH,
+        )
     end
 end
 
@@ -561,9 +591,9 @@ Update BGC auxiliary fields
     )
     
     launch!(
-	arch, 
-	grid, 
-	:xyz, 
+	arch,
+	grid,
+	:xyz,
 	update_photosynthetic_active_radiation!,
         kernel_args...,
     )
@@ -571,7 +601,7 @@ Update BGC auxiliary fields
     # Solve the ocean carbon system and calculate pH, pCO₂, etc
     kernel_args = (
         grid,
-        bgc.carbon_solver_params,
+        bgc.carbon_system_params,
         bgc.reference_density,
         bgc.ocean_pCO₂, 
         bgc.atmospheric_CO₂_solubility, 
@@ -593,21 +623,6 @@ Update BGC auxiliary fields
         solve_ocean_pCO₂!,
         kernel_args...,
     )
-
-#    # Update surface freshwater forcing on DIC
-#    # NOW DONE IN calculate_air_sea_carbon_exchange!
-#    kernel_args =(
-#        model.grid,
-#        model.biogeochemistry.CO₂_flux,
-#        model.tracers.DIC.boundary_conditions.top.condition,
-#    )
-#    launch!(
-#        arch,
-#        grid,
-#        :xy,
-#        combine_dic_fw_and_co2_fluxes!,
-#        kernel_args...,
-#    )
      return nothing
 end
 
@@ -663,11 +678,11 @@ end
     NO₃ =nitrate_concentration
     Feₜ =iron_concentration
 
-    # First, adjust the concentrations to be non-zero
-    I_nonzero = max(zero(FT), I)
-    P_nonzero = max(zero(FT), PO₄)
-    N_nonzero = max(zero(FT), NO₃)
-    F_nonzero = max(zero(FT), Feₜ)
+    # First, adjust the concentrations to be non-zero and NaN-safe
+    I_nonzero = ifelse(isnan(I),   zero(FT), max(zero(FT), I))
+    P_nonzero = ifelse(isnan(PO₄), zero(FT), max(zero(FT), PO₄))
+    N_nonzero = ifelse(isnan(NO₃), zero(FT), max(zero(FT), NO₃))
+    F_nonzero = ifelse(isnan(Feₜ), zero(FT), max(zero(FT), Feₜ))
 
     # calculate the limitation terms
     Lₗᵢₘ = I_nonzero / (I_nonzero + kᴵ)
@@ -807,14 +822,15 @@ Tracer sources and sinks for dissolved inorganic carbon (DIC)
        POP      = fields.POP[i, j, k]
        kface_top= min(k + 1, size(wₛ, 3))
        Wₛ       = (wₛ[i, j, k] + wₛ[i, j, kface_top]) / 2
-       CO₂_flux = bgc.CO₂_flux[i, j]
+#       CO₂_flux_raw = bgc.CO₂_flux[i, j, 1]
+#       CO₂_flux = ifelse(isnan(CO₂_flux_raw), zero(eltype(grid)), CO₂_flux_raw)
     end
 
     return Rᶜᴾ * (dissolved_organic_phosphorus_remin(grid, γ, DOP) -
                  (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(grid, μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
                  particulate_organic_phosphorus_remin(grid, Rᵣ, r, b, Wₛ, λ, z, fᵢ, POP)) +
-           particulate_inorganic_carbon_remin(grid) + 
-           CO₂_flux
+           particulate_inorganic_carbon_remin(grid) #+ 
+#           CO₂_flux
 end
 
 """
@@ -1061,7 +1077,8 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
        Feₜ = fields.Fe[i, j, k]
        DOP = fields.DOP[i, j, k]
        POP = fields.POP[i, j, k]
-       Wₛ  = (wₛ[i, j, k] + wₛ[i, j, k+1]) / 2
+       kface_top = min(k + 1, size(wₛ, 3))
+       Wₛ  = (wₛ[i, j, k] + wₛ[i, j, kface_top]) / 2
     end
     return α * net_community_production(grid, μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
            particulate_organic_phosphorus_remin(grid, Rᵣ, r, b, Wₛ, λ, z, fᵢ, POP)

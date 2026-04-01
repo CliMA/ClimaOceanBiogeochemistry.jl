@@ -1,42 +1,11 @@
 #using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
-#using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonSystem, CarbonSystemParameters, CarbonSolverParameters, CarbonCoefficientParameters
+#using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonSystem, CarbonSystemParameters, CarbonSolverOptions, CarbonCoefficientParameters
 using KernelAbstractions: @kernel, @index
 using Oceananigans.Utils: launch!
 using Oceananigans.Grids: inactive_cell
 using Oceananigans.Fields: Field
 
 const exchange_coefficient = 0.337 / 3.6e5 # cm hr⁻¹ / cmhr⁻¹_per_ms⁻¹
-
-#atmospheric_CO₂_solubility = Field{Center, Center, Nothing}(grid)
-#oceanic_CO₂_solubility     = Field{Center, Center, Nothing}(grid)
-#schmidt_dic                = Field{Center, Center, Center}(grid)
-#piston_velocity            = Field{Center, Center, Center}(grid)
-#wind_speed                 = Field{Center, Center, Center}(grid)
-
-### Supply some coefficients and external data for the CO₂ flux calculation
-#struct AirSeaCarbonFluxParameters
-##    atmospheric_pCO₂     :: Real
-#    exchange_coefficient :: Real
-#    reference_density    :: Real
-#end
-#adapt_structure( 
-#    to, cp::AirSeaCarbonFluxParameters
-#    ) = AirSeaCarbonFluxParameters(
-##           adapt(to, cp.atmospheric_pCO₂),
-#           adapt(to, cp.exchange_coefficient),
-#           adapt(to, cp.reference_density),
-#)
-#@inline function AirSeaCarbonFluxParameters(; 
-##        atmospheric_pCO₂::Real = 380e-6, # atm
-#        exchange_coefficient::Real = 0.337 / 3.6e5, # cm hr⁻¹ / cmhr⁻¹_per_ms⁻¹
-#        reference_density::Real = 1024.5, # kg m⁻³
-#        )
-#    return AirSeaCarbonFluxParameters(
-#				      #atmospheric_pCO₂,
-#                                      exchange_coefficient,
-#                                      reference_density,
-#                                      )
-#end
 
 """
     compute_schmidt_dic(
@@ -72,7 +41,7 @@ Arguments:
     k = size(grid, 3)
     inactive = inactive_cell(i, j, k, grid)
 
-    @inbounds schmidt_number_dic[i, j, k] = ifelse(
+    @inbounds schmidt_number_dic[i, j, 1] = ifelse(
         inactive,
         zero(grid),
         (kˢᶜ.a₀ - 
@@ -111,7 +80,7 @@ Arguments:
     k    = size(grid, 3)
     inactive = inactive_cell(i, j, k, grid)
 
-    @inbounds wind_speed[i, j, k] = ifelse(
+    @inbounds wind_speed[i, j, 1] = ifelse(
         inactive,
         zero(grid),
         sqrt(u_wind_velocity[i, j, 1]^2 + 
@@ -149,98 +118,14 @@ Arguments:
     k    = size(grid, 3)
     inactive = inactive_cell(i, j, k, grid)
 
-    @inbounds piston_velocity[i, j, k] = ifelse(
+    @inbounds piston_velocity[i, j, 1] = ifelse(
         inactive,
         zero(grid),
         exchange_coefficient * 
-            surface_wind_speed[i, j, k]^2 / 
-            sqrt(schmidt_number[i, j, k]),
+            surface_wind_speed[i, j, 1]^2 / 
+            sqrt(schmidt_number[i, j, 1]),
     )
 end
-
-#"""
-#    solve_ocean_pCO₂!(
-#        grid,
-#        reference_density,
-#        ocean_pCO₂, 
-#        atmospheric_CO₂_solubility, 
-#        oceanic_CO₂_solubility,
-#        Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ
-#        )
-#
-#Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
-#
-#Arguments:
-#- `grid::RegularCartesianGrid`: The model grid.
-#- `solver_params::NamedTuple`: The parameters for the UniversalRobustCarbonSystem solver.
-#- `reference_density::Float64`: The reference density of seawater.
-#- `ocean_pCO₂::Field{Center, Center, Nothing}`: The computed oceanic pCO₂.
-#- `atmospheric_CO₂_solubility::Field{Center, Center, Nothing}`: The solubility of CO₂ in the atmosphere.
-#- `oceanic_CO₂_solubility::Field{Center, Center, Nothing}`: The solubility of CO₂ in the ocean.
-#- `Θᶜ::Field{Center, Center, Nothing}`: Temperature in degrees Celsius.
-#- `Sᴬ::Field{Center, Center, Nothing}`: Salinity in PSU.
-#- `Δpᵦₐᵣ::Field{Center, Center, Nothing}`: Applied pressure in atm.
-#- `Cᵀ::Field{Center, Center, Nothing}`: Total dissolved inorganic carbon (DIC) in mol kg⁻¹.
-#- `Aᵀ::Field{Center, Center, Nothing}`: Total alkalinity (ALK) in mol kg⁻¹.
-#- `Pᵀ::Field{Center, Center, Nothing}`: Phosphate concentration in mol kg⁻¹.
-#- `pH::Field{Center, Center, Center}`: The computed pH.
-#- `pCO₂ᵃᵗᵐ::Field{Center, Center, Nothing}`: The partial pressure of CO₂ in the atmosphere.
-#"""
-#@kernel function solve_ocean_pCO₂!(
-#    grid,
-#    solver_params,
-#    reference_density,
-#    ocean_pCO₂, 
-#    atmospheric_CO₂_solubility, 
-#    oceanic_CO₂_solubility,
-#    temperature, 
-#    salinity, 
-#    applied_pressure_bar, 
-#    DIC, 
-#    ALK, 
-#    PO4, 
-#    pH, 
-#    atmosphere_pCO₂
-#    )
-#    i, j = @index(Global, NTuple)
-#    k    = size(grid, 3)
-#    inactive = inactive_cell(i, j, k, grid)
-#
-#    @inbounds CarbonSolved = ifelse(
-#        inactive,
-#        CarbonSystem{eltype(grid)}(
-#            zero(grid),
-#            zero(grid),
-#            zero(grid),
-#            zero(grid),
-#            zero(grid),
-#            zero(grid),
-#            zero(grid),
-#            zero(grid),
-#            zero(grid),
-#            zero(grid),
-#            zero(grid),
-#        ),
-#        ## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
-#        UniversalRobustCarbonSystem(;
-#            pH      = pH[i, j, 1], 
-#            pCO₂ᵃᵗᵐ = atmosphere_pCO₂,
-#            Θᶜ      = temperature[i, j, k], 
-#            Sᴬ      = salinity[i, j, k], 
-#            Δpᵦₐᵣ   = applied_pressure_bar[i, j, 1]*Pa2bar, 
-#            Cᵀ      = DIC[i, j, k]/reference_density, 
-#            Aᵀ      = ALK[i, j, k]/reference_density, 
-#            Pᵀ      = PO4[i, j, k]/reference_density, 
-#            Siᵀ     = PO4[i, j, k]*15/reference_density,
-#            solver_params...,
-#            ),
-#    )        
-#
-#    ocean_pCO₂[i, j, 1]                 = CarbonSolved.pCO₂ᵒᶜᵉ
-#    atmospheric_CO₂_solubility[i, j, 1] = CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ
-#    oceanic_CO₂_solubility[i, j, 1]     = CarbonSolved.Pᵈⁱᶜₖₛₒₗₒ
-#    pH[i, j, 1]                         = CarbonSolved.pH
-#end
 
 """
     compute_CO₂_flux(
@@ -283,12 +168,12 @@ The convention is that a positive flux is upwards (outgassing), and a negative f
     inactive = inactive_cell(i, j, k, grid)
 
     ## compute CO₂ flux (-ve for uptake, +ve for outgassing since convention is +ve upwards)
-    @inbounds CO₂_flux[i, j, k] = ifelse(
+    @inbounds CO₂_flux[i, j, 1] = ifelse(
         inactive,
         zero(grid),
-	    -piston_velocity[i, j, k] * (
-                     atmospheric_pCO₂ * atmospheric_CO₂_solubility[i, j, k] - 
-                     oceanic_pCO₂[i, j, k]     * oceanic_CO₂_solubility[i, j, k]
+	    -piston_velocity[i, j, 1] * (
+                     atmospheric_pCO₂[i,j,1] * atmospheric_CO₂_solubility[i, j, 1] - 
+                     oceanic_pCO₂[i, j, 1]     * oceanic_CO₂_solubility[i, j, 1]
                   ) * reference_density, # Convert mol kg⁻¹ m s⁻¹ to mol m⁻² s⁻¹
     )
 end
@@ -300,9 +185,9 @@ end
     inactive = inactive_cell(i, j, k, grid)
 
     @inbounds boundary_condition[i, j, 1] += ifelse(
-        inactive,
+        inactive | isnan(CO₂_flux[i, j, 1]),
         zero(grid),
-        CO₂_flux[i, j, k]
+        CO₂_flux[i, j, 1]
     )
 end
 
@@ -363,8 +248,8 @@ solubility/activity of CO₂ in seawater.
     # wind_speed = Field{Center, Center, Nothing}(grid)
     kernel_args = (
         grid,
-        simulation.model.fluxes.surface_atmosphere_state.u,
-        simulation.model.fluxes.surface_atmosphere_state.v,
+        simulation.model.interfaces.exchanger.atmosphere.state.u,
+        simulation.model.interfaces.exchanger.atmosphere.state.v,
         wind_speed,
     )
 
