@@ -184,7 +184,7 @@ end
     k    = size(grid, 3)
     inactive = inactive_cell(i, j, k, grid)
 
-    @inbounds boundary_condition[i, j, 1] += ifelse(
+    @inbounds boundary_condition[i, j, 1] -= ifelse(
         inactive | isnan(CO₂_flux[i, j, 1]),
         zero(grid),
         CO₂_flux[i, j, 1]

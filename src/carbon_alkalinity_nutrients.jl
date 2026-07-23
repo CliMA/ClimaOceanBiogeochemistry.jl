@@ -375,16 +375,6 @@ Update Photosynthetically Active Ratiation (PAR) field (i.e. light) for phytopla
     #kt   = size(grid, 3)
 
     λ  = bgc.PAR_attenuation_scale
-    #z_top = znode(i, j, kt, grid, Center(), Center(), Center())
-    #
-    #inactive = inactive_cell(i, j, kt, grid)
-    #@inbounds PAR[i, j, kt] =  ifelse(
-	#	        inactive,
-    #		    zero(FT),
-    #    		PAR⁰[i, j, 1] * exp(z_top / λ),
-	#	)
-
-#    for k in kt-1:-1:1
     zᶜ = znode(i, j, k, grid, Center(), Center(), Center())
     inactive = inactive_cell(i, j, k, grid)
     @inbounds PAR[i, j, k] =  ifelse(
@@ -392,7 +382,6 @@ Update Photosynthetically Active Ratiation (PAR) field (i.e. light) for phytopla
 		    zero(FT),
     	    PAR⁰[i, j, 1] * exp(zᶜ / λ),
 		    )
-#    end
 end 
 """
 Use salt forcing to inform DIC and ALK forcing using surface average values
@@ -460,6 +449,47 @@ end
     return nothing
 end
 
+@kernel function fused_surface_bgc_transfer!(
+    grid, par_fraction, incident_PAR, Qs, C₀, A₀, S₀, FS, FC, FA
+)
+    FT = eltype(grid)
+    i, j = @index(Global, NTuple)
+    ks = size(grid, 3)
+
+    @inbounds if inactive_cell(i, j, ks, grid)
+        incident_PAR[i, j, 1] = zero(FT)
+        FC[i, j, 1] = zero(FT)
+        FA[i, j, 1] = zero(FT)
+    else
+        incident_PAR[i, j, 1] = par_fraction * Qs[i, j, 1]
+        Ssafe = 1/max(S₀[i, j, ks], FT(1e-12))
+        FC[i, j, 1] = C₀[i, j, ks] * Ssafe * FS[i, j, 1]
+        FA[i, j, 1] = A₀[i, j, ks] * Ssafe * FS[i, j, 1]
+    end
+end
+
+@inline function transfer_surface_atmospheric_state_for_bgc_fused!(simulation::Simulation)
+    ocean = simulation.model.ocean.model
+    bgc   = ocean.biogeochemistry
+    grid  = ocean.grid
+
+    launch!(
+        architecture(grid), grid, :xy, fused_surface_bgc_transfer!,
+        grid,
+        bgc.PAR_fraction_of_incoming_solar_radiation,
+        bgc.incident_PAR, # if needed: replace with bgc.PAR⁰
+        simulation.model.interfaces.atmosphere_ocean_interface.fluxes.downwelling_shortwave,
+        ocean.tracers.DIC,
+        ocean.tracers.ALK,
+        ocean.tracers.S,
+        simulation.model.interfaces.net_fluxes.ocean.S,
+        ocean.tracers.DIC.boundary_conditions.top.condition,
+        ocean.tracers.ALK.boundary_conditions.top.condition,
+    )
+
+    return nothing
+end
+
 """
     solve_ocean_pCO₂!(
         grid,
@@ -507,58 +537,51 @@ Arguments:
     FT = eltype(grid)
     i, j = @index(Global, NTuple)
     ks    = size(grid, 3)
-    inactive = inactive_cell(i, j, ks, grid)
 
-    @inbounds CarbonSolved = ifelse(
-        inactive,
-        CarbonSystem{FT}(
-            zero(FT),
-            zero(FT),
-            zero(FT),
-            zero(FT),
-            zero(FT),
-            zero(FT),
-            zero(FT),
-            zero(FT),
-            zero(FT),
-            zero(FT),
-            zero(FT),
-        ),
-	## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
-        UniversalRobustCarbonSystem(;
-            pH      = pH[i, j, 1],
-            pCO₂ᵃᵗᵐ = atmospheric_pCO₂[i, j, 1],
-            Θᶜ      = temperature[i, j, ks],
-            Sᴬ      = max(one(FT), salinity[i, j, ks]),  # guard against S ≤ 0 (ice melt)
-            Δpᵦₐᵣ   = applied_pressure_bar,
-            Cᵀ      = DIC[i, j, ks]/reference_density,
-            Aᵀ      = ALK[i, j, ks]/reference_density,
-            Pᵀ      = PO4[i, j, ks]/reference_density,
-            Siᵀ     = PO4[i, j, ks]*15/reference_density,
-            params  = solver_params,
-            ),
-    )
-    @inbounds begin
-        ocean_pCO₂[i, j, 1]                 = ifelse(
-            isnan(CarbonSolved.pCO₂ᵒᶜᵉ), 
-            ocean_pCO₂[i, j, 1],                 
-            CarbonSolved.pCO₂ᵒᶜᵉ,
-        )
-        atmospheric_CO₂_solubility[i, j, 1] = ifelse(
-            isnan(CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ), 
-            atmospheric_CO₂_solubility[i, j, 1],
-            CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ,
-        )
-        oceanic_CO₂_solubility[i, j, 1]     = ifelse(
-            isnan(CarbonSolved.Pᵈⁱᶜₖ₀),
-            oceanic_CO₂_solubility[i, j, 1],
-            CarbonSolved.Pᵈⁱᶜₖ₀,
-        )
-        pH[i, j, 1]                         = ifelse(
-            isnan(CarbonSolved.pH),
-            pH[i, j, 1],
-            CarbonSolved.pH,
-        )
+    if !inactive_cell(i, j, ks, grid)
+        @inbounds begin
+	    ## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
+            CarbonSolved = UniversalRobustCarbonSystem(;
+                pH      = pH[i, j, 1],
+                pCO₂ᵃᵗᵐ = atmospheric_pCO₂[i, j, 1],
+                Θᶜ      = temperature[i, j, ks],
+                Sᴬ      = max(one(FT), salinity[i, j, ks]),  # guard against S ≤ 0 (ice melt)
+                Δpᵦₐᵣ   = applied_pressure_bar,
+                Cᵀ      = DIC[i, j, ks]/reference_density,
+                Aᵀ      = ALK[i, j, ks]/reference_density,
+                Pᵀ      = PO4[i, j, ks]/reference_density,
+                Siᵀ     = PO4[i, j, ks]*15/reference_density,
+                params  = solver_params,
+                )
+
+            ocean_pCO₂[i, j, 1]                 = ifelse(
+                isnan(CarbonSolved.pCO₂ᵒᶜᵉ), 
+                ocean_pCO₂[i, j, 1],                 
+                CarbonSolved.pCO₂ᵒᶜᵉ,
+            )
+            atmospheric_CO₂_solubility[i, j, 1] = ifelse(
+                isnan(CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ), 
+                atmospheric_CO₂_solubility[i, j, 1],
+                CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ,
+            )
+            oceanic_CO₂_solubility[i, j, 1]     = ifelse(
+                isnan(CarbonSolved.Pᵈⁱᶜₖ₀),
+                oceanic_CO₂_solubility[i, j, 1],
+                CarbonSolved.Pᵈⁱᶜₖ₀,
+            )
+            pH[i, j, 1]                         = ifelse(
+                isnan(CarbonSolved.pH),
+                pH[i, j, 1],
+                CarbonSolved.pH,
+            )
+        end
+    else
+        @inbounds begin
+            ocean_pCO₂[i, j, 1]                 = zero(FT)
+            atmospheric_CO₂_solubility[i, j, 1] = zero(FT)
+            oceanic_CO₂_solubility[i, j, 1]     = zero(FT)
+            pH[i, j, 1]                         = zero(FT)
+        end
     end
 end
 
