@@ -129,7 +129,7 @@ function NutrientsPlanktonBacteriaDetritus(grid;
         w₀ = detritus_vertical_velocity
         no_penetration = ImpenetrableBoundaryCondition()
 
-        bcs = FieldBoundaryConditions(grid, (Center, Center, Face),
+        bcs = FieldBoundaryConditions(grid, (Center(), Center(), Face()),
                                       top=no_penetration, bottom=no_penetration)
 
         detritus_vertical_velocity = ZFaceField(grid, boundary_conditions = bcs)
