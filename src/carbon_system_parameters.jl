@@ -1,3 +1,18 @@
+abstract type CarbonicAcidFormulation end
+struct Lueker2000  <:CarbonicAcidFormulation end
+struct Millero1995 <:CarbonicAcidFormulation end
+struct Roy1993     <:CarbonicAcidFormulation end
+
+abstract type SilicicAcidFormulation end
+# No pressure correction
+struct YaoMillero1995  <: SilicicAcidFormulation end
+# Pressure correction estimated from borate as suggested by Millero (1995)
+struct YaoMillero1995P <: SilicicAcidFormulation end
+
+abstract type FluoricAcidFormulation end
+struct DicksonRiley1979 <: FluoricAcidFormulation end
+struct PerezFraga1987   <: FluoricAcidFormulation end
+
 # Struct to hold parameters for the UniversalRobustCarbonSolver
 struct CarbonSolverOptions{FT<:Real, IT<:Int} #
     Δₕ₊      :: FT # Tolerance of the H⁺ solution 
@@ -5,11 +20,11 @@ struct CarbonSolverOptions{FT<:Real, IT<:Int} #
     Iᴴ⁺ₘₐₓ   :: IT # Maximum number of iterations
 end
 adapt_structure(
-    to, csp::CarbonSolverOptions
+    to, cso::CarbonSolverOptions
     ) = CarbonSolverOptions(
-           adapt(to, csp.Δₕ₊),
-           adapt(to, csp.H⁺ᵗʰʳᵉˢʰ),
-           adapt(to, csp.Iᴴ⁺ₘₐₓ),
+           adapt(to, cso.Δₕ₊),
+           adapt(to, cso.H⁺ᵗʰʳᵉˢʰ),
+           adapt(to, cso.Iᴴ⁺ₘₐₓ),
 )
 """
     CarbonSolverOptions(Δₕ₊::Real=1e-8, H⁺ᵗʰʳᵉˢʰ::Real=1, Iᴴ⁺ₘₐₓ::Real=100)
@@ -158,36 +173,44 @@ function CarbonCoefficientParameters(FT=Float64;
     )
 end
 
-struct CarbonSystemParameters{CSP<:CarbonSolverOptions, CCP<:CarbonCoefficientParameters}
-    Sᵒᵖᵗˢ        :: CSP
-    Pᴴ²⁰ˢʷ       :: CCP
-    Pᵘˢ          :: CCP
-    Pᴮᵀᴼᵀ        :: CCP
-    Pᶜᵃᵀᴼᵀ       :: CCP
-    Pᶠᵀᴼᵀ        :: CCP
-    Pˢᴼ⁴ᵀᴼᵀ      :: CCP
-    Pᵈⁱᶜₖₛₒₗₐ     :: CCP
-    Pᵈⁱᶜₖₚᵣₑ     :: CCP
-    Pᵈⁱᶜₖ₀       :: CCP
-    Pᵈⁱᶜₖ₁ᵣ₉₃    :: CCP
-    Pᵈⁱᶜₖ₂ᵣ₉₃    :: CCP
-    Pᵈⁱᶜₖ₁ₘ₉₅    :: CCP
-    Pᵈⁱᶜₖ₂ₘ₉₅    :: CCP
-    Pᵈⁱᶜₖ₁ₗ₀₀     :: CCP
-    Pᵈⁱᶜₖ₂ₗ₀₀     :: CCP
-    Pᴮₖ₁         :: CCP
-    Pᴴ²ᴼₖ₁       :: CCP
-    Pᴾᴼ⁴ₖ₁       :: CCP
-    Pᴾᴼ⁴ₖ₂       :: CCP
-    Pᴾᴼ⁴ₖ₃       :: CCP
-    Pˢⁱᵗₖ₁       :: CCP
-    Pᴴ²ˢₖ₁       :: CCP
-    Pᴺᴴ⁴ₖ₁       :: CCP
-    Pᴴᶠᵦ₁        :: CCP
-    Pᴴᶠₖ₁        :: CCP
-    Pᴴˢᴼ⁴ₖ₁      :: CCP
-    Pᶜᵃˡᶜⁱᵗᵉₛₚ   :: CCP
-    Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ :: CCP
+struct CarbonSystemParameters{
+        CSO<:CarbonSolverOptions, 
+        CCP<:CarbonCoefficientParameters,
+        CAF<:CarbonicAcidFormulation,
+        SAF<:SilicicAcidFormulation,
+        FAF<:FluoricAcidFormulation}
+    Sᵒᵖᵗˢ          :: CSO
+    Pᴴ²⁰ˢʷ         :: CCP
+    Pᵘˢ            :: CCP
+    Pᴮᵀᴼᵀ          :: CCP
+    Pᶜᵃᵀᴼᵀ         :: CCP
+    Pᶠᵀᴼᵀ          :: CCP
+    Pˢᴼ⁴ᵀᴼᵀ        :: CCP
+    Pᵈⁱᶜₖₛₒₗₐ       :: CCP
+    Pᵈⁱᶜₖₚᵣₑ       :: CCP
+    Pᵈⁱᶜₖ₀         :: CCP
+    Pᵈⁱᶜₖ₁ᵣ₉₃      :: CCP
+    Pᵈⁱᶜₖ₂ᵣ₉₃      :: CCP
+    Pᵈⁱᶜₖ₁ₘ₉₅      :: CCP
+    Pᵈⁱᶜₖ₂ₘ₉₅      :: CCP
+    Pᵈⁱᶜₖ₁ₗ₀₀       :: CCP
+    Pᵈⁱᶜₖ₂ₗ₀₀       :: CCP
+    Pᴮₖ₁           :: CCP
+    Pᴴ²ᴼₖ₁         :: CCP
+    Pᴾᴼ⁴ₖ₁         :: CCP
+    Pᴾᴼ⁴ₖ₂         :: CCP
+    Pᴾᴼ⁴ₖ₃         :: CCP
+    Pˢⁱᵗₖ₁         :: CCP
+    Pᴴ²ˢₖ₁         :: CCP
+    Pᴺᴴ⁴ₖ₁         :: CCP
+    Pᴴᶠᵦ₁          :: CCP
+    Pᴴᶠₖ₁          :: CCP
+    Pᴴˢᴼ⁴ₖ₁        :: CCP
+    Pᶜᵃˡᶜⁱᵗᵉₛₚ     :: CCP
+    Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ   :: CCP
+    carbonic_acid :: CAF
+    silicic_acid  :: SAF
+    fluoric_acid  :: FAF
 end
 """
     CarbonSystemParameters(kwargs...)
@@ -229,6 +252,9 @@ The parameters are used in carbon system calculations and are initialized with d
 - `Pᴴˢᴼ⁴ₖ₁::CarbonCoefficientParameters`: Default is `CarbonCoefficientParameters(a₀=141.328, a₁=-4276.1, a₂=-23.093, b₀=324.57, b₁=-13856., b₂=-47.986, c₀=-771.54, c₁=35474., c₂=114.723, d₀=-2698., d₁=1776., v₀=-18.03, v₁=0.0466, v₂=0.316E-03, k₀=-4.53e-3, k₁=0.0900e-3)`.
 - `Pᶜᵃˡᶜⁱᵗᵉₛₚ::CarbonCoefficientParameters`: Default is `CarbonCoefficientParameters(a₀=-171.9065, a₁=-0.077993, a₂=2839.319, a₃=71.595, b₀=-0.77712, b₁=0.0028426, b₂=178.34, c₀=-0.07711, d₀=0.0041249, v₀=-48.76, v₁=0.5304, k₀=-11.76e-3, k₁=0.3692e-3)`.
 - `Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ::CarbonCoefficientParameters`: Default is `CarbonCoefficientParameters(a₀=-171.945, a₁=-0.077993, a₂=2903.293, a₃=71.595, b₀=-0.068393, b₁=0.0017276, b₂=88.135, c₀=-0.10018, d₀=0.0059415, v₀=-48.76, v₁=0.5304, v₂=2.8, k₀=-11.76e-3, k₁=0.3692e-3)`.
+- `carbonic_acid :: CAF`: The carbonic acid formulation selected from CarbonChemistryCoefficients (Roy/Millero/Lueker)
+- `silicic_acid :: SAF`: The silicic acid formulation selected from SilicicAcidFormulation (YaoMillero1995/YaoMillero1995P ressure correction)
+- `fluoric_acid :: FAF`: The fluoric acid formulation selected from FluoricAcidFormulation (DicksonRiley1979/PerezFraga1987)
 
 # Returns
 - `CarbonSystemParameters`: An object containing all the initialized carbon coefficient parameters.
@@ -559,7 +585,10 @@ function CarbonSystemParameters(FT=Float64;
             v₂ =     2.8,
             k₀ = -  11.76e-3,
             k₁ =     0.3692e-3,
-        )
+        ),
+        carbonic_acid :: CarbonicAcidFormulation = Lueker2000(),
+        silicic_acid :: SilicicAcidFormulation = YaoMillero1995P(),
+        fluoric_acid :: FluoricAcidFormulation = DicksonRiley1979(),
 )
     return CarbonSystemParameters(
         Sᵒᵖᵗˢ,
@@ -591,5 +620,8 @@ function CarbonSystemParameters(FT=Float64;
         Pᴴˢᴼ⁴ₖ₁,
         Pᶜᵃˡᶜⁱᵗᵉₛₚ,
         Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ,
+        carbonic_acid,
+        silicic_acid,
+        fluoric_acid,
     )
 end

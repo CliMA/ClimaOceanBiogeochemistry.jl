@@ -2,12 +2,8 @@ struct CarbonChemistryCoefficients{FT}
     Cᵈⁱᶜₖₛₒₗₐ     :: FT
     Cᵈⁱᶜₖₛₒₗₒ     :: FT
     Cᵈⁱᶜₖ₀       :: FT 
-    Cᵈⁱᶜₖ₁ᵣ₉₃    :: FT 
-    Cᵈⁱᶜₖ₂ᵣ₉₃    :: FT 
-    Cᵈⁱᶜₖ₁ₘ₉₅    :: FT 
-    Cᵈⁱᶜₖ₂ₘ₉₅    :: FT 
-    Cᵈⁱᶜₖ₁ₗ₀₀     :: FT
-    Cᵈⁱᶜₖ₂ₗ₀₀     :: FT
+    Cᵈⁱᶜₖ₁       :: FT
+    Cᵈⁱᶜₖ₂       :: FT
     Cᵇₖ₁         :: FT 
     Cᴴ²ᴼₖ₁       :: FT 
     Cᴾᴼ⁴ₖ₁       :: FT 
@@ -53,22 +49,19 @@ Return dissociation coefficients necessary to solve for the distribution of carb
     Cᵈⁱᶜₖₛₒₗₐ    = Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, params.Pᵈⁱᶜₖₛₒₗₐ)
     Cᵈⁱᶜₖₛₒₗₒ    = Fᵈⁱᶜₖₚᵣₑ(Θᴷ, Sᵖ, params.Pᵈⁱᶜₖₚᵣₑ) * Fᵈⁱᶜₖ₀(Θᴷ, Sᵖ, params.Pᵈⁱᶜₖ₀) # Fᵈⁱᶜₖₛₒₗₒ
     Cᵈⁱᶜₖ₀       = Fᵈⁱᶜₖ₀(Θᴷ, Sᵖ, params.Pᵈⁱᶜₖ₀)
-    Cᵈⁱᶜₖ₁ᵣ₉₃    = Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᵈⁱᶜₖ₁ᵣ₉₃, params.Pᴴ²⁰ˢʷ)
-    Cᵈⁱᶜₖ₂ᵣ₉₃    = Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᵈⁱᶜₖ₂ᵣ₉₃, params.Pᴴ²⁰ˢʷ)
-    Cᵈⁱᶜₖ₁ₘ₉₅    = Fᵈⁱᶜₖ₁ₘ₉₅(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᵈⁱᶜₖ₁ₘ₉₅)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
-    Cᵈⁱᶜₖ₂ₘ₉₅    = Fᵈⁱᶜₖ₂ₘ₉₅(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᵈⁱᶜₖ₂ₘ₉₅)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
-    Cᵈⁱᶜₖ₁ₗ₀₀    = Fᵈⁱᶜₖ₁ₗ₀₀(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᵈⁱᶜₖ₁ₗ₀₀)
-    Cᵈⁱᶜₖ₂ₗ₀₀    = Fᵈⁱᶜₖ₂ₗ₀₀(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᵈⁱᶜₖ₂ₗ₀₀)
+
+    # Use type dispatch to select the appropriate coefficients
+    Cᵈⁱᶜₖ₁, Cᵈⁱᶜₖ₂ = carbonic_acid_constants(Θᴷ, Sᵖ, Δpᵦₐᵣ, params, params.carbonic_acid)
+    Cˢⁱᵗₖ₁         = silicic_acid_constants(Θᴷ, Sᵖ, Δpᵦₐᵣ, params, params.silicic_acid)
+    Cᴴᶠᵦ₁, Cᴴᶠₖ₁   = fluoric_acid_constants(Θᴷ, Sᵖ, Δpᵦₐᵣ, params, params.fluoric_acid)
+
     Cᵇₖ₁         = Fᵇₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᴮₖ₁)
     Cᴴ²ᴼₖ₁       = Fᴴ²ᴼₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᴴ²ᴼₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
     Cᴾᴼ⁴ₖ₁       = Fᴾᴼ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᴾᴼ⁴ₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
     Cᴾᴼ⁴ₖ₂       = Fᴾᴼ⁴ₖ₂(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᴾᴼ⁴ₖ₂)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
     Cᴾᴼ⁴ₖ₃       = Fᴾᴼ⁴ₖ₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᴾᴼ⁴ₖ₃)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
-    Cˢⁱᵗₖ₁       = Fˢⁱᵗₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pˢⁱᵗₖ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
     Cᴴ²ˢₖ₁       = Fᴴ²ˢₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᴴ²ˢₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
     Cᴺᴴ⁴ₖ₁       = Fᴺᴴ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᴺᴴ⁴ₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
-    Cᴴᶠᵦ₁        = Fᴴᶠᵦ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ)
-    Cᴴᶠₖ₁        = Fᴴᶠₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᴴᶠₖ₁)
     Cᴴˢᴼ⁴ₖ₁      = Fᴴˢᴼ⁴ₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᴴˢᴼ⁴ₖ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ) # Leave on the free scale
     Cᶜᵃˡᶜⁱᵗᵉₛₚ   = Fᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᶜᵃˡᶜⁱᵗᵉₛₚ)
     Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ)
@@ -84,12 +77,8 @@ Return dissociation coefficients necessary to solve for the distribution of carb
         Cᵈⁱᶜₖₛₒₗₐ,
         Cᵈⁱᶜₖₛₒₗₒ,  
         Cᵈⁱᶜₖ₀,  
-        Cᵈⁱᶜₖ₁ᵣ₉₃,   
-        Cᵈⁱᶜₖ₂ᵣ₉₃,   
-        Cᵈⁱᶜₖ₁ₘ₉₅,   
-        Cᵈⁱᶜₖ₂ₘ₉₅,   
-        Cᵈⁱᶜₖ₁ₗ₀₀,   
-        Cᵈⁱᶜₖ₂ₗ₀₀,   
+        Cᵈⁱᶜₖ₁,
+        Cᵈⁱᶜₖ₂,
         Cᵇₖ₁,        
         Cᴴ²ᴼₖ₁,      
         Cᴾᴼ⁴ₖ₁,      
@@ -119,12 +108,8 @@ adapt_structure(
     adapt(to, ccc.Cᵈⁱᶜₖₛₒₗₐ),
     adapt(to, ccc.Cᵈⁱᶜₖₛₒₗₒ),
     adapt(to, ccc.Cᵈⁱᶜₖ₀),
-    adapt(to, ccc.Cᵈⁱᶜₖ₁ᵣ₉₃),
-    adapt(to, ccc.Cᵈⁱᶜₖ₂ᵣ₉₃),
-    adapt(to, ccc.Cᵈⁱᶜₖ₁ₘ₉₅),
-    adapt(to, ccc.Cᵈⁱᶜₖ₂ₘ₉₅),
-    adapt(to, ccc.Cᵈⁱᶜₖ₁ₗ₀₀),
-    adapt(to, ccc.Cᵈⁱᶜₖ₂ₗ₀₀),
+    adapt(to, ccc.Cᵈⁱᶜₖ₁),
+    adapt(to, ccc.Cᵈⁱᶜₖ₂),
     adapt(to, ccc.Cᵇₖ₁),
     adapt(to, ccc.Cᴴ²ᴼₖ₁),
     adapt(to, ccc.Cᴾᴼ⁴ₖ₁),
@@ -146,6 +131,49 @@ adapt_structure(
     adapt(to, ccc.H⁺ₜoverH⁺₃),
     adapt(to, ccc.H⁺ₛoverH⁺₃),
 )
+
+@inline function carbonic_acid_constants(Θᴷ, Sᵖ, Δpᵦₐᵣ, params, ::Lueker2000)
+    return (
+        Fᵈⁱᶜₖ₁ₗ₀₀(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᵈⁱᶜₖ₁ₗ₀₀),
+        Fᵈⁱᶜₖ₂ₗ₀₀(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᵈⁱᶜₖ₂ₗ₀₀),
+    )
+end
+
+@inline function carbonic_acid_constants(Θᴷ, Sᵖ, Δpᵦₐᵣ, params, ::Millero1995)
+    return (
+        Fᵈⁱᶜₖ₁ₘ₉₅(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᵈⁱᶜₖ₁ₘ₉₅)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁),
+        Fᵈⁱᶜₖ₂ₘ₉₅(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᵈⁱᶜₖ₂ₘ₉₅)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁),
+    )
+end
+
+@inline function carbonic_acid_constants(Θᴷ, Sᵖ, Δpᵦₐᵣ, params, ::Roy1993)
+    return (
+        Fᵈⁱᶜₖ₁ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᵈⁱᶜₖ₁ᵣ₉₃, params.Pᴴ²⁰ˢʷ),
+        Fᵈⁱᶜₖ₂ᵣ₉₃(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᵈⁱᶜₖ₂ᵣ₉₃, params.Pᴴ²⁰ˢʷ),
+    )
+end
+
+@inline function silicic_acid_constants(Θᴷ, Sᵖ, Δpᵦₐᵣ, params, ::YaoMillero1995P)
+    return Fˢⁱᵗₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pˢⁱᵗₖ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
+end
+
+@inline function silicic_acid_constants(Θᴷ, Sᵖ, Δpᵦₐᵣ, params, ::YaoMillero1995)
+    return Fˢⁱᵗₖ₁(Θᴷ, Sᵖ, 0.0, params.Pˢⁱᵗₖ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ)/H⁺ₛoverH⁺ₜ(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
+end
+
+@inline function fluoric_acid_constants(Θᴷ, Sᵖ, Δpᵦₐᵣ, params, ::DicksonRiley1979)
+    return (
+        Fᴴᶠᵦ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ),
+        inv(Fᴴᶠᵦ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ)),
+    )
+end
+
+@inline function fluoric_acid_constants(Θᴷ, Sᵖ, Δpᵦₐᵣ, params, ::PerezFraga1987)
+    return (
+        inv(Fᴴᶠₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᴴᶠₖ₁)),
+        Fᴴᶠₖ₁(Θᴷ, Sᵖ, Δpᵦₐᵣ, params.Pᴴᶠₖ₁),
+    )
+end
 
 # Gas constant
 const gasconst_bar_cm3_o_mol_k = 83.14472 # Handbook (2007)
