@@ -266,7 +266,7 @@ solver that converges from any given initial value.
                           pH::Real, 
                           Pᶜᵒᵉᶠᶠ,  
                           Sᵒᵖᵗˢ,
-                          ) #:: Tuple{Int, Real}
+                          )
    
     # Initialize some variables
     #Iᴴ⁺                = 0
@@ -491,8 +491,6 @@ solver that converges from any given initial value.
 #     ##     return convert(AbstractFloat,Iᴴ⁺), -log10(H⁺)
       ##    return -log10(H⁺)
       ##end
-
-        Aᵀᵃᵇˢₘᵢₙ = min( abs(Aᵀᵣₐₜ), Aᵀᵃᵇˢₘᵢₙ)
     end # end while loop
 
     #Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = ifelse(
