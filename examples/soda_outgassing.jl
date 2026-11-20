@@ -4,7 +4,7 @@
 # `UniversalRobustCarbonSystem` model in a 0-d context.
 
 using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
-using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonSystemParameters, CarbonSolverParameters, CarbonCoefficientParameters
+using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonCoefficientParameters
 
 using Oceananigans
 using Oceananigans.Units
