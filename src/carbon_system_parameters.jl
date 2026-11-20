@@ -71,8 +71,7 @@ function CarbonCalculationConstants(FT=Float64;
     R      = 83.1446261815324, # (exact SI value)
     Θᴷ_0ᵒC = 273.15,
     Sʳᵉᶠ   = -34.8,
-) where {FT <: AbstractFloat}
-
+)
     return CarbonCalculationConstants{FT}(
         FT(R),
         FT(Θᴷ_0ᵒC),
