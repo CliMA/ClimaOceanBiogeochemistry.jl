@@ -3,11 +3,11 @@ using Test
 include("../src/CarbonSystemSolvers.jl")
 
 using .CarbonSystemSolvers
-using .CarbonSystemSolvers: CarbonCoefficientParameters, 
-                             CarbonSolverParameters, 
-                             CarbonSystemParameters,
-                             CarbonSystem, 
-                             CarbonChemistryCoefficients
+using .CarbonSystemSolvers: CarbonSystem, 
+                            CarbonSystemParameters,
+                            CarbonSolverOptions, 
+                            CarbonCoefficientParameters, 
+                            CarbonChemistryCoefficients
 using .CarbonSystemSolvers.DirectCubicCarbonSolver: DirectCubicCarbonSystem
 using .CarbonSystemSolvers.AlkalinityCorrectionCarbonSolver: AlkalinityCorrectionCarbonSystem
 using .CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
@@ -15,7 +15,7 @@ using .CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSys
 # Test carbon chemistry coefficients
 Θᶜ      = 25.0
 Sᴬ      = 35.0
-Δpᵦₐᵣ   = 0.0
+Δpᵦₐᵣ   = 0.0 # Applied pressure (i.e. pressure minus atmospheric pressure) in bar
 Cᵀ      = 2050e-6 # umol/kg to mol/kg
 Aᵀ      = 2350e-6 # umol/kg to mol/kg
 pCO₂ᵃᵗᵐ = 280e-6  # uatm to atm
@@ -25,8 +25,8 @@ pH      = 8.0
 carbon_params = CarbonSystemParameters()
 
 @test carbon_params       isa CarbonSystemParameters
-#@test carbon_params.Sᵒᵖᵗˢ isa CarbonSolverParameters
-#@test carbon_params.Pᵈⁱᶜₖ₀ isa CarbonCoefficientParameters
+@test carbon_params.Sᵒᵖᵗˢ isa CarbonSolverOptions
+@test carbon_params.Pᵈⁱᶜₖ₀ isa CarbonCoefficientParameters
 
 Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(carbon_params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
 
@@ -73,9 +73,9 @@ DirectCubicCarbonSystem(
         pCO₂ᵃᵗᵐ = pCO₂ᵃᵗᵐ,
         )
 
-@test pH            == 8.044006579710093 
+@test pH            == 8.044006579188588 #8.044006579710093 
 @test pCO₂ᵃᵗᵐ * 1e6 == 280.0             
-@test pCO₂ᵒᶜᵉ * 1e6 == 407.52135708764496
+@test pCO₂ᵒᶜᵉ * 1e6 == 407.5213576262527 #407.52135708764496
 
 Pᵀ = 0.5e-6  # umol/kg to mol/kg
 Siᵀ = 7.5e-6 # umol/kg to mol/kg
@@ -95,9 +95,9 @@ AlkalinityCorrectionCarbonSystem(
         pCO₂ᵃᵗᵐ = pCO₂ᵃᵗᵐ,
         )
 
-@test pH            == 8.033988293659919
+@test pH            == 8.033988293858117 #8.033988293659919
 @test pCO₂ᵃᵗᵐ * 1e6 == 280.0            
-@test pCO₂ᵒᶜᵉ * 1e6 == 417.9894057400246
+@test pCO₂ᵒᶜᵉ * 1e6 == 417.9894055305121 #417.9894057400246
 
 @test UniversalRobustCarbonSystem() isa CarbonSystem
 

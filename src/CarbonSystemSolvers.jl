@@ -1,6 +1,6 @@
 module CarbonSystemSolvers
 export CarbonCoefficientParameters, 
-    CarbonSolverParameters, 
+    CarbonSolverOptions, 
     CarbonSystemParameters, 
     CarbonChemistryCoefficients, 
     CarbonSystem
@@ -30,7 +30,7 @@ end
 Calculate the dissolved and hydrated CO₂ concentration in seawater
 given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
 """
-@inline function FCᵀCO₂ˢᵒˡ(Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FCᵀCO₂ˢᵒˡ(Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -47,7 +47,7 @@ end
 Calculate the bicarbonate ion concentration in seawater
 given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
 """
-@inline function FCᵀHCO₃⁻(Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FCᵀHCO₃⁻(Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -64,7 +64,7 @@ end
 Calculate the carbonate concentration in seawater
 given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
 """
-@inline function FCᵀCO₃²⁻(Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FCᵀCO₃²⁻(Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -81,7 +81,7 @@ end
 Calculate the dissolved and hydrated CO₂ concentration in seawater
 given the pCO₂, pH, and the carbon chemistry coefficients.
 """
-@inline function FpCO₂CO₂ˢᵒˡ(pCO₂::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FpCO₂CO₂ˢᵒˡ(pCO₂::Real, Pᶜᵒᵉᶠᶠ)
     # Perhaps take account of fugacity here?
     return Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * pCO₂
 end
@@ -92,7 +92,7 @@ end
 Calculate the bicarbonate ion concentration in seawater
 given the pCO₂, pH, and the carbon chemistry coefficients.
 """
-@inline function FpCO₂HCO₃⁻(pCO₂::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FpCO₂HCO₃⁻(pCO₂::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -105,7 +105,7 @@ end
 Calculate the carbonate concentration in seawater
 given the pCO₂, pH, and the carbon chemistry coefficients.
 """
-@inline function FpCO₂CO₃²⁻(pCO₂::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FpCO₂CO₃²⁻(pCO₂::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -118,7 +118,7 @@ export UniversalRobustCarbonSystem,
         CarbonSystem
 
 using ..CarbonSystemSolvers: CarbonCoefficientParameters, 
-                             CarbonSolverParameters, 
+                             CarbonSolverOptions, 
                              CarbonSystemParameters,
                              CarbonChemistryCoefficients, 
                              CarbonSystem, 
@@ -137,7 +137,7 @@ using ..CarbonSystemSolvers: CarbonCoefficientParameters,
             Aᵀ      :: Real = 2350.0e-6,
             Pᵀ      :: Real = 1.0e-6,
             Siᵀ     :: Real = 15.0e-6,
-            kwargs...,
+            params  :: CarbonSystemParameters = CarbonSystemParameters(),
             )
 
 Uses the Munhoven (2013) SolveSAPHE package to solve the distribution of carbon species.
@@ -155,8 +155,8 @@ The function takes the following keyword arguments:
 - Siᵀ: The total silicate concentration in seawater
 - NH₄ᵀ: The total ammonium concentration in seawater
 - H₂Sᵀ: The total hydrogen sulfide concentration in seawater
-- kwargs: Alternative solver options or dissociation coefficients to be 
-          passed to the CarbonSystemParameters constructor.
+- params: Alternative solver options or dissociation coefficients to be 
+          passed by the CarbonSystemParameters constructor.
 
 The function returns a CarbonSystem object.
 
@@ -175,16 +175,16 @@ References:
         Siᵀ     :: Real = 15.0e-6,
         NH₄ᵀ    :: Real = 0.0,
         H₂Sᵀ    :: Real = 0.0,
-        kwargs...,
+        params  :: CarbonSystemParameters = CarbonSystemParameters(),
     )
 
-    # Error check kwargs for input names that are not in the CarbonSystemParameters struct
-    for key in keys(kwargs)
-        if key ∉ fieldnames(CarbonSystemParameters)
-           error("UniversalRobustCarbonSystem: $key is not a valid keyword argument for CarbonSystemParameters()")
-        end
-     end
-    params = CarbonSystemParameters(; kwargs...)
+    ## Error check kwargs for input names that are not in the CarbonSystemParameters struct
+    #for key in keys(kwargs)
+    #    if key ∉ fieldnames(CarbonSystemParameters)
+    #       error("UniversalRobustCarbonSystem: $key is not a valid keyword argument for CarbonSystemParameters()")
+    #    end
+    # end
+    #params = CarbonSystemParameters(; kwargs...)
 
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
     Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
@@ -210,10 +210,10 @@ References:
     )
 
     # Calculate pH from Aᵀ and Cᵀ and then calculate the rest of the carbon system
-    iter, pH     = Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, pH, Pᶜᵒᵉᶠᶠ, params.Sᵒᵖᵗˢ) 
-    if iter == params.Sᵒᵖᵗˢ.Iᴴ⁺ₘₐₓ
-        error("UniversalRobustCarbonSystem failed to converge")
-    end
+    pH     = Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, pH, Pᶜᵒᵉᶠᶠ, params.Sᵒᵖᵗˢ) 
+    #if iter == params.Sᵒᵖᵗˢ.Iᴴ⁺ₘₐₓ
+    #    error("UniversalRobustCarbonSystem failed to converge")
+    #end
     CO₂ˢᵒˡ = FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     HCO₃⁻  = FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     CO₃²⁻  = FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
@@ -266,7 +266,7 @@ solver that converges from any given initial value.
                           pH::Real, 
                           Pᶜᵒᵉᶠᶠ,  
                           Sᵒᵖᵗˢ,
-                          ) :: Tuple{Int, Real}
+                          ) #:: Tuple{Int, Real}
    
     # Initialize some variables
     #Iᴴ⁺                = 0
@@ -476,32 +476,34 @@ solver that converges from any given initial value.
         #    end
         #end
 
-        if abs(H⁺ᶠᵃᶜᵗᵒʳ) < Sᵒᵖᵗˢ.Δₕ₊
-            # H⁺ has converged to the desired accuracy so begin exiting
-            # This is similar to what is done in RootSolvers.jl
-            Aᵀᵃᵇˢₘᵢₙ = min( abs(Aᵀᵣₐₜ), Aᵀᵃᵇˢₘᵢₙ)
-            
-            Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = ifelse(
-                H⁺ > 0,
-                FAᵀ(
-                    Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
-                ),
-                (nothing, nothing)
-            )
-            return convert(AbstractFloat,Iᴴ⁺), -log10(H⁺)
-        end
+      ##if abs(H⁺ᶠᵃᶜᵗᵒʳ) < Sᵒᵖᵗˢ.Δₕ₊
+      ##    # H⁺ has converged to the desired accuracy so begin exiting
+      ##    # This is similar to what is done in RootSolvers.jl
+      ##    Aᵀᵃᵇˢₘᵢₙ = min( abs(Aᵀᵣₐₜ), Aᵀᵃᵇˢₘᵢₙ)
+      ##    
+      ##    Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = ifelse(
+      ##        H⁺ > 0,
+      ##        FAᵀ(
+      ##            Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
+      ##        ),
+      ##        (0, 0)
+      ##    )
+#     ##     return convert(AbstractFloat,Iᴴ⁺), -log10(H⁺)
+      ##    return -log10(H⁺)
+      ##end
 
         Aᵀᵃᵇˢₘᵢₙ = min( abs(Aᵀᵣₐₜ), Aᵀᵃᵇˢₘᵢₙ)
     end # end while loop
 
-    Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = ifelse(
-        H⁺ > 0,
-        FAᵀ(
-            Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
-        ),
-        (nothing, nothing)
-    )
-    return Sᵒᵖᵗˢ.Iᴴ⁺ₘₐₓ, -log10(H⁺)
+    #Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = ifelse(
+    #    H⁺ > 0,
+    #    FAᵀ(
+    #        Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
+    #    ),
+    #    (0, 0)
+    #)
+#    return Sᵒᵖᵗˢ.Iᴴ⁺ₘₐₓ, -log10(H⁺)
+    return -log10(H⁺)
 end
 
 """
@@ -517,7 +519,7 @@ Calculates the root for the 2nd order approximation of the
             and the 2nd order approximation does not have a solution
 
 """
-@inline function FH⁺ᵢₙᵢ(Aᶜ::Real, Cᵀ::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FH⁺ᵢₙᵢ(Aᶜ::Real, Cᵀ::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate the coefficients of the cubic polynomial
     Rᶜᴬ = Cᵀ/Aᶜ
     Rᴮᴬ = Pᶜᵒᵉᶠᶠ.Cᴮᵀ/Aᶜ
@@ -564,7 +566,7 @@ Calculate the lower and upper bounds of the "non-water-selfionization"
 """
 @inline function FboundsAᵀₙₕ₂ₒ( 
     Cᵀ::Real, Pᵀ::Real, Siᵀ::Real, NH₄ᵀ::Real, H₂Sᵀ::Real, Pᶜᵒᵉᶠᶠ
-) :: Tuple{Real, Real}
+)
 # greatest lower bound (infimum)
     Aᵀₗₒ = -Pᵀ - Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴  - Pᶜᵒᵉᶠᶠ.Cᶠᵀ
 
@@ -609,7 +611,7 @@ end
 """
     function FACᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FACᵀ(Cᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FACᵀ(Cᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H2CO3 - HCO3 - CO3 : n=2, m=0
     return Cᵀ * (( 2 * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * 
                        Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ + 
@@ -624,7 +626,7 @@ end
 """
     F∂A∂Cᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Cᵀ(Cᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂Cᵀ(Cᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H2CO3 - HCO3 - CO3 : n=2, m=0
     return - Cᵀ * (
                     ( Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * 
@@ -644,7 +646,7 @@ end
 """
     function FABᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FABᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FABᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # B(OH)3 - B(OH)4 : n=1, m=0
     return Pᶜᵒᵉᶠᶠ.Cᴮᵀ * (Pᶜᵒᵉᶠᶠ.Cᵇₖ₁/(Pᶜᵒᵉᶠᶠ.Cᵇₖ₁ + H⁺))   
 end
@@ -652,7 +654,7 @@ end
 """
     function F∂A∂Bᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Bᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂Bᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # B(OH)3 - B(OH)4 : n=1, m=0
     return - Pᶜᵒᵉᶠᶠ.Cᴮᵀ * ( 
                             Pᶜᵒᵉᶠᶠ.Cᵇₖ₁
@@ -664,7 +666,7 @@ end
 """
     function FAPᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FAPᵀ(Pᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FAPᵀ(Pᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H3PO4 - H2PO4 - HPO4 - PO4 : n=3, m=1
     return Pᵀ * 3 * (Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
                      Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * 
@@ -687,7 +689,7 @@ end
 """
     function F∂A∂Pᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Pᵀ(Pᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂Pᵀ(Pᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H3PO4 - H2PO4 - HPO4 - PO4 : n=3, m=1
     return - Pᵀ * ((Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
                     Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * 
@@ -722,7 +724,7 @@ end
 """
     function FASiᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FASiᵀ(Siᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FASiᵀ(Siᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H4SiO4 - H3SiO4 : n=1, m=0
     return Siᵀ * (Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁/(Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁ + H⁺))
 end
@@ -730,7 +732,7 @@ end
 """
     function F∂A∂Siᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Siᵀ(Siᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂Siᵀ(Siᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H4SiO4 - H3SiO4 : n=1, m=0
     return - Siᵀ * (Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁/(Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁ + H⁺)^2)
 end
@@ -738,7 +740,7 @@ end
 """
     function FASO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FASO₄ᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FASO₄ᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # HSO4 - SO4 : n=1, m=1
     return Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * (Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ + H⁺) - 1)
 end
@@ -746,7 +748,7 @@ end
 """
     function F∂A∂SO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂SO₄ᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂SO₄ᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # HSO4 - SO4 : n=1, m=1
     return - Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * (Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ + H⁺)^2)
 end
@@ -754,7 +756,7 @@ end
 """
     function FAFᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FAFᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FAFᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # HF - F : n=1, m=1
     return Pᶜᵒᵉᶠᶠ.Cᶠᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁ + H⁺) - 1)
 end
@@ -762,7 +764,7 @@ end
 """
     function F∂A∂Fᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Fᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂Fᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # HF - F : n=1, m=1
     return - Pᶜᵒᵉᶠᶠ.Cᶠᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁ + H⁺)^2)
 end
@@ -770,7 +772,7 @@ end
 """
     function FANH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FANH₄ᵀ(NH₄ᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FANH₄ᵀ(NH₄ᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # NH4 - NH3 : n=1, m=0
     return NH₄ᵀ * (Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁ + H⁺))
 end
@@ -778,7 +780,7 @@ end
 """
     function F∂A∂NH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂NH₄ᵀ(NH₄ᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂NH₄ᵀ(NH₄ᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # NH4 - NH3 : n=1, m=0
     return - NH₄ᵀ * (Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁ + H⁺)^2)
 end
@@ -786,7 +788,7 @@ end
 """
     function FAH₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FAH₂Sᵀ(H₂Sᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FAH₂Sᵀ(H₂Sᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H2S - HS : n=1, m=0
     return H₂Sᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁ + H⁺))
 end
@@ -794,7 +796,7 @@ end
 """
     function F∂A∂H₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂H₂Sᵀ(H₂Sᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂H₂Sᵀ(H₂Sᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H2S - HS : n=1, m=0
     return - H₂Sᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁ + H⁺)^2)
 end
@@ -802,7 +804,7 @@ end
 """
     function FAH₂O(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FAH₂O(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FAH₂O(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H2O - OH
     return Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/H⁺ -H⁺/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
 end
@@ -810,7 +812,7 @@ end
 """
     function F∂A∂H₂O(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂H₂O(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂H₂O(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H2O - OH
     return - Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/H⁺^2 - 1/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
 end
@@ -822,7 +824,7 @@ export AlkalinityCorrectionCarbonSystem,
         CarbonSystem
 
 using ..CarbonSystemSolvers: CarbonCoefficientParameters, 
-                             CarbonSolverParameters, 
+                             CarbonSolverOptions, 
                              CarbonSystemParameters,
                              CarbonChemistryCoefficients, 
                              CarbonSystem, 
@@ -841,6 +843,7 @@ using ..CarbonSystemSolvers: CarbonCoefficientParameters,
             Siᵀ     :: FT = 15.0e-6,
             pH      :: FT = 8.0,
             pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
+	    params  :: CarbonSystemParameters = CarbonSystemParameters(),
             )
 
 Uses the Follows et al (2006) method to solve the distribution of carbon species
@@ -855,16 +858,16 @@ Uses the Follows et al (2006) method to solve the distribution of carbon species
         Siᵀ     :: Real = 15.0e-6,
         pH      :: Real = 8.0,
         pCO₂ᵃᵗᵐ :: Real = 280.0e-6,
-        kwargs...,
+        params  :: CarbonSystemParameters = CarbonSystemParameters(),
     )
 
-    # Error check kwargs for input names that are not in the CarbonSystemParameters struct
-    for key in keys(kwargs)
-        if key ∉ fieldnames(CarbonSystemParameters)
-           error("AlkalinityCorrectionCarbonSystem: $key is not a valid keyword argument for CarbonSystemParameters()")
-        end
-     end
-    params = CarbonSystemParameters(; kwargs...)
+    ## Error check kwargs for input names that are not in the CarbonSystemParameters struct
+    #for key in keys(kwargs)
+    #    if key ∉ fieldnames(CarbonSystemParameters)
+    #       error("AlkalinityCorrectionCarbonSystem: $key is not a valid keyword argument for CarbonSystemParameters()")
+    #    end
+    # end
+    #params = CarbonSystemParameters(; kwargs...)
 
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
     Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
@@ -928,7 +931,7 @@ adapt_structure(
 
 Calculate borate (B(OH)₄⁻) contribution to Aᶜ using salinity as a proxy
 """
-@inline function BO₄H₄⁻(pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function BO₄H₄⁻(pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -940,7 +943,7 @@ end
 
 Calculate orthophosphoric acid (H₃PO₄) contribution to Aᶜ
 """
-@inline function H₃PO₄(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function H₃PO₄(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -957,7 +960,7 @@ end
 
 Calculate the dihydrogen phosphate (H₂PO₄⁻) contribution to Aᶜ
 """
-@inline function H₂PO₄⁻(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function H₂PO₄⁻(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -974,7 +977,7 @@ end
 
 Calculate the monohydrogen phosphate (HPO₄²⁻) contribution to Aᶜ
 """
-@inline function HPO₄²⁻(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function HPO₄²⁻(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -991,7 +994,7 @@ end
 
 Calculate the phosphate (PO₄³⁻) contribution to Aᶜ
 """
-@inline function PO₄³⁻(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function PO₄³⁻(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -1008,7 +1011,7 @@ end
 
 Calculate the silicate (SiO(OH)₃⁻) contribution to Aᶜ
 """
-@inline function SiO₄H₃⁻(Siᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function SiO₄H₃⁻(Siᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -1020,7 +1023,7 @@ end
 
 Calculate the hydroxide (OH⁻) contribution to Aᶜ
 """
-@inline function OH⁻(pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function OH⁻(pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -1032,7 +1035,7 @@ end
 
 Calculate the "Free" H⁺ contribution to Aᶜ
 """
-@inline function H⁺ᶠʳᵉᵉ(pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function H⁺ᶠʳᵉᵉ(pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -1044,7 +1047,7 @@ end
 
 Calculate the hydrogen sulphate (HSO₄⁻) contribution to Aᶜ
 """
-@inline function HSO₄⁻(pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function HSO₄⁻(pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     # H⁺ = 10^-pH
 
@@ -1056,7 +1059,7 @@ end
 
 Calculate the hydrogen fluoride (HF) contribution to Aᶜ
 """
-@inline function HF(pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function HF(pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -1071,7 +1074,7 @@ Solve for ocean pCO₂ given total Alkalinity and DIC
 Estimate H⁺ (hydrogen ion conc) using estimate of Aᶜ, carbonate alkalinity
 after (Follows et al., 2006)
 """
-@inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ::Real, Cᵀ::Real, Pᵀ::Real, Siᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ::Real, Cᵀ::Real, Pᵀ::Real, Siᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
 
 # Estimate carbonate alkalinity
     Aᶜ = Aᵀ - 
@@ -1107,7 +1110,7 @@ Solve for ocean DIC given total Alkalinity and pCO₂
 Estimate H⁺ (hydrogen ion conc) using estimate of Aᶜ, carbonate alkalinity
 after (Follows et al., 2006)
 """
-@inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ::Real, pCO₂::Real, Pᵀ::Real, Siᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ::Real, pCO₂::Real, Pᵀ::Real, Siᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
 
 # Estimate carbonate alkalinity
     Aᶜ = Aᵀ - 
@@ -1143,7 +1146,7 @@ export DirectCubicCarbonSystem,
         CarbonSystem
 
 using ..CarbonSystemSolvers: CarbonCoefficientParameters, 
-                             CarbonSolverParameters, 
+                             CarbonSolverOptions, 
                              CarbonSystemParameters,
                              CarbonChemistryCoefficients, 
                              CarbonSystem, 
@@ -1161,6 +1164,7 @@ using RootSolvers
             Aᵀ      :: FT = 2350.0e-6,
             pH      :: FT = 8.0,
             pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
+	    params  :: CarbonSystemParameters = CarbonSystemParameters(),
             )
 
 DirectCubicCarbonSolver solves a cubic equation in terms of [H⁺]; 
@@ -1174,16 +1178,16 @@ Not for serious use, but as a placeholder and for testing purposes
         Aᵀ      :: Real = 2350.0e-6,
         pH      :: Real = 8.0,
         pCO₂ᵃᵗᵐ :: Real = 280.0e-6,
-        kwargs...,
+        params  :: CarbonSystemParameters = CarbonSystemParameters(),
     )
 
-    # Error check kwargs for input names that are not in the CarbonSystemParameters struct
-    for key in keys(kwargs)
-        if key ∉ fieldnames(CarbonSystemParameters)
-           error("DirectCubicCarbonSystem: $key is not a valid keyword argument for CarbonSystemParameters()")
-        end
-     end
-    params = CarbonSystemParameters(; kwargs...)
+    ## Error check kwargs for input names that are not in the CarbonSystemParameters struct
+    #for key in keys(kwargs)
+    #    if key ∉ fieldnames(CarbonSystemParameters)
+    #       error("DirectCubicCarbonSystem: $key is not a valid keyword argument for CarbonSystemParameters()")
+    #    end
+    # end
+    #params = CarbonSystemParameters(; kwargs...)
 
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
     Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
@@ -1240,7 +1244,7 @@ adapt_structure(
 
 Solve for DIC given total Alkalinity and pCO₂
 """
-@inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ::Real, pCO₂::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ::Real, pCO₂::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Find the real roots of the polynomial using RootSolvers.jl 
     sol = find_zero(  x -> (
         x^3*(Aᵀ) +
@@ -1289,7 +1293,7 @@ end # end function
 
 Solve for ocean pCO₂ given total Alkalinity and DIC
 """
-@inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ::Real, Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ::Real, Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Find the real roots of the polynomial using RootSolvers.jl
     sol = find_zero(  x -> (
         x^3*(Aᵀ) +

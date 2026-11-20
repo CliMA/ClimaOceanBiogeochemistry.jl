@@ -1,23 +1,37 @@
 import Oceananigans.Biogeochemistry:
-    biogeochemical_drift_velocity, required_biogeochemical_tracers
+       required_biogeochemical_tracers,
+       required_biogeochemical_auxiliary_fields,
+       biogeochemical_drift_velocity,
+       biogeochemical_auxiliary_fields,
+       update_biogeochemical_state!
 
 using Oceananigans.Biogeochemistry: AbstractBiogeochemistry
 using Adapt
 import Adapt: adapt_structure, adapt
-using Oceananigans.BoundaryConditions: ImpenetrableBoundaryCondition, fill_halo_regions!
+using Oceananigans.BoundaryConditions: fill_halo_regions!, ImpenetrableBoundaryCondition
 using Oceananigans.Fields: ConstantField, ZeroField, CenterField
-using Oceananigans.Grids: Center, znode
+using Oceananigans.Grids: Center, znode, znodes
 using Oceananigans.Units: days
+using Oceananigans.Architectures: architecture
+using ClimaOceanBiogeochemistry.CarbonSystemSolvers.UniversalRobustCarbonSolver: UniversalRobustCarbonSystem
+using ClimaOceanBiogeochemistry.CarbonSystemSolvers: CarbonSystem, CarbonSystemParameters, CarbonSolverOptions, CarbonCoefficientParameters
+using KernelAbstractions: @kernel, @index
+using Oceananigans.Utils: launch!
+using Oceananigans.Grids: inactive_cell
+
+#include("calculate_air_sea_carbon_exchange.jl")
 
 const c = Center()
+const Pa2bar = 1e-5
 
-struct CarbonAlkalinityNutrients{FT, W, S} <: AbstractBiogeochemistry
+struct CarbonAlkalinityNutrients{FT, W, S, M, P} <: AbstractBiogeochemistry
     reference_density                               :: FT # kg m⁻³
     maximum_net_community_production_rate           :: FT # mol PO₄ m⁻³ s⁻¹
     phosphate_half_saturation                       :: FT # mol PO₄ m⁻³
     nitrate_half_saturation                         :: FT # mol NO₃ m⁻³
     iron_half_saturation                            :: FT # mol Fe m⁻³
     incident_PAR                                    :: S # W m⁻²
+    PAR_fraction_of_incoming_solar_radiation        :: FT
     PAR_half_saturation                             :: FT  # W m⁻²
     PAR_attenuation_scale                           :: FT  # m
     PAR_percent                                     :: FT
@@ -38,7 +52,15 @@ struct CarbonAlkalinityNutrients{FT, W, S} <: AbstractBiogeochemistry
     iron_scavenging_rate                            :: FT # s⁻¹
     ligand_concentration                            :: FT # mol L m⁻³
     ligand_stability_coefficient                    :: FT
-    particulate_organic_phosphorus_sinking_velocity :: W  # m s⁻¹ 
+    particulate_organic_phosphorus_sinking_velocity :: W  # m s⁻¹
+    PAR                                             :: M
+    pH                                              :: S
+    ocean_pCO₂                                      :: S
+    atmospheric_CO₂_solubility                      :: S
+    oceanic_CO₂_solubility                          :: S
+    carbon_system_params                            :: P # Named Tuple
+    atmospheric_pCO₂                                :: S # ATM
+    CO₂_flux                                        :: S
 end
 
 """
@@ -48,7 +70,8 @@ end
                                 nitrate_half_saturation                       = 1.6e-6 * reference_density,
                                 iron_half_saturation                          = 1e-10 * reference_density,
                                 incident_PAR                                  = 700.0,
-                                PAR_half_saturation                           = 10.0,
+                                PAR_fraction_of_incoming_solar_radiation      = 0.4,
+				                PAR_half_saturation                           = 10.0,
                                 PAR_attenuation_scale                         = 25.0,
                                 PAR_percent                                   = 0.01,
                                 fraction_of_particulate_export                = 0.33,
@@ -106,13 +129,14 @@ function CarbonAlkalinityNutrients(; grid,
                                    nitrate_half_saturation                       = 7.e-6 * reference_density, # mol NO₃ m⁻³
                                    iron_half_saturation                          = 1.e-10 * reference_density, # mol Fe m⁻³
                                    incident_PAR                                  = 700.0, # W m⁻²
+                                   PAR_fraction_of_incoming_solar_radiation      = 0.4,
                                    PAR_half_saturation                           = 30.0,  # W m⁻²
                                    PAR_attenuation_scale                         = 25.0,  # m
                                    PAR_percent                                   = 0.01,  # % light: to define the euphotic zone
                                    fraction_of_particulate_export                = 0.33,
                                    dissolved_organic_phosphorus_remin_timescale  = 2. / 365.25days, # s⁻¹
                                    option_of_particulate_remin                   = 1, # POP remin rate: 1 for 1/z, others for constant
-                                   particulate_organic_phosphorus_remin_timescale= 0.03 / day, # s⁻¹
+                                   particulate_organic_phosphorus_remin_timescale= 0.03 / days, # s⁻¹
                                    stoichoimetric_ratio_carbon_to_phosphate      = 117.0,
                                    stoichoimetric_ratio_nitrate_to_phosphate     = 16.0,
                                    stoichoimetric_ratio_phosphate_to_oxygen      = 170.0, 
@@ -126,26 +150,67 @@ function CarbonAlkalinityNutrients(; grid,
                                    iron_scavenging_rate                          = 0.2 / 365.25days, # s⁻¹
                                    ligand_concentration                          = 1e-9 * reference_density, # mol L m⁻³
                                    ligand_stability_coefficient                  = 1e8,
-                                   particulate_organic_phosphorus_sinking_velocity   = -10.0 / day,
-                                   )
+                                   particulate_organic_phosphorus_sinking_velocity = -10.0 / days,
+                                   carbon_system_params                          = CarbonSystemParameters(eltype(grid)),
+                                   atmospheric_pCO₂                              = 280e-6,
+				   )
+    FT = eltype(grid)
+    
     if incident_PAR isa Number
         surface_PAR = incident_PAR            
-        incident_PAR = CenterField(grid)            
+        incident_PAR = Field{Center,Center,Nothing}(grid)           
         set!(incident_PAR, surface_PAR)            
         fill_halo_regions!(incident_PAR)
     end
+    S = typeof(incident_PAR)
+    if atmospheric_pCO₂ isa Number
+        surface_pCO₂ = atmospheric_pCO₂            
+        atmospheric_pCO₂ = Field{Center,Center,Nothing}(grid)           
+        set!(atmospheric_pCO₂, surface_pCO₂)            
+        fill_halo_regions!(atmospheric_pCO₂)
+    end
 
     if particulate_organic_phosphorus_sinking_velocity  isa Number
+        #if particulate_organic_phosphorus_sinking_velocity != 0
+        #   sinking_advection_scheme = Centered()
+        #end
+        #
+        #u = ZeroField()
+        #v = ZeroField()
+        #w = particulate_organic_phosphorus_sinking_velocity
+        #particulate_organic_phosphorus_sinking_velocity = (; u, v, w)
         w₀ = particulate_organic_phosphorus_sinking_velocity 
         no_penetration = ImpenetrableBoundaryCondition()
-        bcs = FieldBoundaryConditions(grid, (Center, Center, Face),
-                                      top=no_penetration, bottom=no_penetration)
-        particulate_organic_phosphorus_sinking_velocity  = ZFaceField(grid, boundary_conditions = bcs)
+        bcs = FieldBoundaryConditions(top=no_penetration, bottom=no_penetration)
+        particulate_organic_phosphorus_sinking_velocity  = ZFaceField(grid) #, boundary_conditions = bcs)
         set!(particulate_organic_phosphorus_sinking_velocity , w₀)
         fill_halo_regions!(particulate_organic_phosphorus_sinking_velocity )
     end
-                            
-    FT = eltype(grid)
+    W = typeof(particulate_organic_phosphorus_sinking_velocity)
+
+    pH = Field{Center,Center,Nothing}(grid)
+    # Set initial first guess of pH
+    set!(pH, one(FT)*8)
+
+    ocean_pCO₂                 = Field{Center,Center,Nothing}(grid)
+    atmospheric_CO₂_solubility = Field{Center,Center,Nothing}(grid)
+    oceanic_CO₂_solubility     = Field{Center,Center,Nothing}(grid)
+    CO₂_flux                   = Field{Center,Center,Nothing}(grid)
+    PAR                        = Field{Center,Center,Center}(grid)
+    
+    # Initialize auxiliary fields to prevent NaN propagation
+    set!(ocean_pCO₂,                 atmospheric_pCO₂)
+    set!(atmospheric_CO₂_solubility, zero(FT))  # typical seawater CO₂ solubility
+    set!(oceanic_CO₂_solubility,     zero(FT))
+    set!(CO₂_flux,                   zero(FT))
+    set!(PAR,                        zero(FT))
+    fill_halo_regions!(ocean_pCO₂)
+    fill_halo_regions!(atmospheric_CO₂_solubility)
+    fill_halo_regions!(oceanic_CO₂_solubility)
+    fill_halo_regions!(CO₂_flux)
+    fill_halo_regions!(PAR)
+    
+    M = typeof(PAR)
 
     return CarbonAlkalinityNutrients(convert(FT, reference_density),
                                      convert(FT, maximum_net_community_production_rate),
@@ -153,6 +218,7 @@ function CarbonAlkalinityNutrients(; grid,
                                      convert(FT, nitrate_half_saturation),
                                      convert(FT, iron_half_saturation),
                                      incident_PAR,
+                                     convert(FT, PAR_fraction_of_incoming_solar_radiation),
                                      convert(FT, PAR_half_saturation),
                                      convert(FT, PAR_attenuation_scale),     
                                      convert(FT, PAR_percent), 
@@ -173,8 +239,16 @@ function CarbonAlkalinityNutrients(; grid,
                                      convert(FT, iron_scavenging_rate),
                                      convert(FT, ligand_concentration),
                                      convert(FT, ligand_stability_coefficient),
-                                     particulate_organic_phosphorus_sinking_velocity ,
-                                     )
+                                     particulate_organic_phosphorus_sinking_velocity,
+                                     PAR,
+                                     pH,
+                                     ocean_pCO₂,
+                                     atmospheric_CO₂_solubility,
+                                     oceanic_CO₂_solubility,
+                                     carbon_system_params,
+                                     atmospheric_pCO₂,
+                                     CO₂_flux,
+)
 end
 
 Adapt.adapt_structure(to, bgc::CarbonAlkalinityNutrients) = 
@@ -184,6 +258,7 @@ Adapt.adapt_structure(to, bgc::CarbonAlkalinityNutrients) =
                             adapt(to, bgc.nitrate_half_saturation),
                             adapt(to, bgc.iron_half_saturation),
                             adapt(to, bgc.incident_PAR),
+                            adapt(to, bgc.PAR_fraction_of_incoming_solar_radiation),
                             adapt(to, bgc.PAR_half_saturation),
                             adapt(to, bgc.PAR_attenuation_scale),
                             adapt(to, bgc.PAR_percent),
@@ -205,10 +280,29 @@ Adapt.adapt_structure(to, bgc::CarbonAlkalinityNutrients) =
                             adapt(to, bgc.ligand_concentration),
                             adapt(to, bgc.ligand_stability_coefficient),
                             adapt(to, bgc.particulate_organic_phosphorus_sinking_velocity),
-                            )
+                            adapt(to, bgc.PAR),
+                            adapt(to, bgc.pH),
+                            adapt(to, bgc.ocean_pCO₂),    
+                            adapt(to, bgc.atmospheric_CO₂_solubility),
+                            adapt(to, bgc.oceanic_CO₂_solubility),
+                            adapt(to, bgc.carbon_system_params),
+                            adapt(to, bgc.atmospheric_pCO₂),
+                            adapt(to, bgc.CO₂_flux),
+)
 
+# Define function methods required by Oceananigans BGC interface
 const CAN = CarbonAlkalinityNutrients
 
+"""
+Required biogeochemical tracers for the CarbonAlkalinityNutrients model
+    DIC -> Dissolved Inorganic Carbon
+    ALK -> Alkalinity
+    PO₄ -> Phosphate (macronutrient)
+    NO₃ -> Nitrate (macronutrient)
+    DOP -> Dissolved Organic Phosphorus
+    POP -> Particulate Organic Phosphorus
+    Fe  -> Dissolved Iron (micronutrient)
+"""
 @inline required_biogeochemical_tracers(::CAN) = (:DIC, :ALK, :PO₄, :NO₃, :DOP, :POP, :Fe)
 
 """
@@ -220,26 +314,362 @@ Add a vertical sinking "drift velocity" for the particulate organic phosphate (P
     w = bgc.particulate_organic_phosphorus_sinking_velocity 
     return (; u, v, w)
 end
+#@inline biogeochemical_drift_velocity(bgc::CAN, ::Val{:POP})   = bgc.particulate_organic_phosphorus_sinking_velocity
+##@inline biogeochemical_advection_scheme(bgc::CAN, ::Val{:POP}) = bgc.advection_scheme
 
 """
-    PAR(surface_photosynthetically_active_ratiation, 
-        photosynthetically_active_ratiation_attenuation_scale, 
-        depth)
-
-Calculate the photosynthetically active radiation (PAR) at a given depth due to attenuation.
+Required biogeochemical auxiliary tracers for the CarbonAlkalinityNutrients model
+    PAR: Photosynthetically Active Radiation (W m⁻²)
+    pH: ocean pH
+    ocean_pCO₂: ocean partial pressure of CO₂ (atm)
+    atmospheric_CO₂_solubility: solubility of CO₂ in seawater (mol m⁻³ atm⁻¹)
+    oceanic_CO₂_solubility: solubility of CO₂ in seawater (mol m⁻³ atm⁻¹)
+    CO₂_flux: air-sea flux of CO₂ (mol m⁻² s⁻¹)
 """
-@inline function PAR(surface_photosynthetically_active_ratiation, 
-                     photosynthetically_active_ratiation_attenuation_scale, 
-                     depth)
+@inline required_biogeochemical_auxiliary_fields(::CAN) = tuple(
+    :PAR, 
+    :pH, 
+    :ocean_pCO₂, 
+    :atmospheric_CO₂_solubility,
+    :oceanic_CO₂_solubility,
+    :CO₂_flux,
+)
+"""
+Set the biogeochemical auxiliary tracers for the CarbonAlkalinityNutrients model
+"""
+@inline biogeochemical_auxiliary_fields(bgc::CAN) = (; 
+    PAR                        = bgc.PAR,
+    pH                         = bgc.pH, 
+    ocean_pCO₂                 = bgc.ocean_pCO₂, 
+    atmospheric_CO₂_solubility = bgc.atmospheric_CO₂_solubility,
+    atmospheric_pCO₂           = bgc.atmospheric_pCO₂,
+    oceanic_CO₂_solubility     = bgc.oceanic_CO₂_solubility,
+    CO₂_flux                   = bgc.CO₂_flux,
+)
 
-    I₀ = surface_photosynthetically_active_ratiation
-    λ  = photosynthetically_active_ratiation_attenuation_scale
-    z  = depth
-    return I₀ * exp(z / λ)
+#Functions that fill the biogeochemical auxiliary tracers for the CarbonAlkalinityNutrients model
+"""
+Set the PAR to 40% of the downwelling shortwave radiation
+    at the ocean surface.
+"""
+@kernel function calculate_incident_par_from_surface_Qs!(grid, parfac, incident_par, Qs)
+    FT = eltype(grid)
+    i, j = @index(Global, NTuple)
+    ks    = size(grid, 3)
+    inactive = inactive_cell(i, j, ks, grid)
+
+    @inbounds incident_par[i, j, 1] = ifelse(
+        inactive,
+        zero(FT),
+        parfac * Qs[i, j, 1]
+    )
 end
 
 """
-    net_community_production(maximum_net_community_production_rate,
+Update Photosynthetically Active Ratiation (PAR) field (i.e. light) for phytoplankton growth
+    below the surface based on incident surface PAR and attenuation with depth.
+"""
+@kernel function update_photosynthetic_active_radiation!(bgc, PAR⁰, PAR, grid) 
+    FT = eltype(grid)
+    i, j, k = @index(Global, NTuple)
+    #kt   = size(grid, 3)
+
+    λ  = bgc.PAR_attenuation_scale
+    zᶜ = znode(i, j, k, grid, Center(), Center(), Center())
+    inactive = inactive_cell(i, j, k, grid)
+    @inbounds PAR[i, j, k] =  ifelse(
+		    inactive,
+		    zero(FT),
+    	    PAR⁰[i, j, 1] * exp(zᶜ / λ),
+		    )
+end 
+"""
+Use salt forcing to inform DIC and ALK forcing using surface average values
+    to convert salinity flux to carbon and alkalinity 'virtual' fluxes.
+"""
+@kernel function calculate_bgc_fw_forcing!(grid, C₀, A₀, S₀, FS, FC, FA)
+    FT = eltype(grid)
+    i, j = @index(Global, NTuple)
+    ks    = size(grid, 3)
+    inactive = inactive_cell(i, j, ks, grid)
+
+    # Add carbon flux to the CO2 flux
+    @inbounds begin
+        FC[i, j, 1] = ifelse(
+            inactive | (S₀[i, j, ks] <= zero(FT)),
+            zero(FT),
+            (C₀[i, j, ks]/S₀[i, j, ks]) * FS[i, j, 1],
+        )
+        FA[i, j, 1] = ifelse(
+            inactive | (S₀[i, j, ks] <= zero(FT)),
+            zero(FT),
+            (A₀[i, j, ks]/S₀[i, j, ks]) * FS[i, j, 1],
+        )
+    end
+end
+
+"""
+    Transfer the surface shortwave radiation and surface salinity, to the incident PAR field
+        (par is ~40% of Qs) and surface DIC and ALK forcing fields respectively.
+"""
+@inline function transfer_surface_atmospheric_state_for_bgc!(simulation::Simulation)
+    grid = simulation.model.ocean.model.grid
+
+    kernel_args = (
+        grid,
+        simulation.model.ocean.model.biogeochemistry.PAR_fraction_of_incoming_solar_radiation,
+        simulation.model.ocean.model.biogeochemistry.incident_PAR,
+        simulation.model.interfaces.atmosphere_ocean_interface.fluxes.downwelling_shortwave,
+        )
+
+    launch!(
+	    architecture(grid),
+        grid,
+        :xy,
+        calculate_incident_par_from_surface_Qs!,
+        kernel_args...
+    )
+
+    kernel_args =(
+        grid,
+        simulation.model.ocean.model.tracers.DIC,
+        simulation.model.ocean.model.tracers.ALK,
+        simulation.model.ocean.model.tracers.S,
+        simulation.model.interfaces.net_fluxes.ocean.S, # The FW forcing
+        simulation.model.ocean.model.tracers.DIC.boundary_conditions.top.condition,
+        simulation.model.ocean.model.tracers.ALK.boundary_conditions.top.condition,
+    )
+    launch!(
+        architecture(grid),
+        grid,
+        :xy,
+        calculate_bgc_fw_forcing!,
+        kernel_args...,
+    )
+    return nothing
+end
+
+@kernel function fused_surface_bgc_transfer!(
+    grid, par_fraction, incident_PAR, Qs, C₀, A₀, S₀, FS, FC, FA
+)
+    FT = eltype(grid)
+    i, j = @index(Global, NTuple)
+    ks = size(grid, 3)
+
+    @inbounds if inactive_cell(i, j, ks, grid)
+        incident_PAR[i, j, 1] = zero(FT)
+        FC[i, j, 1] = zero(FT)
+        FA[i, j, 1] = zero(FT)
+    else
+        incident_PAR[i, j, 1] = par_fraction * Qs[i, j, 1]
+        Ssafe = 1/max(S₀[i, j, ks], FT(1e-12))
+        FC[i, j, 1] = C₀[i, j, ks] * Ssafe * FS[i, j, 1]
+        FA[i, j, 1] = A₀[i, j, ks] * Ssafe * FS[i, j, 1]
+    end
+end
+
+@inline function transfer_surface_atmospheric_state_for_bgc_fused!(simulation::Simulation)
+    ocean = simulation.model.ocean.model
+    bgc   = ocean.biogeochemistry
+    grid  = ocean.grid
+
+    launch!(
+        architecture(grid), grid, :xy, fused_surface_bgc_transfer!,
+        grid,
+        bgc.PAR_fraction_of_incoming_solar_radiation,
+        bgc.incident_PAR, # if needed: replace with bgc.PAR⁰
+        simulation.model.interfaces.atmosphere_ocean_interface.fluxes.downwelling_shortwave,
+        ocean.tracers.DIC,
+        ocean.tracers.ALK,
+        ocean.tracers.S,
+        simulation.model.interfaces.net_fluxes.ocean.S,
+        ocean.tracers.DIC.boundary_conditions.top.condition,
+        ocean.tracers.ALK.boundary_conditions.top.condition,
+    )
+
+    return nothing
+end
+
+"""
+    solve_ocean_pCO₂!(
+        grid,
+        reference_density,
+        ocean_pCO₂, 
+        atmospheric_CO₂_solubility, 
+        oceanic_CO₂_solubility,
+        Θᶜ, Sᴬ, Δpᵦₐᵣ, Cᵀ, Aᵀ, Pᵀ, Siᵀ, pH, pCO₂ᵃᵗᵐ
+        )
+
+Compute the oceanic pCO₂ using the UniversalRobustCarbonSystem solver.
+
+Arguments:
+- `grid::RegularCartesianGrid`: The model grid.
+- `solver_params::NamedTuple`: The parameters for the UniversalRobustCarbonSystem solver.
+- `reference_density::Float64`: The reference density of seawater.
+- `ocean_pCO₂::Field{Center, Center, Nothing}`: The computed oceanic pCO₂.
+- `atmospheric_CO₂_solubility::Field{Center, Center, Nothing}`: The solubility of CO₂ in the atmosphere.
+- `oceanic_CO₂_solubility::Field{Center, Center, Nothing}`: The solubility of CO₂ in the ocean.
+- `Θᶜ::Field{Center, Center, Nothing}`: Temperature in degrees Celsius.
+- `Sᴬ::Field{Center, Center, Nothing}`: Salinity in PSU.
+- `Δpᵦₐᵣ::Field{Center, Center, Nothing}`: Applied pressure in atm.
+- `Cᵀ::Field{Center, Center, Nothing}`: Total dissolved inorganic carbon (DIC) in mol kg⁻¹.
+- `Aᵀ::Field{Center, Center, Nothing}`: Total alkalinity (ALK) in mol kg⁻¹.
+- `Pᵀ::Field{Center, Center, Nothing}`: Phosphate concentration in mol kg⁻¹.
+- `pH::Field{Center, Center, Center}`: The computed pH.
+- `pCO₂ᵃᵗᵐ::Field{Center, Center, Nothing}`: The partial pressure of CO₂ in the atmosphere.
+"""
+@kernel function solve_ocean_pCO₂!(
+    grid,
+    solver_params,
+    reference_density,
+    ocean_pCO₂,
+    atmospheric_CO₂_solubility, 
+    oceanic_CO₂_solubility,
+    temperature, 
+    salinity, 
+    applied_pressure_bar, 
+    DIC, 
+    ALK, 
+    PO4, 
+    pH, 
+    atmospheric_pCO₂
+    )
+    FT = eltype(grid)
+    i, j = @index(Global, NTuple)
+    ks    = size(grid, 3)
+
+    if !inactive_cell(i, j, ks, grid)
+        @inbounds begin
+	    ## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
+            CarbonSolved = UniversalRobustCarbonSystem(;
+                pH      = pH[i, j, 1],
+                pCO₂ᵃᵗᵐ = atmospheric_pCO₂[i, j, 1],
+                Θᶜ      = temperature[i, j, ks],
+                Sᴬ      = max(one(FT), salinity[i, j, ks]),  # guard against S ≤ 0 (ice melt)
+                Δpᵦₐᵣ   = applied_pressure_bar,
+                Cᵀ      = DIC[i, j, ks]/reference_density,
+                Aᵀ      = ALK[i, j, ks]/reference_density,
+                Pᵀ      = PO4[i, j, ks]/reference_density,
+                Siᵀ     = PO4[i, j, ks]*15/reference_density,
+                params  = solver_params,
+                )
+
+            ocean_pCO₂[i, j, 1]                 = ifelse(
+                isnan(CarbonSolved.pCO₂ᵒᶜᵉ), 
+                ocean_pCO₂[i, j, 1],                 
+                CarbonSolved.pCO₂ᵒᶜᵉ,
+            )
+            atmospheric_CO₂_solubility[i, j, 1] = ifelse(
+                isnan(CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ), 
+                atmospheric_CO₂_solubility[i, j, 1],
+                CarbonSolved.Pᵈⁱᶜₖₛₒₗₐ,
+            )
+            oceanic_CO₂_solubility[i, j, 1]     = ifelse(
+                isnan(CarbonSolved.Pᵈⁱᶜₖ₀),
+                oceanic_CO₂_solubility[i, j, 1],
+                CarbonSolved.Pᵈⁱᶜₖ₀,
+            )
+            pH[i, j, 1]                         = ifelse(
+                isnan(CarbonSolved.pH),
+                pH[i, j, 1],
+                CarbonSolved.pH,
+            )
+        end
+    else
+        @inbounds begin
+            ocean_pCO₂[i, j, 1]                 = zero(FT)
+            atmospheric_CO₂_solubility[i, j, 1] = zero(FT)
+            oceanic_CO₂_solubility[i, j, 1]     = zero(FT)
+            pH[i, j, 1]                         = zero(FT)
+        end
+    end
+end
+
+#@kernel function combine_dic_fw_and_co2_fluxes!(grid, CO₂_flux, boundary_condition)
+#    i, j = @index(Global, NTuple)
+#    k    = size(grid, 3)
+#    inactive = inactive_cell(i, j, k, grid)
+#
+#    @inbounds boundary_condition[i, j, 1] += ifelse(
+#        inactive,
+#        zero(grid),
+#        CO₂_flux[i, j, k]
+#    )
+#end
+
+"""
+Update BGC auxiliary fields
+"""
+@inline function update_biogeochemical_state!(bgc::CAN, model)
+    arch = architecture(model.grid)
+    grid = model.grid
+    FT = eltype(grid)
+
+    # Calculate depth dependent Photosynthetic Active Radiation
+    kernel_args =(
+        bgc,
+        bgc.incident_PAR,
+        bgc.PAR,
+        grid,
+    )
+    
+    launch!(
+	arch,
+	grid,
+	:xyz,
+	update_photosynthetic_active_radiation!,
+        kernel_args...,
+    )
+
+    # Solve the ocean carbon system and calculate pH, pCO₂, etc
+    kernel_args = (
+        grid,
+        bgc.carbon_system_params,
+        bgc.reference_density,
+        bgc.ocean_pCO₂, 
+        bgc.atmospheric_CO₂_solubility, 
+        bgc.oceanic_CO₂_solubility,
+        model.tracers.T, 
+        model.tracers.S, 
+        zero(FT), #applied_pressure_bar, 
+        model.tracers.DIC, 
+        model.tracers.ALK,
+        model.tracers.PO₄, 
+        bgc.pH, 
+        bgc.atmospheric_pCO₂,
+        )
+    
+    launch!(
+        arch,
+        grid,
+        :xy,
+        solve_ocean_pCO₂!,
+        kernel_args...,
+    )
+     return nothing
+end
+
+# Now define functions that relate to the specific BGC model
+#"""
+#    PAR(surface_photosynthetically_active_ratiation, 
+#        photosynthetically_active_ratiation_attenuation_scale, 
+#        depth)
+#
+#Calculate the photosynthetically active radiation (PAR) at a given depth due to attenuation.
+#"""
+#@inline function PAR(surface_photosynthetically_active_ratiation, 
+#                     photosynthetically_active_ratiation_attenuation_scale, 
+#                     depth)
+#
+#    I₀ = surface_photosynthetically_active_ratiation
+#    λ  = photosynthetically_active_ratiation_attenuation_scale
+#    z  = depth
+#    return I₀ * exp(z / λ)
+#end
+
+"""
+    net_community_production(grid,
+			     maximum_net_community_production_rate,
                              light_half_saturation, 
                              phosphate_half_saturation, 
                              nitrate_half_saturation, 
@@ -250,7 +680,8 @@ end
                              iron_concentration)
 
 """
-@inline function net_community_production(maximum_net_community_production_rate,
+@inline function net_community_production(grid,
+					  maximum_net_community_production_rate,
                                           light_half_saturation, 
                                           phosphate_half_saturation, 
                                           nitrate_half_saturation, 
@@ -259,6 +690,7 @@ end
                                           phosphate_concentration, 
                                           nitrate_concentration, 
                                           iron_concentration)
+    FT = eltype(grid)
     μᵖ=maximum_net_community_production_rate
     kᴵ=light_half_saturation
     kᴾ=phosphate_half_saturation
@@ -269,11 +701,11 @@ end
     NO₃ =nitrate_concentration
     Feₜ =iron_concentration
 
-    # First, adjust the concentrations to be non-zero
-    I_nonzero = max(0, I)
-    P_nonzero = max(0, PO₄)
-    N_nonzero = max(0, NO₃)
-    F_nonzero = max(0, Feₜ)
+    # First, adjust the concentrations to be non-zero and NaN-safe
+    I_nonzero = ifelse(isnan(I),   zero(FT), max(zero(FT), I))
+    P_nonzero = ifelse(isnan(PO₄), zero(FT), max(zero(FT), PO₄))
+    N_nonzero = ifelse(isnan(NO₃), zero(FT), max(zero(FT), NO₃))
+    F_nonzero = ifelse(isnan(Feₜ), zero(FT), max(zero(FT), Feₜ))
 
     # calculate the limitation terms
     Lₗᵢₘ = I_nonzero / (I_nonzero + kᴵ)
@@ -282,33 +714,37 @@ end
     Fₗᵢₘ = F_nonzero / (F_nonzero + kᶠ)
 
     # return the net community production
-    return max(0,
+    return max(zero(FT),
         μᵖ * Lₗᵢₘ * min(Pₗᵢₘ, Nₗᵢₘ, Fₗᵢₘ)
     )
 end
 
 """
-    dissolved_organic_phosphorus_remin(remineralization_rate, 
+    dissolved_organic_phosphorus_remin(grid, remineralization_rate, 
                                       dissolved_organic_phosphorus_concentration)
 Calculate the remineralization of dissolved organic phosphorus.
 """
-@inline dissolved_organic_phosphorus_remin(remineralization_rate, 
-                                          dissolved_organic_phosphorus_concentration) = 
-        max(0, remineralization_rate * dissolved_organic_phosphorus_concentration)
+@inline function dissolved_organic_phosphorus_remin(grid, 
+                                                    remineralization_rate, 
+                                                    dissolved_organic_phosphorus_concentration) 
+        FT = eltype(grid)
+    return max(zero(FT), remineralization_rate * dissolved_organic_phosphorus_concentration)
+end
 
 """
 Calculate remineralization of particulate organic phosphorus according to 
     1) rate decreases with depth (1/z+z₀), 
 or  2) a first-order rate constant.
 """
-@inline function particulate_organic_phosphorus_remin(option_of_particulate_remin,
-                                                    particulate_organic_phosphorus_remin_timescale,  
-                                                    martin_curve_exponent,
-                                                    particulate_organic_phosphorus_sinking_velocity,
-                                                    PAR_attenuation_scale,
-                                                    depth, percent_light,
-                                                    particulate_organic_phosphorus_concentration)
-
+@inline function particulate_organic_phosphorus_remin(grid,
+						                              option_of_particulate_remin,
+                                                      particulate_organic_phosphorus_remin_timescale,  
+                                                      martin_curve_exponent,
+                                                      particulate_organic_phosphorus_sinking_velocity,
+                                                      PAR_attenuation_scale,
+                                                      depth, percent_light,
+                                                      particulate_organic_phosphorus_concentration)
+        FT = eltype(grid)
         Rᵣ = option_of_particulate_remin                                  
         r = particulate_organic_phosphorus_remin_timescale
         b = martin_curve_exponent    
@@ -319,14 +755,14 @@ or  2) a first-order rate constant.
         z₀ = log(fᵢ)*λ # The base of the euphotic layer depth (z₀) where PAR is degraded down to 1%     
         POP = particulate_organic_phosphorus_concentration
 
-    return ifelse(Rᵣ == 1, max(0, b * wₛ / (z + z₀) * POP), max(0, r * POP))
+    return ifelse(Rᵣ == one(FT), max(zero(FT), b * wₛ / (z + z₀) * POP), max(zero(FT), r * POP))
 end
 
 
 """
 Calculate remineralization of particulate inorganic carbon.
 """
-@inline particulate_inorganic_carbon_remin() = 0.0
+@inline particulate_inorganic_carbon_remin(grid) = zero(eltype(grid))
 
 """
     iron_scavenging(iron_scavenging_rate, 
@@ -398,20 +834,26 @@ Tracer sources and sinks for dissolved inorganic carbon (DIC)
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     Rᵣ = bgc.option_of_particulate_remin    
 
-    # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = PAR(I₀[i, j, k], λ, z)
+    @inbounds begin
+       z        = znode(i, j, k, grid, c, c, c)
+       # Available photosynthetic radiation
+       I        = bgc.PAR[i, j, k]
+       PO₄      = fields.PO₄[i, j, k]
+       NO₃      = fields.NO₃[i, j, k]
+       Feₜ       = fields.Fe[i, j, k]
+       DOP      = fields.DOP[i, j, k]
+       POP      = fields.POP[i, j, k]
+       kface_top= min(k + 1, size(wₛ, 3))
+       Wₛ       = (wₛ[i, j, k] + wₛ[i, j, kface_top]) / 2
+#       CO₂_flux_raw = bgc.CO₂_flux[i, j, 1]
+#       CO₂_flux = ifelse(isnan(CO₂_flux_raw), zero(eltype(grid)), CO₂_flux_raw)
+    end
 
-    PO₄ = @inbounds fields.PO₄[i, j, k]
-    NO₃ = @inbounds fields.NO₃[i, j, k]
-    Feₜ = @inbounds fields.Fe[i, j, k]
-    DOP = @inbounds fields.DOP[i, j, k]
-    POP = @inbounds fields.POP[i, j, k]
-    
-    return Rᶜᴾ * (dissolved_organic_phosphorus_remin(γ, DOP) -
-                 (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
-                 particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP)) +
-           particulate_inorganic_carbon_remin()
+    return Rᶜᴾ * (dissolved_organic_phosphorus_remin(grid, γ, DOP) -
+                 (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(grid, μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
+                 particulate_organic_phosphorus_remin(grid, Rᵣ, r, b, Wₛ, λ, z, fᵢ, POP)) +
+           particulate_inorganic_carbon_remin(grid) #+ 
+#           CO₂_flux
 end
 
 """
@@ -440,21 +882,24 @@ Tracer sources and sinks for alkalinity (ALK)
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     Rᵣ = bgc.option_of_particulate_remin
 
-    # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = PAR(I₀[i, j, k], λ, z)
+    @inbounds begin
+       z   = znode(i, j, k, grid, c, c, c)
+       # Available photosynthetic radiation
+       I   = bgc.PAR[i, j, k]
+       PO₄ = fields.PO₄[i, j, k]
+       NO₃ = fields.NO₃[i, j, k]
+       Feₜ = fields.Fe[i, j, k]
+       DOP = fields.DOP[i, j, k]
+       POP = fields.POP[i, j, k]
+       kface_top = min(k + 1, size(wₛ, 3))
+       Wₛ  = (wₛ[i, j, k] + wₛ[i, j, kface_top]) / 2
+    end
 
-    PO₄ = @inbounds fields.PO₄[i, j, k]
-    NO₃ = @inbounds fields.NO₃[i, j, k]
-    Feₜ = @inbounds fields.Fe[i, j, k]
-    DOP = @inbounds fields.DOP[i, j, k]
-    POP = @inbounds fields.POP[i, j, k]
-    
     return -Rᴺᴾ * (
-        - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
-        dissolved_organic_phosphorus_remin(γ, DOP) +
-        particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP)
-        ) + 2 * particulate_inorganic_carbon_remin()
+        - (1 + Rᶜᵃᶜᵒ³ * α) * net_community_production(grid, μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
+        dissolved_organic_phosphorus_remin(grid, γ, DOP) +
+        particulate_organic_phosphorus_remin(grid, Rᵣ, r, b, Wₛ, λ, z, fᵢ, POP)
+        ) + 2 * particulate_inorganic_carbon_remin(grid)
 end
 
 """
@@ -483,19 +928,22 @@ Tracer sources and sinks for dissolved inorganic phosphate (PO₄)
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity   
     Rᵣ = bgc.option_of_particulate_remin    
 
-    # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = PAR(I₀[i, j, k], λ, z)
+    @inbounds begin
+       z   = znode(i, j, k, grid, c, c, c)
+       # Available photosynthetic radiation
+       I   = bgc.PAR[i, j, k]
+       PO₄ = fields.PO₄[i, j, k]
+       NO₃ = fields.NO₃[i, j, k]
+       Feₜ = fields.Fe[i, j, k]
+       DOP = fields.DOP[i, j, k]
+       POP = fields.POP[i, j, k]
+       kface_top = min(k + 1, size(wₛ, 3))
+       Wₛ  = (wₛ[i, j, k] + wₛ[i, j, kface_top]) / 2
+    end
 
-    PO₄ = @inbounds fields.PO₄[i, j, k]
-    NO₃ = @inbounds fields.NO₃[i, j, k]
-    Feₜ = @inbounds fields.Fe[i, j, k]
-    DOP = @inbounds fields.DOP[i, j, k]
-    POP = @inbounds fields.POP[i, j, k]
-
-    return - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
-           dissolved_organic_phosphorus_remin(γ, DOP) +
-           particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP)
+    return - net_community_production(grid, μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
+           dissolved_organic_phosphorus_remin(grid, γ, DOP) +
+           particulate_organic_phosphorus_remin(grid, Rᵣ, r, b, Wₛ, λ, z, fᵢ, POP)
 end
 
 """
@@ -524,20 +972,23 @@ Tracer sources and sinks for dissolved inorganic nitrate (NO₃)
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     Rᵣ = bgc.option_of_particulate_remin   
 
-    # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = PAR(I₀[i, j, k], λ, z)
-
-    PO₄ = @inbounds fields.PO₄[i, j, k]
-    NO₃ = @inbounds fields.NO₃[i, j, k]
-    Feₜ = @inbounds fields.Fe[i, j, k]
-    DOP = @inbounds fields.DOP[i, j, k]
-    POP = @inbounds fields.POP[i, j, k]
+    @inbounds begin
+       z   = znode(i, j, k, grid, c, c, c)
+       # Available photosynthetic radiation
+       I   = bgc.PAR[i, j, k]
+       PO₄ = fields.PO₄[i, j, k]
+       NO₃ = fields.NO₃[i, j, k]
+       Feₜ = fields.Fe[i, j, k]
+       DOP = fields.DOP[i, j, k]
+       POP = fields.POP[i, j, k]
+       kface_top = min(k + 1, size(wₛ, 3))
+       Wₛ  = (wₛ[i, j, k] + wₛ[i, j, kface_top]) / 2
+    end
 
     return Rᴺᴾ * (
-           - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
-           dissolved_organic_phosphorus_remin(γ, DOP) +
-           particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP))
+           - net_community_production(grid, μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
+           dissolved_organic_phosphorus_remin(grid, γ, DOP) +
+           particulate_organic_phosphorus_remin(grid, Rᵣ, r, b, Wₛ, λ, z, fᵢ, POP))
 end
 
 """
@@ -570,21 +1021,23 @@ Tracer sources and sinks for dissolved iron (FeT)
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     Rᵣ = bgc.option_of_particulate_remin
 
-    # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = PAR(I₀[i, j, k], λ, z)
+    @inbounds begin
+       z   = znode(i, j, k, grid, c, c, c)
+       # Available photosynthetic radiation
+       I   = bgc.PAR[i, j, k]
+       PO₄ = fields.PO₄[i, j, k]
+       NO₃ = fields.NO₃[i, j, k]
+       Feₜ = fields.Fe[i, j, k]
+       DOP = fields.DOP[i, j, k]
+       POP = fields.POP[i, j, k]
+       kface_top = min(k + 1, size(wₛ, 3))
+       Wₛ  = (wₛ[i, j, k] + wₛ[i, j, kface_top]) / 2
+    end
 
-    PO₄ = @inbounds fields.PO₄[i, j, k]
-    NO₃ = @inbounds fields.NO₃[i, j, k]
-    Feₜ = @inbounds fields.Fe[i, j, k]
-    DOP = @inbounds fields.DOP[i, j, k]
-    POP = @inbounds fields.POP[i, j, k]
-
-    
     return Rᶠᴾ * (
-                - net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
-                  dissolved_organic_phosphorus_remin(γ, DOP) + 
-                  particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP)
+                - net_community_production(grid, μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) +
+                  dissolved_organic_phosphorus_remin(grid, γ, DOP) + 
+                  particulate_organic_phosphorus_remin(grid, Rᵣ, r, b, Wₛ, λ, z, fᵢ, POP)
                  ) + 
                  iron_sources() -
                  iron_scavenging(kˢᶜᵃᵛ, Feₜ, Lᶠᵉ, β)
@@ -605,18 +1058,19 @@ Tracer sources and sinks for dissolved organic phosphorus (DOP)
     γ = bgc.dissolved_organic_phosphorus_remin_timescale
     α = bgc.fraction_of_particulate_export
 
-    # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = PAR(I₀[i, j, k], λ, z)
+   @inbounds begin
+       z   = znode(i, j, k, grid, c, c, c)
+       # Available photosynthetic radiation
+       I   = bgc.PAR[i, j, k]
+       PO₄ = fields.PO₄[i, j, k]
+       NO₃ = fields.NO₃[i, j, k]
+       Feₜ = fields.Fe[i, j, k]
+       DOP = fields.DOP[i, j, k]
+       POP = fields.POP[i, j, k]
+    end    
 
-    PO₄ = @inbounds fields.PO₄[i, j, k]
-    NO₃ = @inbounds fields.NO₃[i, j, k]
-    Feₜ = @inbounds fields.Fe[i, j, k]
-    DOP = @inbounds fields.DOP[i, j, k]
-
-    
-return - dissolved_organic_phosphorus_remin(γ, DOP) +
-             (1 - α) * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
+    return - dissolved_organic_phosphorus_remin(grid, γ, DOP) +
+             (1 - α) * net_community_production(grid, μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ)
 end
 
 """
@@ -636,16 +1090,22 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
     b = bgc.martin_curve_exponent      
     wₛ = bgc.particulate_organic_phosphorus_sinking_velocity
     Rᵣ = bgc.option_of_particulate_remin
-
-    # Available photosynthetic radiation
-    z = znode(i, j, k, grid, c, c, c)
-    I = PAR(I₀[i, j, k], λ, z)
-
-    PO₄ = @inbounds fields.PO₄[i, j, k]
-    NO₃ = @inbounds fields.NO₃[i, j, k]
-    Feₜ = @inbounds fields.Fe[i, j, k]
-    POP = @inbounds fields.POP[i, j, k]
-
-    return α * net_community_production(μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
-           particulate_organic_phosphorus_remin(Rᵣ, r, b, wₛ[i,j,k], λ, z, fᵢ, POP)
+    
+    @inbounds begin
+       z   = znode(i, j, k, grid, c, c, c)
+       # Available photosynthetic radiation
+       I   = bgc.PAR[i, j, k]
+       PO₄ = fields.PO₄[i, j, k]
+       NO₃ = fields.NO₃[i, j, k]
+       Feₜ = fields.Fe[i, j, k]
+       DOP = fields.DOP[i, j, k]
+       POP = fields.POP[i, j, k]
+       kface_top = min(k + 1, size(wₛ, 3))
+       Wₛ  = (wₛ[i, j, k] + wₛ[i, j, kface_top]) / 2
+    end
+    return α * net_community_production(grid, μᵖ, kᴵ, kᴾ, kᴺ, kᶠ, I, PO₄, NO₃, Feₜ) -
+           particulate_organic_phosphorus_remin(grid, Rᵣ, r, b, Wₛ, λ, z, fᵢ, POP)
 end
+
+
+
