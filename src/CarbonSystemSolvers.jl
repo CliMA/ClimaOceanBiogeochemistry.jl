@@ -476,31 +476,31 @@ solver that converges from any given initial value.
         #    end
         #end
 
-        if abs(H⁺ᶠᵃᶜᵗᵒʳ) < Sᵒᵖᵗˢ.Δₕ₊
-            # H⁺ has converged to the desired accuracy so begin exiting
-            # This is similar to what is done in RootSolvers.jl
-            Aᵀᵃᵇˢₘᵢₙ = min( abs(Aᵀᵣₐₜ), Aᵀᵃᵇˢₘᵢₙ)
-            
-            Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = ifelse(
-                H⁺ > 0,
-                FAᵀ(
-                    Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
-                ),
-                (0, 0)
-            )
-            return convert(AbstractFloat,Iᴴ⁺), -log10(H⁺)
-        end
+        #if abs(H⁺ᶠᵃᶜᵗᵒʳ) < Sᵒᵖᵗˢ.Δₕ₊
+        #    # H⁺ has converged to the desired accuracy so begin exiting
+        #    # This is similar to what is done in RootSolvers.jl
+        #    Aᵀᵃᵇˢₘᵢₙ = min( abs(Aᵀᵣₐₜ), Aᵀᵃᵇˢₘᵢₙ)
+        #    
+        #    Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = ifelse(
+        #        H⁺ > 0,
+        #        FAᵀ(
+        #            Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
+        #        ),
+        #        (0, 0)
+        #    )
+        #    return convert(AbstractFloat,Iᴴ⁺), -log10(H⁺)
+        #end
 
         Aᵀᵃᵇˢₘᵢₙ = min( abs(Aᵀᵣₐₜ), Aᵀᵃᵇˢₘᵢₙ)
-    end # end while loop
+    end # end loop
 
-    Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = ifelse(
-        H⁺ > 0,
-        FAᵀ(
-            Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
-        ),
-        (0, 0)
-    )
+    #Aᵀᵣₐₜ, ∂Aᵀᵣₐₜ∂H⁺ = ifelse(
+    #    H⁺ > 0,
+    #    FAᵀ(
+    #        Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
+    #    ),
+    #    (0, 0)
+    #)
     return -log10(H⁺)
 end
 
