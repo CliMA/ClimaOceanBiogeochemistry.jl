@@ -3,7 +3,14 @@ export CarbonCoefficientParameters,
     CarbonSolverOptions, 
     CarbonSystemParameters, 
     CarbonChemistryCoefficients, 
-    CarbonSystem
+    CarbonSystem,
+    Lueker2000,
+    Millero1995,
+    Roy1993,
+    YaoMillero1995,
+    YaoMillero1995P,
+    DicksonRiley1979,
+    PerezFraga1987
 
 # definitions of the structs that hold the carbon system parameters and constructor functions
 include("carbon_system_parameters.jl")
@@ -183,10 +190,9 @@ References:
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
     Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
     
-    # Some logic here about choosing coefficient options, particularly Cᵈⁱᶜ 
     Pᶜᵒᵉᶠᶠ = (Cᵈⁱᶜₖ₀ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
-              Cᵈⁱᶜₖ₁ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ₗ₀₀,
-              Cᵈⁱᶜₖ₂ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ₗ₀₀,
+              Cᵈⁱᶜₖ₁ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁,
+              Cᵈⁱᶜₖ₂ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂,
               Cᵇₖ₁   = Cᶜᵒᵉᶠᶠ.Cᵇₖ₁,
               Cᴾᴼ⁴ₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁,
               Cᴾᴼ⁴ₖ₂ = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂,
@@ -204,7 +210,7 @@ References:
     )
 
     # Calculate pH from Aᵀ and Cᵀ and then calculate the rest of the carbon system
-    pH     = Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, pH, Pᶜᵒᵉᶠᶠ, params.Sᵒᵖᵗˢ) 
+    pH     = Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, pH, Pᶜᵒᵉᶠᶠ, params.Sᵒᵖᵗˢ)
     CO₂ˢᵒˡ = FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     HCO₃⁻  = FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     CO₃²⁻  = FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
@@ -258,7 +264,7 @@ solver that converges from any given initial value.
                           Pᶜᵒᵉᶠᶠ,  
                           Sᵒᵖᵗˢ,
                           )
-   
+ 
     # Initialize some variables
     #Iᴴ⁺                = 0
     Aᵀᵃᵇˢₘᵢₙ           = floatmax(typeof(Aᵀ))
@@ -842,7 +848,7 @@ using ..CarbonSystemSolvers: CarbonCoefficientParameters,
             Siᵀ     :: FT = 15.0e-6,
             pH      :: FT = 8.0,
             pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
-            params  :: CarbonSystemParameters = CarbonSystemParameters(),
+	        params  :: CarbonSystemParameters = CarbonSystemParameters(),
             )
 
 Uses the Follows et al (2006) method to solve the distribution of carbon species
@@ -863,10 +869,9 @@ Uses the Follows et al (2006) method to solve the distribution of carbon species
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
     Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
     
-    # Some logic here about choosing coefficient options, particularly Cᵈⁱᶜ 
     Pᶜᵒᵉᶠᶠ = (Cᵈⁱᶜₖ₀ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
-              Cᵈⁱᶜₖ₁ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ₗ₀₀,
-              Cᵈⁱᶜₖ₂ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ₗ₀₀,
+              Cᵈⁱᶜₖ₁ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁,
+              Cᵈⁱᶜₖ₂ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂,
               Cᵇₖ₁   = Cᶜᵒᵉᶠᶠ.Cᵇₖ₁,
               Cᴾᴼ⁴ₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁,
               Cᴾᴼ⁴ₖ₂ = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂,
@@ -1155,7 +1160,7 @@ using RootSolvers
             Aᵀ      :: FT = 2350.0e-6,
             pH      :: FT = 8.0,
             pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
-            params  :: CarbonSystemParameters = CarbonSystemParameters(),
+	        params  :: CarbonSystemParameters = CarbonSystemParameters(),
             )
 
 DirectCubicCarbonSolver solves a cubic equation in terms of [H⁺]; 
@@ -1177,8 +1182,8 @@ Not for serious use, but as a placeholder and for testing purposes
     
     # Some logic here about choosing coefficient options, particularly Cᵈⁱᶜ 
     Pᶜᵒᵉᶠᶠ = (Cᵈⁱᶜₖ₀ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
-              Cᵈⁱᶜₖ₁ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ₗ₀₀,
-              Cᵈⁱᶜₖ₂ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ₗ₀₀,
+              Cᵈⁱᶜₖ₁ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁,
+              Cᵈⁱᶜₖ₂ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂,
               Cᵇₖ₁   = Cᶜᵒᵉᶠᶠ.Cᵇₖ₁,
               Cᴴ²ᴼₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁,
               Cᴮᵀ    = Cᶜᵒᵉᶠᶠ.Cᴮᵀ,
@@ -1186,7 +1191,6 @@ Not for serious use, but as a placeholder and for testing purposes
 
     # Calculate pH, pCO2, and carbon species from Aᵀ and Cᵀ
     pH  = Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ, Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
-
     CO₂ˢᵒˡ = FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     HCO₃⁻  = FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     CO₃²⁻  = FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
