@@ -1,20 +1,20 @@
 # Struct to hold parameters for the UniversalRobustCarbonSolver
-struct CarbonSolverParameters{FT<:Real, IT<:Int} #
+struct CarbonSolverOptions{FT<:Real, IT<:Int} #
     Δₕ₊      :: FT # Tolerance of the H⁺ solution 
     H⁺ᵗʰʳᵉˢʰ :: FT # H⁺ threshold for secant iteration
     Iᴴ⁺ₘₐₓ   :: IT # Maximum number of iterations
 end
 adapt_structure(
-    to, csp::CarbonSolverParameters
-    ) = CarbonSolverParameters(
+    to, csp::CarbonSolverOptions
+    ) = CarbonSolverOptions(
            adapt(to, csp.Δₕ₊),
            adapt(to, csp.H⁺ᵗʰʳᵉˢʰ),
            adapt(to, csp.Iᴴ⁺ₘₐₓ),
 )
 """
-    CarbonSolverParameters(Δₕ₊::Real=1e-8, H⁺ᵗʰʳᵉˢʰ::Real=1, Iᴴ⁺ₘₐₓ::Real=100)
+    CarbonSolverOptions(Δₕ₊::Real=1e-8, H⁺ᵗʰʳᵉˢʰ::Real=1, Iᴴ⁺ₘₐₓ::Real=100)
 
-Create a `CarbonSolverParameters` object with the specified parameters.
+Create a `CarbonSolverOptions` object with the specified parameters.
 
 # Arguments
 - `Δₕ₊`: A real number representing the increment for the hydrogen ion concentration. Default is `1e-8`.
@@ -22,14 +22,14 @@ Create a `CarbonSolverParameters` object with the specified parameters.
 - `Iᴴ⁺ₘₐₓ`: A real number representing the maximum number of iterations for the solver. Default is `100`.
 
 # Returns
-- A `CarbonSolverParameters` object with the specified parameters.
+- A `CarbonSolverOptions` object with the specified parameters.
 """
-function CarbonSolverParameters(FT=Float64;
+function CarbonSolverOptions(FT=Float64;
     Δₕ₊      :: Real = 1e-8, 
     H⁺ᵗʰʳᵉˢʰ :: Real = 1.0, 
     Iᴴ⁺ₘₐₓ   :: Int = 100,
 )
-    return CarbonSolverParameters(
+    return CarbonSolverOptions(
         FT(Δₕ₊),
         FT(H⁺ᵗʰʳᵉˢʰ),
         Iᴴ⁺ₘₐₓ,
@@ -158,7 +158,7 @@ function CarbonCoefficientParameters(FT=Float64;
     )
 end
 
-struct CarbonSystemParameters{CSP<:CarbonSolverParameters, CCP<:CarbonCoefficientParameters}
+struct CarbonSystemParameters{CSP<:CarbonSolverOptions, CCP<:CarbonCoefficientParameters}
     Sᵒᵖᵗˢ        :: CSP
     Pᴴ²⁰ˢʷ       :: CCP
     Pᵘˢ          :: CCP
@@ -200,7 +200,7 @@ The parameters are used in carbon system calculations and are initialized with d
 - `kwargs...`: Keyword arguments for various carbon coefficient parameters.
 
 # Keyword Arguments
-- `Sᵒᵖᵗˢ::CarbonSolverParameters`: Default is `CarbonSolverParameters()`.
+- `Sᵒᵖᵗˢ::CarbonSolverOptions`: Default is `CarbonSolverOptions()`.
 - `Pᴴ²⁰ˢʷ::CarbonCoefficientParameters`: Default is `CarbonCoefficientParameters(a₀=1.0, a₁=-0.001005)`.
 - `Pᵘˢ::CarbonCoefficientParameters`: Default is `CarbonCoefficientParameters(a₀=0.019924)`.
 - `Pᴮᵀᴼᵀ::CarbonCoefficientParameters`: Default is `CarbonCoefficientParameters(a₀=0.000416, a₁=35.0, a₂=1.0)`.

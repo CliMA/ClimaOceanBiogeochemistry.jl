@@ -1,6 +1,6 @@
 module CarbonSystemSolvers
 export CarbonCoefficientParameters, 
-    CarbonSolverParameters, 
+    CarbonSolverOptions, 
     CarbonSystemParameters, 
     CarbonChemistryCoefficients, 
     CarbonSystem
@@ -118,7 +118,7 @@ export UniversalRobustCarbonSystem,
         CarbonSystem
 
 using ..CarbonSystemSolvers: CarbonCoefficientParameters, 
-                             CarbonSolverParameters, 
+                             CarbonSolverOptions, 
                              CarbonSystemParameters,
                              CarbonChemistryCoefficients, 
                              CarbonSystem, 
@@ -827,7 +827,7 @@ export AlkalinityCorrectionCarbonSystem,
         CarbonSystem
 
 using ..CarbonSystemSolvers: CarbonCoefficientParameters, 
-                             CarbonSolverParameters, 
+                             CarbonSolverOptions, 
                              CarbonSystemParameters,
                              CarbonChemistryCoefficients, 
                              CarbonSystem, 
@@ -1148,7 +1148,7 @@ export DirectCubicCarbonSystem,
         CarbonSystem
 
 using ..CarbonSystemSolvers: CarbonCoefficientParameters, 
-                             CarbonSolverParameters, 
+                             CarbonSolverOptions, 
                              CarbonSystemParameters,
                              CarbonChemistryCoefficients, 
                              CarbonSystem, 

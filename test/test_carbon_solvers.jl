@@ -4,7 +4,7 @@ include("../src/CarbonSystemSolvers.jl")
 
 using .CarbonSystemSolvers
 using .CarbonSystemSolvers: CarbonCoefficientParameters, 
-                             CarbonSolverParameters, 
+                             CarbonSolverOptions, 
                              CarbonSystemParameters,
                              CarbonSystem, 
                              CarbonChemistryCoefficients
@@ -25,7 +25,7 @@ pH      = 8.0
 carbon_params = CarbonSystemParameters()
 
 @test carbon_params       isa CarbonSystemParameters
-#@test carbon_params.Sᵒᵖᵗˢ isa CarbonSolverParameters
+#@test carbon_params.Sᵒᵖᵗˢ isa CarbonSolverOptions
 #@test carbon_params.Pᵈⁱᶜₖ₀ isa CarbonCoefficientParameters
 
 Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(carbon_params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
