@@ -137,6 +137,8 @@ using ..CarbonSystemSolvers: CarbonCoefficientParameters,
             Aᵀ      :: Real = 2350.0e-6,
             Pᵀ      :: Real = 1.0e-6,
             Siᵀ     :: Real = 15.0e-6,
+            NH₄ᵀ    :: Real = 0.0,
+            H₂Sᵀ    :: Real = 0.0,
             params  :: CarbonSystemParameters = CarbonSystemParameters(),
             )
 
@@ -178,14 +180,6 @@ References:
         params  :: CarbonSystemParameters = CarbonSystemParameters(),
     )
 
-    ## Error check kwargs for input names that are not in the CarbonSystemParameters struct
-    #for key in keys(kwargs)
-    #    if key ∉ fieldnames(CarbonSystemParameters)
-    #       error("UniversalRobustCarbonSystem: $key is not a valid keyword argument for CarbonSystemParameters()")
-    #    end
-    # end
-    #params = CarbonSystemParameters(; kwargs...)
-
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
     Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
     
@@ -211,9 +205,6 @@ References:
 
     # Calculate pH from Aᵀ and Cᵀ and then calculate the rest of the carbon system
     pH     = Fᵖᴴᵤₙᵢᵣₒ(Aᵀ, Cᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, pH, Pᶜᵒᵉᶠᶠ, params.Sᵒᵖᵗˢ) 
-    #if iter == params.Sᵒᵖᵗˢ.Iᴴ⁺ₘₐₓ
-    #    error("UniversalRobustCarbonSystem failed to converge")
-    #end
     CO₂ˢᵒˡ = FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     HCO₃⁻  = FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     CO₃²⁻  = FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
@@ -841,7 +832,7 @@ using ..CarbonSystemSolvers: CarbonCoefficientParameters,
             Siᵀ     :: FT = 15.0e-6,
             pH      :: FT = 8.0,
             pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
-	    params  :: CarbonSystemParameters = CarbonSystemParameters(),
+            params  :: CarbonSystemParameters = CarbonSystemParameters(),
             )
 
 Uses the Follows et al (2006) method to solve the distribution of carbon species
@@ -858,14 +849,6 @@ Uses the Follows et al (2006) method to solve the distribution of carbon species
         pCO₂ᵃᵗᵐ :: Real = 280.0e-6,
         params  :: CarbonSystemParameters = CarbonSystemParameters(),
     )
-
-    ## Error check kwargs for input names that are not in the CarbonSystemParameters struct
-    #for key in keys(kwargs)
-    #    if key ∉ fieldnames(CarbonSystemParameters)
-    #       error("AlkalinityCorrectionCarbonSystem: $key is not a valid keyword argument for CarbonSystemParameters()")
-    #    end
-    # end
-    #params = CarbonSystemParameters(; kwargs...)
 
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
     Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
@@ -1162,7 +1145,7 @@ using RootSolvers
             Aᵀ      :: FT = 2350.0e-6,
             pH      :: FT = 8.0,
             pCO₂ᵃᵗᵐ :: FT = 280.0e-6,
-	    params  :: CarbonSystemParameters = CarbonSystemParameters(),
+            params  :: CarbonSystemParameters = CarbonSystemParameters(),
             )
 
 DirectCubicCarbonSolver solves a cubic equation in terms of [H⁺]; 
@@ -1178,14 +1161,6 @@ Not for serious use, but as a placeholder and for testing purposes
         pCO₂ᵃᵗᵐ :: Real = 280.0e-6,
         params  :: CarbonSystemParameters = CarbonSystemParameters(),
     )
-
-    ## Error check kwargs for input names that are not in the CarbonSystemParameters struct
-    #for key in keys(kwargs)
-    #    if key ∉ fieldnames(CarbonSystemParameters)
-    #       error("DirectCubicCarbonSystem: $key is not a valid keyword argument for CarbonSystemParameters()")
-    #    end
-    # end
-    #params = CarbonSystemParameters(; kwargs...)
 
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
     Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
