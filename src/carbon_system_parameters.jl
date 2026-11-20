@@ -51,6 +51,36 @@ function CarbonSolverOptions(FT=Float64;
     )
 end
 
+# Struct to hold other values used in carbon chemistry calculations 
+struct CarbonCalculationConstants{FT}
+    R             :: FT
+    Θᴷ_0ᵒC        :: FT
+    Sʳᵉᶠ          :: FT
+end
+
+"""
+    CarbonCalculationConstants(::Type{FT}=Float64;
+    R      = 83.1446261815324, # (exact SI value)
+    Θᴷ_0ᵒC = 273.15,
+    Sʳᵉᶠ   = -34.8,
+) where {FT <: AbstractFloat}
+
+TBW
+"""
+function CarbonCalculationConstants(FT=Float64;
+    R      = 83.1446261815324, # (exact SI value)
+    Θᴷ_0ᵒC = 273.15,
+    Sʳᵉᶠ   = -34.8,
+) where {FT <: AbstractFloat}
+
+    return CarbonCalculationConstants{FT}(
+        FT(R),
+        FT(Θᴷ_0ᵒC),
+        FT(Sʳᵉᶠ),
+    )
+end
+
+
 # Struct to hold carbon dissociation function coefficients for chemical species
 struct CarbonCoefficientParameters{FT<:Real}
     a₀ :: FT
@@ -175,11 +205,13 @@ end
 
 struct CarbonSystemParameters{
         CSO<:CarbonSolverOptions, 
+        CCC<:CarbonCalculationConstants,
         CCP<:CarbonCoefficientParameters,
         CAF<:CarbonicAcidFormulation,
         SAF<:SilicicAcidFormulation,
         FAF<:FluoricAcidFormulation}
     Sᵒᵖᵗˢ          :: CSO
+    Cᶜᵒⁿˢᵗ         :: CCC
     Pᴴ²⁰ˢʷ         :: CCP
     Pᵘˢ            :: CCP
     Pᴮᵀᴼᵀ          :: CCP
@@ -224,6 +256,7 @@ The parameters are used in carbon system calculations and are initialized with d
 
 # Keyword Arguments
 - `Sᵒᵖᵗˢ::CarbonSolverOptions`: Default is `CarbonSolverOptions()`.
+- `Cᶜᵒⁿˢᵗ::CarbonCalculationConstants`: Default is `CarbonCalculationConstants()`.
 - `Pᴴ²⁰ˢʷ::CarbonCoefficientParameters`: Default is `CarbonCoefficientParameters(a₀=1.0, a₁=-0.001005)`.
 - `Pᵘˢ::CarbonCoefficientParameters`: Default is `CarbonCoefficientParameters(a₀=0.019924)`.
 - `Pᴮᵀᴼᵀ::CarbonCoefficientParameters`: Default is `CarbonCoefficientParameters(a₀=0.000416, a₁=35.0, a₂=1.0)`.
@@ -261,6 +294,7 @@ The parameters are used in carbon system calculations and are initialized with d
 """
 function CarbonSystemParameters(FT=Float64;
         Sᵒᵖᵗˢ :: CarbonSolverOptions = CarbonSolverOptions(FT),
+        Cᶜᵒⁿˢᵗ :: CarbonCalculationConstants = CarbonCalculationConstants(FT),
         Pᴴ²⁰ˢʷ :: CarbonCoefficientParameters = CarbonCoefficientParameters(FT,
             a₀ =   1.0,
             a₁ = - 0.001005,
