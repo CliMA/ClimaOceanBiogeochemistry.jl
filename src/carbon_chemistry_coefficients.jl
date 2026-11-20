@@ -46,32 +46,32 @@ Return dissociation coefficients necessary to solve for the distribution of carb
 # Also need to convert from Absolute Pressure, Pᴬ, to Applied Pressure in bars, the pressure relative to (1x) atm
 
 # Calculate the coefficients
-    Cᵈⁱᶜₖₛₒₗₐ    = Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Θᶜ, Sᵖ, params.Pᵈⁱᶜₖₛₒₗₐ)
-    Cᵈⁱᶜₖₛₒₗₒ    = Fᵈⁱᶜₖₚᵣₑ(Θᴷ, Θᶜ, Sᵖ, params.Pᵈⁱᶜₖₚᵣₑ) * Fᵈⁱᶜₖ₀(Θᴷ, Θᶜ, Sᵖ, params.Pᵈⁱᶜₖ₀) # Fᵈⁱᶜₖₛₒₗₒ
-    Cᵈⁱᶜₖ₀      = Fᵈⁱᶜₖ₀(Θᴷ, Θᶜ, Sᵖ, params.Pᵈⁱᶜₖ₀)
+    Cᵈⁱᶜₖₛₒₗₐ    = Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, params.Pᵈⁱᶜₖₛₒₗₐ)
+    Cᵈⁱᶜₖₛₒₗₒ    = Fᵈⁱᶜₖₚᵣₑ(Θᴷ, Sᵖ, params.Cᶜᵒⁿˢᵗ, params.Pᵈⁱᶜₖₚᵣₑ) * Fᵈⁱᶜₖ₀(Θᴷ, Sᵖ, params.Pᵈⁱᶜₖ₀) # Fᵈⁱᶜₖₛₒₗₒ
+    Cᵈⁱᶜₖ₀      = Fᵈⁱᶜₖ₀(Θᴷ, Sᵖ, params.Pᵈⁱᶜₖ₀)
 
     # Use type dispatch to select the appropriate coefficients
-    Cᵈⁱᶜₖ₁, Cᵈⁱᶜₖ₂ = carbonic_acid_constants(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params, params.carbonic_acid)
-    Cˢⁱᵗₖ₁         = silicic_acid_constants(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params, params.silicic_acid)
-    Cᴴᶠᵦ₁, Cᴴᶠₖ₁   = fluoric_acid_constants(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params, params.fluoric_acid)
+    Cᵈⁱᶜₖ₁, Cᵈⁱᶜₖ₂ = carbonic_acid_constants(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params, params.carbonic_acid)
+    Cˢⁱᵗₖ₁         = silicic_acid_constants(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params, params.silicic_acid)
+    Cᴴᶠᵦ₁, Cᴴᶠₖ₁   = fluoric_acid_constants(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params, params.fluoric_acid)
 
-    Cᵇₖ₁         = Fᵇₖ₁(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᴮₖ₁)
-    Cᴴ²ᴼₖ₁       = Fᴴ²ᴼₖ₁(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᴴ²ᴼₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
-    Cᴾᴼ⁴ₖ₁       = Fᴾᴼ⁴ₖ₁(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᴾᴼ⁴ₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
-    Cᴾᴼ⁴ₖ₂       = Fᴾᴼ⁴ₖ₂(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᴾᴼ⁴ₖ₂)/H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
-    Cᴾᴼ⁴ₖ₃       = Fᴾᴼ⁴ₖ₃(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᴾᴼ⁴ₖ₃)/H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
-    Cᴴ²ˢₖ₁       = Fᴴ²ˢₖ₁(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᴴ²ˢₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
-    Cᴺᴴ⁴ₖ₁       = Fᴺᴴ⁴ₖ₁(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᴺᴴ⁴ₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
-    Cᴴˢᴼ⁴ₖ₁      = Fᴴˢᴼ⁴ₖ₁(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᴴˢᴼ⁴ₖ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ) # Leave on the free scale
-    Cᶜᵃˡᶜⁱᵗᵉₛₚ   = Fᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᶜᵃˡᶜⁱᵗᵉₛₚ)
-    Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ)
+    Cᵇₖ₁         = Fᵇₖ₁(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᴮₖ₁)
+    Cᴴ²ᴼₖ₁       = Fᴴ²ᴼₖ₁(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᴴ²ᴼₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
+    Cᴾᴼ⁴ₖ₁       = Fᴾᴼ⁴ₖ₁(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᴾᴼ⁴ₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
+    Cᴾᴼ⁴ₖ₂       = Fᴾᴼ⁴ₖ₂(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᴾᴼ⁴ₖ₂)/H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
+    Cᴾᴼ⁴ₖ₃       = Fᴾᴼ⁴ₖ₃(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᴾᴼ⁴ₖ₃)/H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
+    Cᴴ²ˢₖ₁       = Fᴴ²ˢₖ₁(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᴴ²ˢₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
+    Cᴺᴴ⁴ₖ₁       = Fᴺᴴ⁴ₖ₁(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᴺᴴ⁴ₖ₁)/H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
+    Cᴴˢᴼ⁴ₖ₁      = Fᴴˢᴼ⁴ₖ₁(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᴴˢᴼ⁴ₖ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ) # Leave on the free scale
+    Cᶜᵃˡᶜⁱᵗᵉₛₚ   = Fᶜᵃˡᶜⁱᵗᵉₛₚ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᶜᵃˡᶜⁱᵗᵉₛₚ)
+    Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = Fᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ)
     Cᴮᵀ          = Bᵀᴼᵀ(Sᵖ, params.Pᴮᵀᴼᵀ)
     Cᶠᵀ          = Fᵀᴼᵀ(Sᵖ, params.Pᶠᵀᴼᵀ)
     Cᶜᵃ          = Caᵀᴼᵀ(Sᵖ, params.Pᶜᵃᵀᴼᵀ)
     Cˢᴼ⁴         = SO₄ᵀᴼᵀ(Sᵖ, params.Pˢᴼ⁴ᵀᴼᵀ)
-    CH⁺ₛoverH⁺ₜ   = H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
-    CH⁺ₜoverH⁺₃   = H⁺ₜoverH⁺₃(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ)
-    CH⁺ₛoverH⁺₃   = H⁺ₛoverH⁺₃(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
+    CH⁺ₛoverH⁺ₜ   = H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
+    CH⁺ₜoverH⁺₃   = H⁺ₜoverH⁺₃(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ)
+    CH⁺ₛoverH⁺₃   = H⁺ₛoverH⁺₃(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, params.Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
 
     return CarbonChemistryCoefficients(
         Cᵈⁱᶜₖₛₒₗₐ,
@@ -158,7 +158,7 @@ end
 end
 
 @inline function silicic_acid_constants(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params, ::YaoMillero1995)
-    return Fˢⁱᵗₖ₁(Θᴷ, Θᶜ, Sᵖ, 0.0, params.Pˢⁱᵗₖ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ)/H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
+    return Fˢⁱᵗₖ₁(Θᴷ, Θᶜ, Sᵖ, 0.0, Cᶜᵒⁿˢᵗ, params.Pˢⁱᵗₖ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ)/H⁺ₛoverH⁺ₜ(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params.Pᶠᵀᴼᵀ, params.Pᴴᶠᵦ₁, params.Pᵘˢ, params.Pᴴ²⁰ˢʷ, params.Pˢᴼ⁴ᵀᴼᵀ, params.Pᴴˢᴼ⁴ₖ₁)
 end
 
 @inline function fluoric_acid_constants(Θᴷ, Θᶜ, Sᵖ, Δpᵦₐᵣ, Cᶜᵒⁿˢᵗ, params, ::DicksonRiley1979)
@@ -178,9 +178,9 @@ end
 @inline Θᴷ₁₀₀(Θᴷ::Real) = Θᴷ/100
 @inline Sᴾ⁰⁵(Sᵖ::Real)  = sqrt(Sᵖ)
 @inline Θᵒᴷ(ΘᵒC::Real, Cᶜᵒⁿˢᵗ::CarbonCalculationConstants) = ΘᵒC + Cᶜᵒⁿˢᵗ.Θᴷ_0ᵒC
-@inline ΘᵒC(Θᴷ::Real, Cᶜᵒⁿˢᵗ::CarbonCalculationConstants)  = Θᴷ - Cᶜᵒⁿˢᵗ.Θᴷ_0ᵒC
-@inline ΔSᵖ(Sᵖ::Real, Cᶜᵒⁿˢᵗ::CarbonCalculationConstants)  = Sᵖ + Cᶜᵒⁿˢᵗ.Sʳᵉᶠ
-@inline Rₜ(Θᴷ::Real, Cᶜᵒⁿˢᵗ::CarbonCalculationConstants)    = Θᴷ * Cᶜᵒⁿˢᵗ.R
+@inline ΘᵒC(Θᴷ::Real, Cᶜᵒⁿˢᵗ::CarbonCalculationConstants)  = Θᴷ -  Cᶜᵒⁿˢᵗ.Θᴷ_0ᵒC
+@inline ΔSᵖ(Sᵖ::Real, Cᶜᵒⁿˢᵗ::CarbonCalculationConstants)  = Sᵖ +  Cᶜᵒⁿˢᵗ.Sʳᵉᶠ
+@inline Rₜ(Θᴷ::Real, Cᶜᵒⁿˢᵗ::CarbonCalculationConstants)    = Θᴷ *  Cᶜᵒⁿˢᵗ.R
 
 #Base.@kwdef struct Pᴴ²⁰ˢʷ{FT}
 #    a₀ :: FT    =   1.0
@@ -411,7 +411,7 @@ end
 #     adapt(to, p.b₂),
 # )
 """
-    Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Θᶜ, Sᵖ, Pᵈⁱᶜₖₛₒₗₐ)
+    Fᵈⁱᶜₖₛₒₗₐ(Θᴷ, Sᵖ, Pᵈⁱᶜₖₛₒₗₐ)
 
     Calculate f = k0(1-pH2O)*correction term for non-ideality in (mol/kg-SW)/atm given temperature 
     in K, `Θᴷ`, practical salinity, `Sᵖ`, and coefficients, `Pᵈⁱᶜₖₛₒₗₐ`. Currently no pressure correction
@@ -420,7 +420,7 @@ end
     pH scale  : N/A
     Note      : currently no pressure correction
 """
-@inline function Fᵈⁱᶜₖₛₒₗₐ(Θᴷ::Real, Θᶜ::Real, Sᵖ::Real, params₁ = Pᵈⁱᶜₖₛₒₗₐ)
+@inline function Fᵈⁱᶜₖₛₒₗₐ(Θᴷ::Real, Sᵖ::Real, params₁ = Pᵈⁱᶜₖₛₒₗₐ)
     (; a₀, a₁, a₂, a₃, b₀, b₁, b₂) = params₁
     return exp(
                a₀ + 
@@ -466,7 +466,7 @@ References: Weiss (1974) Marine Chemistry
 pH scale  : N/A
 Note      : currently no pressure correction
 """
-@inline function Fᵈⁱᶜₖₚᵣₑ(Θᴷ::Real, Sᵖ, params₁ = Pᵈⁱᶜₖₚᵣₑ)
+@inline function Fᵈⁱᶜₖₚᵣₑ(Θᴷ::Real, Sᵖ, Cᶜᵒⁿˢᵗ::CarbonCalculationConstants, params₁ = Pᵈⁱᶜₖₚᵣₑ)
     (; a₀, a₁, a₂, a₃, b₀, b₁, p₀) = params₁
 
 #  "x2" term often neglected (assumed=1) in applications of Weiss (1974) eq.9
@@ -499,7 +499,7 @@ end
 #     adapt(to, p.b₂),
 # )
 """
-    Fᵈⁱᶜₖ₀(Θᴷ, Θᶜ, Sᵖ, Pᵈⁱᶜₖ₀)
+    Fᵈⁱᶜₖ₀(Θᴷ, Sᵖ, Pᵈⁱᶜₖ₀)
 
 Return hydration constant of CO₂ in (mol/kg-SW)/atm given temperature 
 in K, `Θᴷ`, practical salinity, `Sᵖ`, and coefficients, `Pᵈⁱᶜₖ₀`.
@@ -510,7 +510,7 @@ References: Weiss (1979)
 pH scale  : N/A
 Note      : currently no pressure correction
 """
-@inline function Fᵈⁱᶜₖ₀(Θᴷ::Real, Θᶜ::Real, Sᵖ::Real, params₁ = Pᵈⁱᶜₖ₀)
+@inline function Fᵈⁱᶜₖ₀(Θᴷ::Real, Sᵖ::Real, params₁ = Pᵈⁱᶜₖ₀)
     (; a₀, a₁, a₂, b₀, b₁, b₂) = params₁
     return exp(
                a₀ + 
@@ -586,11 +586,11 @@ Note      : converted here from mol/kg-H2O to mol/kg-SW
 
     "Pressure correction for applied pressure /= 0"
     ln_kc1_pp = (-(v₀ + 
-                   v₁*ΔSᵖ(Sᵖ) +
+                   v₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ) +
                    v₂*Θᶜ) 
                  +(
                     k₀ + 
-                    k₁*ΔSᵖ(Sᵖ) +
+                    k₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ) +
                     k₂*Θᶜ
                 )*(Δpᵦₐᵣ/2.)
                 )*(Δpᵦₐᵣ/Rₜ(Θᴷ, Cᶜᵒⁿˢᵗ))
@@ -660,11 +660,11 @@ Note      : converted here from mol/kg-H2O to mol/kg-SW
 
     "Pressure correction for applied pressure /= 0"
     ln_kc2_pp = (-(v₀ + 
-                   v₁*ΔSᵖ(Sᵖ) +
+                   v₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ) +
                    v₂*Θᶜ) 
                  +(
                    k₀ + 
-                   k₁*ΔSᵖ(Sᵖ) +
+                   k₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ) +
                    k₂*Θᶜ
                 )*(Δpᵦₐᵣ/2.)
                 )*(Δpᵦₐᵣ/Rₜ(Θᴷ, Cᶜᵒⁿˢᵗ))
@@ -733,11 +733,11 @@ pH scale:   SWS
 
     "Pressure correction for applied pressure /= 0"
     ln_kc1_pp = (-(v₀ + 
-                   v₁*ΔSᵖ(Sᵖ) +
+                   v₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ) +
                    v₂*Θᶜ) 
                  +(
                    k₀ + 
-                   k₁*ΔSᵖ(Sᵖ) +
+                   k₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ) +
                    k₂*Θᶜ
                 )*(Δpᵦₐᵣ/2.)
                 )*(Δpᵦₐᵣ/Rₜ(Θᴷ, Cᶜᵒⁿˢᵗ))
@@ -805,11 +805,11 @@ pH scale:   SWS
 
     "Pressure correction for applied pressure /= 0"
     ln_kc2_pp = (-(v₀ + 
-                   v₁*ΔSᵖ(Sᵖ) +
+                   v₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ) +
                    v₂*Θᶜ) 
                  +(
                    k₀ + 
-                   k₁*ΔSᵖ(Sᵖ) +
+                   k₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ) +
                    k₂*Θᶜ
                 )*(Δpᵦₐᵣ/2.)
             )*(Δpᵦₐᵣ/Rₜ(Θᴷ, Cᶜᵒⁿˢᵗ))
@@ -871,11 +871,11 @@ pH scale:   Total
 
     "Pressure correction for applied pressure /= 0"
     ln_kc1_pp = (-(v₀ + 
-                   v₁*ΔSᵖ(Sᵖ) +
+                   v₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ) +
                    v₂*Θᶜ) 
                  +(
                    k₀ + 
-                   k₁*ΔSᵖ(Sᵖ) +
+                   k₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ) +
                    k₂*Θᶜ
                 )*(Δpᵦₐᵣ/2.)
             )*(Δpᵦₐᵣ/Rₜ(Θᴷ, Cᶜᵒⁿˢᵗ))
@@ -937,11 +937,11 @@ pH scale:   Total
 
     "Pressure correction for applied pressure /= 0"
     ln_kc2_pp = (-(v₀ + 
-                   v₁*ΔSᵖ(Sᵖ) +
+                   v₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ) +
                    v₂*Θᶜ) 
                  +(
                    k₀ + 
-                   k₁*ΔSᵖ(Sᵖ) +
+                   k₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ) +
                    k₂*Θᶜ
                 )*(Δpᵦₐᵣ/2.)
             )*(Δpᵦₐᵣ/Rₜ(Θᴷ, Cᶜᵒⁿˢᵗ))
@@ -1024,12 +1024,12 @@ pH scale  : total
 
     "Pressure correction for applied pressure /= 0"
     ln_kb_pp = (-(v₀ + 
-                  v₁*ΔSᵖ(Sᵖ) +
+                  v₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ) +
                   v₂*Θᶜ + 
                   v₃*Θᶜ*Θᶜ) 
                  +(
                    k₀ + 
-                   k₁*ΔSᵖ(Sᵖ)
+                   k₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ)
                 )*(Δpᵦₐᵣ/2.)
                 )*(Δpᵦₐᵣ/Rₜ(Θᴷ, Cᶜᵒⁿˢᵗ))
 
@@ -1367,12 +1367,12 @@ Note      : converted here from mol/kg-H2O to mol/kg-sw
     "Pressure correction for applied pressure /= 0 
     estimated from borate as suggested by Millero (1995)"
     ln_kb_pp = (-(v₀ + 
-                  v₁*ΔSᵖ(Sᵖ) +
+                  v₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ) +
                   v₂*Θᶜ + 
                   v₃*Θᶜ*Θᶜ) 
                 +(
                   k₀ + 
-                  k₁*ΔSᵖ(Sᵖ)
+                  k₁*ΔSᵖ(Sᵖ, Cᶜᵒⁿˢᵗ)
                 )*(Δpᵦₐᵣ/2.)
                 )*(Δpᵦₐᵣ/Rₜ(Θᴷ, Cᶜᵒⁿˢᵗ))
 
