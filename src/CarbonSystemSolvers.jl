@@ -30,7 +30,7 @@ end
 Calculate the dissolved and hydrated CO₂ concentration in seawater
 given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
 """
-@inline function FCᵀCO₂ˢᵒˡ(Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FCᵀCO₂ˢᵒˡ(Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -47,7 +47,7 @@ end
 Calculate the bicarbonate ion concentration in seawater
 given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
 """
-@inline function FCᵀHCO₃⁻(Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FCᵀHCO₃⁻(Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -64,7 +64,7 @@ end
 Calculate the carbonate concentration in seawater
 given the total carbon concentration Cᵀ, pH, and the carbon chemistry coefficients.
 """
-@inline function FCᵀCO₃²⁻(Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FCᵀCO₃²⁻(Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -81,7 +81,7 @@ end
 Calculate the dissolved and hydrated CO₂ concentration in seawater
 given the pCO₂, pH, and the carbon chemistry coefficients.
 """
-@inline function FpCO₂CO₂ˢᵒˡ(pCO₂::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FpCO₂CO₂ˢᵒˡ(pCO₂::Real, Pᶜᵒᵉᶠᶠ)
     # Perhaps take account of fugacity here?
     return Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * pCO₂
 end
@@ -92,7 +92,7 @@ end
 Calculate the bicarbonate ion concentration in seawater
 given the pCO₂, pH, and the carbon chemistry coefficients.
 """
-@inline function FpCO₂HCO₃⁻(pCO₂::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FpCO₂HCO₃⁻(pCO₂::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -105,7 +105,7 @@ end
 Calculate the carbonate concentration in seawater
 given the pCO₂, pH, and the carbon chemistry coefficients.
 """
-@inline function FpCO₂CO₃²⁻(pCO₂::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FpCO₂CO₃²⁻(pCO₂::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -266,7 +266,7 @@ solver that converges from any given initial value.
                           pH::Real, 
                           Pᶜᵒᵉᶠᶠ,  
                           Sᵒᵖᵗˢ,
-                          ) :: Tuple{Int, Real}
+                          )
    
     # Initialize some variables
     #Iᴴ⁺                = 0
@@ -486,7 +486,7 @@ solver that converges from any given initial value.
                 FAᵀ(
                     Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
                 ),
-                (nothing, nothing)
+                (0, 0)
             )
             return convert(AbstractFloat,Iᴴ⁺), -log10(H⁺)
         end
@@ -499,9 +499,9 @@ solver that converges from any given initial value.
         FAᵀ(
             Cᵀ, Aᵀ, Pᵀ, Siᵀ, NH₄ᵀ, H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ
         ),
-        (nothing, nothing)
+        (0, 0)
     )
-    return Sᵒᵖᵗˢ.Iᴴ⁺ₘₐₓ, -log10(H⁺)
+    return -log10(H⁺)
 end
 
 """
@@ -517,7 +517,7 @@ Calculates the root for the 2nd order approximation of the
             and the 2nd order approximation does not have a solution
 
 """
-@inline function FH⁺ᵢₙᵢ(Aᶜ::Real, Cᵀ::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FH⁺ᵢₙᵢ(Aᶜ::Real, Cᵀ::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate the coefficients of the cubic polynomial
     Rᶜᴬ = Cᵀ/Aᶜ
     Rᴮᴬ = Pᶜᵒᵉᶠᶠ.Cᴮᵀ/Aᶜ
@@ -564,7 +564,7 @@ Calculate the lower and upper bounds of the "non-water-selfionization"
 """
 @inline function FboundsAᵀₙₕ₂ₒ( 
     Cᵀ::Real, Pᵀ::Real, Siᵀ::Real, NH₄ᵀ::Real, H₂Sᵀ::Real, Pᶜᵒᵉᶠᶠ
-) :: Tuple{Real, Real}
+)
 # greatest lower bound (infimum)
     Aᵀₗₒ = -Pᵀ - Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴  - Pᶜᵒᵉᶠᶠ.Cᶠᵀ
 
@@ -609,7 +609,7 @@ end
 """
     function FACᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FACᵀ(Cᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FACᵀ(Cᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H2CO3 - HCO3 - CO3 : n=2, m=0
     return Cᵀ * (( 2 * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * 
                        Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ + 
@@ -624,7 +624,7 @@ end
 """
     F∂A∂Cᵀ(Cᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Cᵀ(Cᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂Cᵀ(Cᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H2CO3 - HCO3 - CO3 : n=2, m=0
     return - Cᵀ * (
                     ( Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * 
@@ -644,7 +644,7 @@ end
 """
     function FABᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FABᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FABᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # B(OH)3 - B(OH)4 : n=1, m=0
     return Pᶜᵒᵉᶠᶠ.Cᴮᵀ * (Pᶜᵒᵉᶠᶠ.Cᵇₖ₁/(Pᶜᵒᵉᶠᶠ.Cᵇₖ₁ + H⁺))   
 end
@@ -652,7 +652,7 @@ end
 """
     function F∂A∂Bᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Bᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂Bᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # B(OH)3 - B(OH)4 : n=1, m=0
     return - Pᶜᵒᵉᶠᶠ.Cᴮᵀ * ( 
                             Pᶜᵒᵉᶠᶠ.Cᵇₖ₁
@@ -692,7 +692,7 @@ end
 """
     function F∂A∂Pᵀ(Pᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Pᵀ(Pᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂Pᵀ(Pᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H3PO4 - H2PO4 - HPO4 - PO4 : n=3, m=1
     return - Pᵀ * ((Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁ * 
                     Pᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂ * 
@@ -727,7 +727,7 @@ end
 """
     function FASiᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FASiᵀ(Siᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FASiᵀ(Siᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H4SiO4 - H3SiO4 : n=1, m=0
     return Siᵀ * (Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁/(Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁ + H⁺))
 end
@@ -735,7 +735,7 @@ end
 """
     function F∂A∂Siᵀ(Siᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Siᵀ(Siᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂Siᵀ(Siᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H4SiO4 - H3SiO4 : n=1, m=0
     return - Siᵀ * (Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁/(Pᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁ + H⁺)^2)
 end
@@ -743,7 +743,7 @@ end
 """
     function FASO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FASO₄ᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FASO₄ᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # HSO4 - SO4 : n=1, m=1
     return Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * (Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ + H⁺) - 1)
 end
@@ -751,7 +751,7 @@ end
 """
     function F∂A∂SO₄ᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂SO₄ᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂SO₄ᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # HSO4 - SO4 : n=1, m=1
     return - Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * (Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ + H⁺)^2)
 end
@@ -759,7 +759,7 @@ end
 """
     function FAFᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FAFᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FAFᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # HF - F : n=1, m=1
     return Pᶜᵒᵉᶠᶠ.Cᶠᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁ + H⁺) - 1)
 end
@@ -767,7 +767,7 @@ end
 """
     function F∂A∂Fᵀ(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂Fᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂Fᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # HF - F : n=1, m=1
     return - Pᶜᵒᵉᶠᶠ.Cᶠᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁ + H⁺)^2)
 end
@@ -775,7 +775,7 @@ end
 """
     function FANH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FANH₄ᵀ(NH₄ᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FANH₄ᵀ(NH₄ᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # NH4 - NH3 : n=1, m=0
     return NH₄ᵀ * (Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁ + H⁺))
 end
@@ -783,7 +783,7 @@ end
 """
     function F∂A∂NH₄ᵀ(NH₄ᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂NH₄ᵀ(NH₄ᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂NH₄ᵀ(NH₄ᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # NH4 - NH3 : n=1, m=0
     return - NH₄ᵀ * (Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁ + H⁺)^2)
 end
@@ -791,7 +791,7 @@ end
 """
     function FAH₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FAH₂Sᵀ(H₂Sᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FAH₂Sᵀ(H₂Sᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H2S - HS : n=1, m=0
     return H₂Sᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁ + H⁺))
 end
@@ -799,7 +799,7 @@ end
 """
     function F∂A∂H₂Sᵀ(H₂Sᵀ, H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂H₂Sᵀ(H₂Sᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂H₂Sᵀ(H₂Sᵀ::Real, H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H2S - HS : n=1, m=0
     return - H₂Sᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁ + H⁺)^2)
 end
@@ -807,7 +807,7 @@ end
 """
     function FAH₂O(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function FAH₂O(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function FAH₂O(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H2O - OH
     return Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/H⁺ -H⁺/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
 end
@@ -815,7 +815,7 @@ end
 """
     function F∂A∂H₂O(H⁺, Pᶜᵒᵉᶠᶠ)
 """
-@inline function F∂A∂H₂O(H⁺::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function F∂A∂H₂O(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # H2O - OH
     return - Pᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁/H⁺^2 - 1/Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
 end
@@ -933,7 +933,7 @@ adapt_structure(
 
 Calculate borate (B(OH)₄⁻) contribution to Aᶜ using salinity as a proxy
 """
-@inline function BO₄H₄⁻(pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function BO₄H₄⁻(pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -945,7 +945,7 @@ end
 
 Calculate orthophosphoric acid (H₃PO₄) contribution to Aᶜ
 """
-@inline function H₃PO₄(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function H₃PO₄(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -962,7 +962,7 @@ end
 
 Calculate the dihydrogen phosphate (H₂PO₄⁻) contribution to Aᶜ
 """
-@inline function H₂PO₄⁻(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function H₂PO₄⁻(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -979,7 +979,7 @@ end
 
 Calculate the monohydrogen phosphate (HPO₄²⁻) contribution to Aᶜ
 """
-@inline function HPO₄²⁻(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function HPO₄²⁻(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -996,7 +996,7 @@ end
 
 Calculate the phosphate (PO₄³⁻) contribution to Aᶜ
 """
-@inline function PO₄³⁻(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function PO₄³⁻(Pᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -1013,7 +1013,7 @@ end
 
 Calculate the silicate (SiO(OH)₃⁻) contribution to Aᶜ
 """
-@inline function SiO₄H₃⁻(Siᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function SiO₄H₃⁻(Siᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -1025,7 +1025,7 @@ end
 
 Calculate the hydroxide (OH⁻) contribution to Aᶜ
 """
-@inline function OH⁻(pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function OH⁻(pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -1037,7 +1037,7 @@ end
 
 Calculate the "Free" H⁺ contribution to Aᶜ
 """
-@inline function H⁺ᶠʳᵉᵉ(pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function H⁺ᶠʳᵉᵉ(pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -1049,7 +1049,7 @@ end
 
 Calculate the hydrogen sulphate (HSO₄⁻) contribution to Aᶜ
 """
-@inline function HSO₄⁻(pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function HSO₄⁻(pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     # H⁺ = 10^-pH
 
@@ -1061,7 +1061,7 @@ end
 
 Calculate the hydrogen fluoride (HF) contribution to Aᶜ
 """
-@inline function HF(pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function HF(pH::Real, Pᶜᵒᵉᶠᶠ)
     # Calculate H⁺ from pH
     H⁺ = 10^-pH
 
@@ -1076,7 +1076,7 @@ Solve for ocean pCO₂ given total Alkalinity and DIC
 Estimate H⁺ (hydrogen ion conc) using estimate of Aᶜ, carbonate alkalinity
 after (Follows et al., 2006)
 """
-@inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ::Real, Cᵀ::Real, Pᵀ::Real, Siᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ::Real, Cᵀ::Real, Pᵀ::Real, Siᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
 
 # Estimate carbonate alkalinity
     Aᶜ = Aᵀ - 
@@ -1112,7 +1112,7 @@ Solve for ocean DIC given total Alkalinity and pCO₂
 Estimate H⁺ (hydrogen ion conc) using estimate of Aᶜ, carbonate alkalinity
 after (Follows et al., 2006)
 """
-@inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ::Real, pCO₂::Real, Pᵀ::Real, Siᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ::Real, pCO₂::Real, Pᵀ::Real, Siᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
 
 # Estimate carbonate alkalinity
     Aᶜ = Aᵀ - 
@@ -1245,7 +1245,7 @@ adapt_structure(
 
 Solve for DIC given total Alkalinity and pCO₂
 """
-@inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ::Real, pCO₂::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᵖᶜᵒ²⁾(Aᵀ::Real, pCO₂::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Find the real roots of the polynomial using RootSolvers.jl 
     sol = find_zero(  x -> (
         x^3*(Aᵀ) +
@@ -1294,7 +1294,7 @@ end # end function
 
 Solve for ocean pCO₂ given total Alkalinity and DIC
 """
-@inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ::Real, Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ) :: Real
+@inline function Fᵖᴴ⁽ᴬᵀ⁺ᶜᵀ⁾(Aᵀ::Real, Cᵀ::Real, pH::Real, Pᶜᵒᵉᶠᶠ)
     # Find the real roots of the polynomial using RootSolvers.jl
     sol = find_zero(  x -> (
         x^3*(Aᵀ) +
