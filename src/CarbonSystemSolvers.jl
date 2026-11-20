@@ -731,7 +731,10 @@ end
 """
 @inline function FASO₄ᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # HSO4 - SO4 : n=1, m=1
-    return Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * (Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ + H⁺) - 1)
+    # Cᴴˢᴼ⁴ₖ₁ is on the free pH scale, so H⁺ (Total scale) must be converted
+    # to the free scale before combining with it.
+    H⁺f = H⁺ / Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
+    return Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * (Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ + H⁺f) - 1)
 end
 
 """
@@ -739,7 +742,9 @@ end
 """
 @inline function F∂A∂SO₄ᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # HSO4 - SO4 : n=1, m=1
-    return - Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * (Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ + H⁺)^2)
+    # Cᴴˢᴼ⁴ₖ₁ is on the free pH scale; see FASO₄ᵀ.
+    H⁺f = H⁺ / Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
+    return - Pᶜᵒᵉᶠᶠ.Cˢᴼ⁴ * (Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁ + H⁺f)^2) / Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
 end
 
 """
@@ -747,7 +752,10 @@ end
 """
 @inline function FAFᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # HF - F : n=1, m=1
-    return Pᶜᵒᵉᶠᶠ.Cᶠᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁ + H⁺) - 1)
+    # Cᴴᶠₖ₁ is on the free pH scale, so H⁺ (Total scale) must be converted
+    # to the free scale before combining with it.
+    H⁺f = H⁺ / Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
+    return Pᶜᵒᵉᶠᶠ.Cᶠᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁ + H⁺f) - 1)
 end
 
 """
@@ -755,7 +763,9 @@ end
 """
 @inline function F∂A∂Fᵀ(H⁺::Real, Pᶜᵒᵉᶠᶠ)
     # HF - F : n=1, m=1
-    return - Pᶜᵒᵉᶠᶠ.Cᶠᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁ + H⁺)^2)
+    # Cᴴᶠₖ₁ is on the free pH scale; see FAFᵀ.
+    H⁺f = H⁺ / Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
+    return - Pᶜᵒᵉᶠᶠ.Cᶠᵀ * (Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁/(Pᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁ + H⁺f)^2) / Pᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃
 end
 
 """
