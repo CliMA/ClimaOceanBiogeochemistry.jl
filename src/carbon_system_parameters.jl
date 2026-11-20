@@ -57,7 +57,13 @@ struct CarbonCalculationConstants{FT}
     Θᴷ_0ᵒC        :: FT
     Sʳᵉᶠ          :: FT
 end
-
+adapt_structure(
+    to, ccc::CarbonCalculationConstants
+    ) = CarbonCalculationConstants(
+           adapt(to, ccc.R     ),
+           adapt(to, ccc.Θᴷ_0ᵒC),
+           adapt(to, ccc.Sʳᵉᶠ  ),
+)
 """
     CarbonCalculationConstants(::Type{FT}=Float64;
     R      = 83.1446261815324, # (exact SI value)
@@ -625,6 +631,7 @@ function CarbonSystemParameters(FT=Float64;
 )
     return CarbonSystemParameters(
         Sᵒᵖᵗˢ,
+        Cᶜᵒⁿˢᵗ,
         Pᴴ²⁰ˢʷ, 
         Pᵘˢ,
         Pᴮᵀᴼᵀ,
