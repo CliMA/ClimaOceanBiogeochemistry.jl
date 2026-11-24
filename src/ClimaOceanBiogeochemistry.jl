@@ -7,4 +7,6 @@ include("CarbonSystemSolvers.jl")
 include("nutrients_plankton_bacteria_detritus.jl")
 include("carbon_alkalinity_nutrients.jl")
 
+include("calculate_air_sea_carbon_exchange.jl")
+
 end # module ClimaOceanBiogeochemistry
