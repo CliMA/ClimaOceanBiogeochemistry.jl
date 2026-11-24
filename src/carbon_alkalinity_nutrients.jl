@@ -22,7 +22,6 @@ using Oceananigans.Grids: inactive_cell
 
 #include("calculate_air_sea_carbon_exchange.jl")
 
-const c = Center()
 const Pa2bar = 1e-5
 
 struct CarbonAlkalinityNutrients{FT, W, S, D, P} <: AbstractBiogeochemistry
@@ -192,7 +191,7 @@ function CarbonAlkalinityNutrients(; grid,
     end
 
     no_penetration = ImpenetrableBoundaryCondition()
-    sinking_bcs = FieldBoundaryConditions(grid, (Center, Center, Face); top=no_penetration, bottom=no_penetration)
+    sinking_bcs = FieldBoundaryConditions(grid, (Center(), Center(), Face()); top=no_penetration, bottom=no_penetration)
 
     if particulate_organic_phosphorus_sinking_velocity  isa Number
         w₀ᵖᵒᶜ = particulate_organic_phosphorus_sinking_velocity 
@@ -477,7 +476,7 @@ Update Photosynthetically Active Ratiation (PAR) field (i.e. light) for phytopla
     i, j, k = @index(Global, NTuple)
 
     λ  = bgc.PAR_attenuation_scale
-    zᶜ = znode(i, j, k, grid, c, c, c)
+    zᶜ = znode(i, j, k, grid, Center(), Center(), Center())
     inactive = inactive_cell(i, j, k, grid)
     @inbounds PAR[i, j, k] =  ifelse(
 		    inactive,
@@ -573,7 +572,7 @@ Arguments:
 
     if !inactive_cell(i, j, k, grid)
         @inbounds begin
-            z      = znode(i, j, k, grid, c, c, c)
+            z      = znode(i, j, k, grid, Center(), Center(), Center())
             Δp_bar = max(zero(FT), -z / FT(10) - FT(1)) # Applied pressure in bar, with 1 bar at the surface
             
 	    ## compute oceanic pCO₂ using the UniversalRobustCarbonSystem solver
@@ -671,7 +670,7 @@ end
     Rᶠ = bgc.stoichoimetric_ratio_iron_to_phosphate
 
     @inbounds begin
-        zᶜ = znode(i, j, k, grid, c, c, c)
+        zᶜ = znode(i, j, k, grid, Center(), Center(), Center())
         inactive = inactive_cell(i, j, k, grid)
 
         PAR[i, j, k] = ifelse(
@@ -952,7 +951,7 @@ Tracer sources and sinks for dissolved inorganic carbon (DIC)
     ΩC⁻ᵉˣᵖ   = bgc.calcite_dissolution_exponent_below_saturation
 
     @inbounds begin
-       z         = znode(i, j, k, grid, c, c, c)
+       z         = znode(i, j, k, grid, Center(), Center(), Center())
        NCP       = bgc.NCP[i, j, k]
        DOP       = fields.DOP[i, j, k]
        POP       = fields.POP[i, j, k]
@@ -992,7 +991,7 @@ Tracer sources and sinks for alkalinity (ALK)
     ΩC⁻ᵉˣᵖ   = bgc.calcite_dissolution_exponent_below_saturation
 
     @inbounds begin
-       z         = znode(i, j, k, grid, c, c, c)
+       z         = znode(i, j, k, grid, Center(), Center(), Center())
        NCP       = bgc.NCP[i, j, k]
        DOP       = fields.DOP[i, j, k]
        POP       = fields.POP[i, j, k]
@@ -1028,7 +1027,7 @@ Tracer sources and sinks for dissolved inorganic phosphate (PO₄)
     Rᵣ = bgc.option_of_particulate_remin
 
     @inbounds begin
-       z         = znode(i, j, k, grid, c, c, c)
+       z         = znode(i, j, k, grid, Center(), Center(), Center())
        NCP       = bgc.NCP[i, j, k]
        DOP       = fields.DOP[i, j, k]
        POP       = fields.POP[i, j, k]
@@ -1055,7 +1054,7 @@ Tracer sources and sinks for dissolved inorganic nitrate (NO₃)
     Rᵣ  = bgc.option_of_particulate_remin
 
     @inbounds begin
-       z         = znode(i, j, k, grid, c, c, c)
+       z         = znode(i, j, k, grid, Center(), Center(), Center())
        NCP       = bgc.NCP[i, j, k]
        DOP       = fields.DOP[i, j, k]
        POP       = fields.POP[i, j, k]
@@ -1087,7 +1086,7 @@ Tracer sources and sinks for dissolved iron (FeT)
     Rᵣ    = bgc.option_of_particulate_remin
 
     @inbounds begin
-       z         = znode(i, j, k, grid, c, c, c)
+       z         = znode(i, j, k, grid, Center(), Center(), Center())
        NCP       = bgc.NCP[i, j, k]
        Feₜ       = fields.Fe[i, j, k]
        DOP       = fields.DOP[i, j, k]
@@ -1134,7 +1133,7 @@ Tracer sources and sinks for Particulate Organic Phosphorus (POP).
     Rᵣ = bgc.option_of_particulate_remin
 
     @inbounds begin
-       z         = znode(i, j, k, grid, c, c, c)
+       z         = znode(i, j, k, grid, Center(), Center(), Center())
        NCP       = bgc.NCP[i, j, k]
        POP       = fields.POP[i, j, k]
        kface_top = min(k + 1, size(wₛ, 3))
