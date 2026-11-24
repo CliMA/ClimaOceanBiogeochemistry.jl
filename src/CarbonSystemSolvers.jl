@@ -19,17 +19,19 @@ include("carbon_system_parameters.jl")
 include("carbon_chemistry_coefficients.jl")
 
 struct CarbonSystem{FT<:Real}
-    pH      :: FT
-    CO₂ˢᵒˡ  :: FT
-    HCO₃⁻   :: FT
-    CO₃²⁻   :: FT
-    Cᵀ      :: FT
-    Aᵀ      :: FT
-    pCO₂ᵒᶜᵉ :: FT
-    pCO₂ᵃᵗᵐ :: FT
-    Pᵈⁱᶜₖₛₒₗₐ :: FT
-    Pᵈⁱᶜₖₛₒₗₒ :: FT
-    Pᵈⁱᶜₖ₀   :: FT
+    pH          :: FT
+    CO₂ˢᵒˡ      :: FT
+    HCO₃⁻       :: FT
+    CO₃²⁻       :: FT
+    Cᵀ          :: FT
+    Aᵀ          :: FT
+    pCO₂ᵒᶜᵉ     :: FT
+    pCO₂ᵃᵗᵐ     :: FT
+    Pᵈⁱᶜₖₛₒₗₐ     :: FT
+    Pᵈⁱᶜₖₛₒₗₒ     :: FT
+    Pᵈⁱᶜₖ₀       :: FT
+    ΩCᵃʳᵍ       :: FT
+    ΩCᶜᵃˡ       :: FT
 end
 """
     FCᵀCO₂ˢᵒˡ(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
@@ -119,6 +121,25 @@ given the pCO₂, pH, and the carbon chemistry coefficients.
     return (Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁ * Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ * pCO₂)/(H⁺^2)
 end
 
+"""
+    FΩCᵃʳᵍ(CO₃²⁻, Pᶜᵒᵉᶠᶠ)
+
+Calculate the saturation state of aragonite in seawater
+given the carbonate concentration CO₃²⁻ and the carbon chemistry coefficients.
+"""
+@inline function FΩCᵃʳᵍ(CO₃²⁻::Real, Pᶜᵒᵉᶠᶠ)
+    return Pᶜᵒᵉᶠᶠ.Cᶜᵃ * CO₃²⁻ / Pᶜᵒᵉᶠᶠ.Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ
+end
+
+"""
+    FΩCᶜᵃˡ(CO₃²⁻, Pᶜᵒᵉᶠᶠ)
+Calculate the saturation state of calcite in seawater
+given the carbonate concentration CO₃²⁻ and the carbon chemistry coefficients.
+"""
+@inline function FΩCᶜᵃˡ(CO₃²⁻::Real, Pᶜᵒᵉᶠᶠ)
+    return Pᶜᵒᵉᶠᶠ.Cᶜᵃ * CO₃²⁻ / Pᶜᵒᵉᶠᶠ.Cᶜᵃˡᶜⁱᵗᵉₛₚ
+end
+
 # ----------------------------------------------------------------------------------
 module UniversalRobustCarbonSolver
 export UniversalRobustCarbonSystem,
@@ -131,7 +152,9 @@ using ..CarbonSystemSolvers: CarbonCoefficientParameters,
                              CarbonSystem, 
                              FCᵀCO₂ˢᵒˡ, 
                              FCᵀCO₃²⁻, 
-                             FCᵀHCO₃⁻
+                             FCᵀHCO₃⁻,
+                             FΩCᵃʳᵍ,
+                             FΩCᶜᵃˡ
 
 """
     UniversalRobustCarbonSystem(
@@ -190,22 +213,25 @@ References:
     # CarbonChemistryCoefficients are pretty much all in mol/kg, hence the 1e-6 factors for Cᵀ and Aᵀ
     Cᶜᵒᵉᶠᶠ = CarbonChemistryCoefficients(params, Θᶜ, Sᴬ, Δpᵦₐᵣ)
     
-    Pᶜᵒᵉᶠᶠ = (Cᵈⁱᶜₖ₀ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
-              Cᵈⁱᶜₖ₁ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁,
-              Cᵈⁱᶜₖ₂ = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂,
-              Cᵇₖ₁   = Cᶜᵒᵉᶠᶠ.Cᵇₖ₁,
-              Cᴾᴼ⁴ₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁,
-              Cᴾᴼ⁴ₖ₂ = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂,
-              Cᴾᴼ⁴ₖ₃ = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃,
-              Cˢⁱᵗₖ₁ = Cᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁,
-              Cᴴˢᴼ⁴ₖ₁= Cᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁,
-              Cᴴ²ˢₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁,
-              Cᴴᶠₖ₁  = Cᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁,
-              Cᴺᴴ⁴ₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁,
-              Cᴴ²ᴼₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁,
-              Cᴮᵀ    = Cᶜᵒᵉᶠᶠ.Cᴮᵀ,
-              Cᶠᵀ    = Cᶜᵒᵉᶠᶠ.Cᶠᵀ,
-              Cˢᴼ⁴   = Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴,
+    Pᶜᵒᵉᶠᶠ = (Cᵈⁱᶜₖ₀    = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
+              Cᵈⁱᶜₖ₁    = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₁,
+              Cᵈⁱᶜₖ₂    = Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₂,
+              Cᵇₖ₁      = Cᶜᵒᵉᶠᶠ.Cᵇₖ₁,
+              Cᴾᴼ⁴ₖ₁    = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₁,
+              Cᴾᴼ⁴ₖ₂    = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₂,
+              Cᴾᴼ⁴ₖ₃    = Cᶜᵒᵉᶠᶠ.Cᴾᴼ⁴ₖ₃,
+              Cˢⁱᵗₖ₁    = Cᶜᵒᵉᶠᶠ.Cˢⁱᵗₖ₁,
+              Cᴴˢᴼ⁴ₖ₁   = Cᶜᵒᵉᶠᶠ.Cᴴˢᴼ⁴ₖ₁,
+              Cᴴ²ˢₖ₁    = Cᶜᵒᵉᶠᶠ.Cᴴ²ˢₖ₁,
+              Cᴴᶠₖ₁     = Cᶜᵒᵉᶠᶠ.Cᴴᶠₖ₁,
+              Cᴺᴴ⁴ₖ₁    = Cᶜᵒᵉᶠᶠ.Cᴺᴴ⁴ₖ₁,
+              Cᴴ²ᴼₖ₁    = Cᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁,
+              Cᴮᵀ       = Cᶜᵒᵉᶠᶠ.Cᴮᵀ,
+              Cᶠᵀ       = Cᶜᵒᵉᶠᶠ.Cᶠᵀ,
+              Cˢᴼ⁴      = Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴,
+              Cᶜᵃ       = Cᶜᵒᵉᶠᶠ.Cᶜᵃ,
+              Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = Cᶜᵒᵉᶠᶠ.Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ,
+              Cᶜᵃˡᶜⁱᵗᵉₛₚ   = Cᶜᵒᵉᶠᶠ.Cᶜᵃˡᶜⁱᵗᵉₛₚ,
               H⁺ₜoverH⁺₃ = Cᶜᵒᵉᶠᶠ.H⁺ₜoverH⁺₃, # pH scale conversion factor
     )
 
@@ -215,6 +241,8 @@ References:
     HCO₃⁻  = FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     CO₃²⁻  = FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     pCO₂ᵒᶜᵉ= CO₂ˢᵒˡ / Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ # correct for fugacity of CO₂ in seawater?
+    ΩCᵃʳᵍ  = FΩCᵃʳᵍ(CO₃²⁻, Pᶜᵒᵉᶠᶠ)
+    ΩCᶜᵃˡ  = FΩCᶜᵃˡ(CO₃²⁻, Pᶜᵒᵉᶠᶠ)
 
     return CarbonSystem(
         pH, 
@@ -228,6 +256,8 @@ References:
         Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₐ, 
         Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₒ, 
         Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
+        ΩCᵃʳᵍ,
+        ΩCᶜᵃˡ,
         )
 end # end function
 adapt_structure( 
@@ -244,6 +274,8 @@ adapt_structure(
            adapt(to, cs.Pᵈⁱᶜₖₛₒₗₐ),
            adapt(to, cs.Pᵈⁱᶜₖₛₒₗₒ),
 	       adapt(to, cs.Pᵈⁱᶜₖ₀),
+           adapt(to, cs.ΩCᵃʳᵍ),
+           adapt(to, cs.ΩCᶜᵃˡ),
 )
 
 """
@@ -840,7 +872,9 @@ using ..CarbonSystemSolvers: CarbonCoefficientParameters,
                              CarbonSystem, 
                              FCᵀCO₂ˢᵒˡ, 
                              FCᵀCO₃²⁻, 
-                             FCᵀHCO₃⁻
+                             FCᵀHCO₃⁻,
+                             FΩCᵃʳᵍ,
+                             FΩCᶜᵃˡ
 
 """
     AlkalinityCorrectionCarbonSystem(
@@ -888,6 +922,9 @@ Uses the Follows et al (2006) method to solve the distribution of carbon species
               Cᴮᵀ    = Cᶜᵒᵉᶠᶠ.Cᴮᵀ,
               Cᶠᵀ    = Cᶜᵒᵉᶠᶠ.Cᶠᵀ,
               Cˢᴼ⁴   = Cᶜᵒᵉᶠᶠ.Cˢᴼ⁴,
+              Cᶜᵃ    = Cᶜᵒᵉᶠᶠ.Cᶜᵃ,
+              Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = Cᶜᵒᵉᶠᶠ.Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ,
+              Cᶜᵃˡᶜⁱᵗᵉₛₚ   = Cᶜᵒᵉᶠᶠ.Cᶜᵃˡᶜⁱᵗᵉₛₚ,
     )
 
     # Calculate pH from Aᵀ and Cᵀ and then calculate the rest of the carbon system
@@ -896,6 +933,8 @@ Uses the Follows et al (2006) method to solve the distribution of carbon species
     HCO₃⁻  = FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     CO₃²⁻  = FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     pCO₂ᵒᶜᵉ= CO₂ˢᵒˡ / Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ # correct for fugacity of CO₂ in seawater?
+    ΩCᵃʳᵍ = FΩCᵃʳᵍ(CO₃²⁻, Pᶜᵒᵉᶠᶠ)
+    ΩCᶜᵃˡ = FΩCᶜᵃˡ(CO₃²⁻, Pᶜᵒᵉᶠᶠ)
 
     return CarbonSystem(
         pH, 
@@ -909,6 +948,8 @@ Uses the Follows et al (2006) method to solve the distribution of carbon species
         Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₐ, 
         Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₒ, 
         Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
+        ΩCᵃʳᵍ,
+        ΩCᶜᵃˡ,
         )
 end # end function
 adapt_structure( 
@@ -925,6 +966,8 @@ adapt_structure(
            adapt(to, cs.Pᵈⁱᶜₖₛₒₗₐ),
            adapt(to, cs.Pᵈⁱᶜₖₛₒₗₒ),
 	       adapt(to, cs.Pᵈⁱᶜₖ₀),
+           adapt(to, cs.ΩCᵃʳᵍ),
+           adapt(to, cs.ΩCᶜᵃˡ),
 )
 
 """
@@ -1153,7 +1196,9 @@ using ..CarbonSystemSolvers: CarbonCoefficientParameters,
                              CarbonSystem, 
                              FCᵀCO₂ˢᵒˡ, 
                              FCᵀCO₃²⁻, 
-                             FCᵀHCO₃⁻
+                             FCᵀHCO₃⁻,
+                             FΩCᵃʳᵍ,
+                             FΩCᶜᵃˡ
 using RootSolvers
 
 """
@@ -1192,6 +1237,9 @@ Not for serious use, but as a placeholder and for testing purposes
               Cᵇₖ₁   = Cᶜᵒᵉᶠᶠ.Cᵇₖ₁,
               Cᴴ²ᴼₖ₁ = Cᶜᵒᵉᶠᶠ.Cᴴ²ᴼₖ₁,
               Cᴮᵀ    = Cᶜᵒᵉᶠᶠ.Cᴮᵀ,
+              Cᶜᵃ    = Cᶜᵒᵉᶠᶠ.Cᶜᵃ,
+              Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ = Cᶜᵒᵉᶠᶠ.Cᵃʳᵃᵍᵒⁿⁱᵗᵉₛₚ,
+              Cᶜᵃˡᶜⁱᵗᵉₛₚ   = Cᶜᵒᵉᶠᶠ.Cᶜᵃˡᶜⁱᵗᵉₛₚ,
     )
 
     # Calculate pH, pCO2, and carbon species from Aᵀ and Cᵀ
@@ -1200,6 +1248,8 @@ Not for serious use, but as a placeholder and for testing purposes
     HCO₃⁻  = FCᵀHCO₃⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     CO₃²⁻  = FCᵀCO₃²⁻(Cᵀ, pH, Pᶜᵒᵉᶠᶠ)
     pCO₂ᵒᶜᵉ= CO₂ˢᵒˡ / Pᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀ # correct for fugacity of CO₂ in seawater?
+    ΩCᵃʳᵍ = FΩCᵃʳᵍ(CO₃²⁻, Pᶜᵒᵉᶠᶠ)
+    ΩCᶜᵃˡ = FΩCᶜᵃˡ(CO₃²⁻, Pᶜᵒᵉᶠᶠ)
 
     return CarbonSystem(
         pH, 
@@ -1213,6 +1263,8 @@ Not for serious use, but as a placeholder and for testing purposes
         Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₐ, 
         Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖₛₒₗₒ, 
         Cᶜᵒᵉᶠᶠ.Cᵈⁱᶜₖ₀,
+        ΩCᵃʳᵍ,
+        ΩCᶜᵃˡ,
         )
 end # end function
 adapt_structure( 
@@ -1229,6 +1281,8 @@ adapt_structure(
            adapt(to, cs.Pᵈⁱᶜₖₛₒₗₐ),
            adapt(to, cs.Pᵈⁱᶜₖₛₒₗₒ),
 	       adapt(to, cs.Pᵈⁱᶜₖ₀),
+           adapt(to, cs.ΩCᵃʳᵍ),
+           adapt(to, cs.ΩCᶜᵃˡ),
 )
 
 """
